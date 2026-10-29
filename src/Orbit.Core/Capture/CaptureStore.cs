@@ -58,6 +58,12 @@ public sealed class CaptureStore(Preferences preferences, string folder)
         return path;
     }
 
+    /// <summary>Takes a file off the recent list once it is gone from the library (moved to the Recycle Bin).</summary>
+    public void Forget(string libraryFile)
+    {
+        lock (_gate) _recent?.RemoveAll(p => string.Equals(p, libraryFile, StringComparison.OrdinalIgnoreCase));
+    }
+
     /// <summary>A copy of a library file in the save folder (Pictures\Screenshots unless chosen); the copy's path.</summary>
     public string SaveCopy(string libraryFile)
     {

@@ -99,6 +99,17 @@ public sealed class CaptureStoreTests : IDisposable
     }
 
     [Fact]
+    public void ForgetTakesAFileOffTheRecentList()
+    {
+        var store = new CaptureStore(_prefs, Path.Combine(_folder, "Captures"));
+        var when = new DateTime(2026, 10, 30, 14, 5, 9);
+        var first = store.Write([1], when);
+        var second = store.Write([2], when);
+        store.Forget(first.ToUpperInvariant());
+        Assert.Equal([second], store.Recent);
+    }
+
+    [Fact]
     public void LastAreaRoundTripsAndOnlyCountsOnItsMonitor()
     {
         var store = new CaptureStore(_prefs, Path.Combine(_folder, "Captures"));

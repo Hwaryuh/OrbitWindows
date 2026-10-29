@@ -15,7 +15,7 @@ using Orbit.Core.Launcher;
 namespace Orbit.App.Features.Capture;
 
 /// <summary>What happens to a capture instead of the usual steps, picked with a key while selecting (Orbit: <c>CaptureAction</c>).</summary>
-internal enum CaptureKeyAction { Copy, Save, Text }
+internal enum CaptureKeyAction { Copy, Save, Text, Pin }
 
 /// <summary>
 /// The selection: a frozen monitor and an area on it (virtual-screen pixels), or a window to
@@ -27,8 +27,8 @@ internal sealed record SelectionResult(MonitorInfo Monitor, ScreenFrame Frame, P
 /// Selecting over frozen monitors (Orbit: SelectionOverlay.swift), one overlay per monitor. Drag to
 /// select an area, Space toggles window mode, Enter takes the whole monitor, Esc cancels. While
 /// dragging: Shift locks a square, Alt grows from the center, Space moves, arrows nudge. Before:
-/// Tab cycles ratios, R brings back the last area, Ctrl+C copies the color under the loupe. C S T
-/// pick what happens to the result (Orbit's E P V L come with the editor, pins and recording).
+/// Tab cycles ratios, R brings back the last area, Ctrl+C copies the color under the loupe. C S T P
+/// pick what happens to the result (Orbit's E comes with the editor; V L, recording, are not ported).
 /// </summary>
 internal sealed class SelectionSession
 {
@@ -182,16 +182,16 @@ internal sealed class SelectionSession
 internal sealed class SelectionOverlay : OverlayWindow
 {
     private const double Loupe = 116, LoupeCells = 15;
-    private static readonly Brush Dim = Freeze(new SolidColorBrush(Color.FromArgb(92, 0, 0, 0)));
-    private static readonly Brush DimText = Freeze(new SolidColorBrush(Color.FromArgb(107, 0, 0, 0)));
-    private static readonly Brush PillFill = Freeze(new SolidColorBrush(Color.FromArgb(184, 0, 0, 0)));
-    private static readonly Brush PillLight = Freeze(new SolidColorBrush(Color.FromArgb(242, 255, 255, 255)));
-    private static readonly Pen PillEdge = Freeze(new Pen(new SolidColorBrush(Color.FromArgb(36, 255, 255, 255)), 0.5));
-    private static readonly Pen Outline = Freeze(new Pen(new SolidColorBrush(Color.FromArgb(242, 255, 255, 255)), 1));
-    private static readonly Pen Crosshair = Freeze(new Pen(new SolidColorBrush(Color.FromArgb(140, 255, 255, 255)), 0.5) { DashStyle = new DashStyle([8, 6], 0) });
-    private static readonly Pen LoupeGrid = Freeze(new Pen(new SolidColorBrush(Color.FromArgb(20, 255, 255, 255)), 0.5));
-    private static readonly Pen LoupeCenter = Freeze(new Pen(Brushes.White, 1.5));
-    private static readonly Pen LoupeEdge = Freeze(new Pen(new SolidColorBrush(Color.FromArgb(64, 255, 255, 255)), 1));
+    private static readonly Brush Dim = Controls.Frozen(new SolidColorBrush(Color.FromArgb(92, 0, 0, 0)));
+    private static readonly Brush DimText = Controls.Frozen(new SolidColorBrush(Color.FromArgb(107, 0, 0, 0)));
+    private static readonly Brush PillFill = Controls.Frozen(new SolidColorBrush(Color.FromArgb(184, 0, 0, 0)));
+    private static readonly Brush PillLight = Controls.Frozen(new SolidColorBrush(Color.FromArgb(242, 255, 255, 255)));
+    private static readonly Pen PillEdge = Controls.Frozen(new Pen(new SolidColorBrush(Color.FromArgb(36, 255, 255, 255)), 0.5));
+    private static readonly Pen Outline = Controls.Frozen(new Pen(new SolidColorBrush(Color.FromArgb(242, 255, 255, 255)), 1));
+    private static readonly Pen Crosshair = Controls.Frozen(new Pen(new SolidColorBrush(Color.FromArgb(140, 255, 255, 255)), 0.5) { DashStyle = new DashStyle([8, 6], 0) });
+    private static readonly Pen LoupeGrid = Controls.Frozen(new Pen(new SolidColorBrush(Color.FromArgb(20, 255, 255, 255)), 0.5));
+    private static readonly Pen LoupeCenter = Controls.Frozen(new Pen(Brushes.White, 1.5));
+    private static readonly Pen LoupeEdge = Controls.Frozen(new Pen(new SolidColorBrush(Color.FromArgb(64, 255, 255, 255)), 1));
     private static readonly Typeface Face = new(new FontFamily("Segoe UI Variable Text, Segoe UI, Malgun Gothic"), FontStyles.Normal, FontWeights.Medium, FontStretches.Normal);
 
     private readonly SelectionSession _session;
@@ -218,8 +218,8 @@ internal sealed class SelectionOverlay : OverlayWindow
         Frame = frame;
         _bitmap = FrameImages.ToBitmap(frame, monitor.Dpi);
         _accent = Palette.DarkTheme.Accent;
-        _windowEdge = Freeze(new Pen(_accent, 3));
-        _windowFill = Freeze(new SolidColorBrush(Color.FromArgb(31, Palette.DarkTheme.Accent.Color.R, Palette.DarkTheme.Accent.Color.G, Palette.DarkTheme.Accent.Color.B)));
+        _windowEdge = Controls.Frozen(new Pen(_accent, 3));
+        _windowFill = Controls.Frozen(new SolidColorBrush(Color.FromArgb(31, Palette.DarkTheme.Accent.Color.R, Palette.DarkTheme.Accent.Color.G, Palette.DarkTheme.Accent.Color.B)));
         Cursor = Cursors.Cross;
 
         _surface = new Surface(this);
@@ -404,8 +404,8 @@ internal sealed class SelectionOverlay : OverlayWindow
             case Key.C when ctrl:
                 CopyColor();
                 break;
-            case Key.C or Key.S or Key.T when !ctrl:
-                if (!e.IsRepeat) _session.ToggleAction(key switch { Key.C => CaptureKeyAction.Copy, Key.S => CaptureKeyAction.Save, _ => CaptureKeyAction.Text });
+            case Key.C or Key.S or Key.T or Key.P when !ctrl:
+                if (!e.IsRepeat) _session.ToggleAction(key switch { Key.C => CaptureKeyAction.Copy, Key.S => CaptureKeyAction.Save, Key.P => CaptureKeyAction.Pin, _ => CaptureKeyAction.Text });
                 break;
             case Key.LeftShift or Key.RightShift or Key.LeftAlt or Key.RightAlt:
                 UpdateSelection();
@@ -493,7 +493,7 @@ internal sealed class SelectionOverlay : OverlayWindow
 
     private IReadOnlyList<(string Keys, string Title)> CurrentHints()
     {
-        (string, string)[] actions = _session.AllowsActions ? [("C · S · T", Strings.KeyAction)] : [];
+        (string, string)[] actions = _session.AllowsActions ? [("C · S · T · P", Strings.KeyAction)] : [];
         if (_restored)
             return [("Enter", Strings.KeyCaptureIt), ("Esc", Strings.KeyPickAgain), ("←↑↓→", Strings.KeyMoveSelection), .. actions];
         if (Dragging)
@@ -645,6 +645,7 @@ internal sealed class SelectionOverlay : OverlayWindow
     {
         CaptureKeyAction.Copy => Strings.CaptureActionCopy,
         CaptureKeyAction.Save => Strings.CaptureActionSave,
+        CaptureKeyAction.Pin => Strings.CaptureActionPin,
         _ => Strings.CaptureActionText,
     };
 
@@ -667,12 +668,6 @@ internal sealed class SelectionOverlay : OverlayWindow
             dc.DrawText(text, new Point(rect.X + padX, rect.Y + padY));
             x += rect.Width + gap;
         }
-    }
-
-    private static T Freeze<T>(T freezable) where T : Freezable
-    {
-        freezable.Freeze();
-        return freezable;
     }
 
     /// <summary>Draws the overlay; the window keeps the state.</summary>

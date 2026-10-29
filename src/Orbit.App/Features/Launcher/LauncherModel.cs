@@ -202,7 +202,7 @@ internal sealed class LauncherModel(AppServices services, AppIndex apps, Frecenc
         new($"file.{path}", Path.GetFileName(path), Path.GetDirectoryName(path), IconKind.File, path, Strings.AccessoryFile, Strings.SectionFiles,
         [
             new LauncherAction(Strings.ActionOpen, Glyphs.OpenInNew, () => Open(path)),
-            new LauncherAction(Strings.ActionOpenFileLocation, Glyphs.Folder, () => Run(() => ShowInExplorer(path)), "Ctrl ↵"),
+            new LauncherAction(Strings.ActionOpenFileLocation, Glyphs.Folder, () => Run(() => Shell.Reveal(path)), "Ctrl ↵"),
             new LauncherAction(Strings.ActionCopyPath, Glyphs.Copy, () => Copy(path)),
         ]);
 
@@ -229,14 +229,11 @@ internal sealed class LauncherModel(AppServices services, AppIndex apps, Frecenc
         return new(AppId(app), app.Name, null, IconKind.App, app.ParsingName, Strings.AccessoryApp, section,
         [
             open,
-            new LauncherAction(Strings.ActionOpenFileLocation, Glyphs.Folder, () => Run(() => ShowInExplorer(path)), "Ctrl ↵"),
+            new LauncherAction(Strings.ActionOpenFileLocation, Glyphs.Folder, () => Run(() => Shell.Reveal(path)), "Ctrl ↵"),
             new LauncherAction(Strings.ActionRunAsAdmin, Glyphs.Shield, () => RunAsAdministrator(path)),
             new LauncherAction(Strings.ActionCopyPath, Glyphs.Copy, () => Copy(path)),
         ]);
     }
-
-    private static void ShowInExplorer(string path) =>
-        Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = false });
 
     /// <summary>Through UAC; saying no there is the user's choice, not a failure.</summary>
     private static void RunAsAdministrator(string path)

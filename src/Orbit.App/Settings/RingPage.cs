@@ -555,10 +555,10 @@ internal sealed class RingPage : StackPanel
         {
             var card = PresetCard(saved.Name, Strings.RingSavedDetail, saved.Slots);
             var menu = new ContextMenu();
-            menu.Items.Add(MenuItem(Strings.Rename, () => StartNaming(saved.Id, saved.Name)));
-            menu.Items.Add(MenuItem(Strings.RingUpdatePreset, () => { _presets.Update(saved.Id, _slots); FillPresets(); }));
+            menu.Items.Add(Controls.MenuItem(Strings.Rename, () => StartNaming(saved.Id, saved.Name)));
+            menu.Items.Add(Controls.MenuItem(Strings.RingUpdatePreset, () => { _presets.Update(saved.Id, _slots); FillPresets(); }));
             menu.Items.Add(new Separator());
-            menu.Items.Add(MenuItem(Strings.Delete, () => { _presets.Delete(saved.Id); FillPresets(); }));
+            menu.Items.Add(Controls.MenuItem(Strings.Delete, () => { _presets.Delete(saved.Id); FillPresets(); }));
             card.ContextMenu = menu;
             _presetCards.Children.Add(card);
         }
@@ -670,7 +670,7 @@ internal sealed class RingPage : StackPanel
         {
             Content = label, Width = 28, Height = 28, FontSize = 14, FontWeight = FontWeights.Bold, ToolTip = help,
             Foreground = _palette.Ink, Background = _palette.Surface, BorderThickness = new Thickness(0), Cursor = Cursors.Hand,
-            Template = RoundTemplate(14),
+            Template = Controls.RoundTemplate(14),
         };
         button.Click += (_, _) => click();
         return button;
@@ -682,7 +682,7 @@ internal sealed class RingPage : StackPanel
         {
             Content = label, Height = 28, Padding = new Thickness(12, 0, 12, 0), FontSize = 12, FontWeight = FontWeights.SemiBold,
             Foreground = prominent ? _palette.Canvas : _palette.Ink, Background = prominent ? _palette.Ink : _palette.Raised,
-            BorderThickness = new Thickness(0), Cursor = Cursors.Hand, Template = RoundTemplate(14),
+            BorderThickness = new Thickness(0), Cursor = Cursors.Hand, Template = Controls.RoundTemplate(14),
         };
         button.Click += (_, _) => click();
         return button;
@@ -693,24 +693,10 @@ internal sealed class RingPage : StackPanel
         var button = new Button
         {
             Content = label, FontSize = 11, FontWeight = FontWeights.SemiBold, Foreground = _palette.Accent, Background = Brushes.Transparent,
-            BorderThickness = new Thickness(0), Cursor = Cursors.Hand, Template = RoundTemplate(0),
+            BorderThickness = new Thickness(0), Cursor = Cursors.Hand, Template = Controls.RoundTemplate(0),
         };
         button.Click += (_, _) => click();
         return button;
-    }
-
-    /// <summary>A button drawn as its background with rounded corners and its content centered.</summary>
-    private static ControlTemplate RoundTemplate(double radius)
-    {
-        var border = new FrameworkElementFactory(typeof(Border));
-        border.SetValue(Border.CornerRadiusProperty, new CornerRadius(radius));
-        border.SetBinding(Border.BackgroundProperty, new System.Windows.Data.Binding(nameof(Background)) { RelativeSource = System.Windows.Data.RelativeSource.TemplatedParent });
-        border.SetBinding(Border.PaddingProperty, new System.Windows.Data.Binding(nameof(Control.Padding)) { RelativeSource = System.Windows.Data.RelativeSource.TemplatedParent });
-        var content = new FrameworkElementFactory(typeof(ContentPresenter));
-        content.SetValue(HorizontalAlignmentProperty, HorizontalAlignment.Center);
-        content.SetValue(VerticalAlignmentProperty, VerticalAlignment.Center);
-        border.AppendChild(content);
-        return new ControlTemplate(typeof(Button)) { VisualTree = border };
     }
 
     private CheckBox Toggle(bool on, Action<bool> changed)
@@ -718,12 +704,5 @@ internal sealed class RingPage : StackPanel
         var box = new CheckBox { IsChecked = on, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(12, 2, 0, 0), Cursor = Cursors.Hand };
         box.Click += (_, _) => changed(box.IsChecked == true);
         return box;
-    }
-
-    private static MenuItem MenuItem(string header, Action click)
-    {
-        var item = new MenuItem { Header = header };
-        item.Click += (_, _) => click();
-        return item;
     }
 }

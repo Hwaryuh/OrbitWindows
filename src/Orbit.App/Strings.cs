@@ -48,6 +48,26 @@ internal static class Strings
     public static string TextNotFound => T("글자를 찾지 못했습니다.", "No text found.");
     public static string TextCopied(int words) => T($"{words}단어를 복사했습니다.", words == 1 ? "Copied 1 word." : $"Copied {words} words.");
     public static string TextNoLanguage => T("글자 인식 언어가 없습니다. 설정 > 시간 및 언어 > 언어에서 언어 팩을 추가하세요.", "No text recognition language is installed. Add a language pack in Settings > Time & language > Language.");
+    public static string CaptureActionPin => T("화면에 고정", "Pin to screen");
+
+    // Capture previews and pins
+    public static string CardHint => T("클릭해서 편집  ·  오른쪽 클릭으로 더 보기", "Click to edit  ·  right-click for more");
+    public static string CardEdit => T("편집", "Edit");
+    public static string CardCopyText => T("글자 복사", "Copy Text");
+    public static string CardPin => T("화면에 고정", "Pin to Screen");
+    public static string CardSaveToFolder => T("폴더에 저장", "Save to Folder");
+    public static string CardShowInExplorer => T("파일 탐색기에서 보기", "Show in File Explorer");
+    public static string CardTuck => T("옆으로 치우기", "Tuck to the Side");
+    public static string CardClose => T("닫기", "Close");
+    public static string CardMoveToRecycleBin => T("휴지통으로 이동", "Move to Recycle Bin");
+    public static string CardShowAll => T("캡처 보기", "Show captures");
+    public static string MovedToRecycleBin => T("휴지통으로 옮겼습니다.", "Moved to the Recycle Bin.");
+    public static string MovedToRecycleBinDetail => T("휴지통에서 되살릴 수 있습니다.", "You can restore it from the Recycle Bin.");
+    public static string RecycleFailed => T("휴지통으로 옮기지 못했습니다.", "Could not move it to the Recycle Bin.");
+    public static string CaptureFileMissing => T("캡처 파일을 찾지 못했습니다.", "The capture file could not be found.");
+    public static string PinUnpin => T("고정 해제", "Unpin");
+    public static string PinUnpinHint => T("고정을 풀고 미리보기로 돌려놓습니다.", "Unpin and put it back with the previews.");
+    public static string PinCloseHint => T("닫기 (Esc)", "Close (Esc)");
     public static string ColorCopied(string hex) => T($"{hex} 색을 복사했습니다.", $"{hex} copied to the clipboard.");
 
     public static string MenuSettings => T("설정", "Settings");

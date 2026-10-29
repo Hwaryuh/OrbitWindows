@@ -18,9 +18,8 @@ namespace Orbit.App.Features;
 /// Screen capture (Orbit: Modules/Capture/CaptureService.swift): area, window, full screen and
 /// text, and the last area again. Every monitor is frozen first; only then does the selection
 /// show. Each picture goes into the library (recognized text only onto the clipboard, as Orbit);
-/// then it is copied (capture.autoCopy), or what the key
-/// picked in the selection happens. Shortcuts: docs/plan/04-shortcuts.md. Quick access cards,
-/// pins and the editor come in the next slices of M2.
+/// then it is copied (capture.autoCopy) and shown as a preview card, or what the key picked in the
+/// selection happens. Shortcuts: docs/plan/04-shortcuts.md. The editor comes in the next slice of M2.
 /// </summary>
 internal sealed class CaptureFeature : IFeature
 {
@@ -31,12 +30,15 @@ internal sealed class CaptureFeature : IFeature
     private readonly Dictionary<int, OrbitAction> _hotkeys = [];
     private AppServices? _services;
     private CaptureStore? _store;
+    private QuickAccess? _cards;
     private bool _busy;
 
     public void Start(AppServices services)
     {
         _services = services;
         _store = new CaptureStore(services.Preferences);
+        _cards = new QuickAccess(services.Preferences, new CaptureActions(_store));
+        _cards.Pin = item => PinWindow.Pin(item, _cards);
         Register(OrbitAction.CaptureArea, Mode.Area, 0x34);
         Register(OrbitAction.CaptureWindow, Mode.Window, 0x35);
         Register(OrbitAction.CaptureScreen, Mode.Screen, 0x33);
@@ -103,7 +105,7 @@ internal sealed class CaptureFeature : IFeature
             if (mode != Mode.Text && result.Window is null) store.LastArea = new LastArea(result.Area, result.Monitor.DeviceName);
 
             var image = result.Window is { } window ? await WindowImageAsync(window, result) : result.Frame.Crop(result.Area);
-            if (mode == Mode.Text || result.Action == CaptureKeyAction.Text) await RecognizeAsync(image);
+            if (mode == Mode.Text || result.Action == CaptureKeyAction.Text) await CaptureActions.RecognizeAsync(image);
             else Deliver(image, result.Action);
         }
         catch (Exception e)
@@ -134,10 +136,14 @@ internal sealed class CaptureFeature : IFeature
         return result.Frame.Crop(result.Area);
     }
 
-    /// <summary>Into the library, then copied, saved or kept, as the key picked (Orbit: <c>deliver</c>, <c>finish</c>).</summary>
+    /// <summary>
+    /// Into the library, then copied, saved or pinned as the key picked; else copied
+    /// (capture.autoCopy) and shown as a card (Orbit: <c>deliver</c>, <c>finish</c>).
+    /// </summary>
     private void Deliver(ScreenFrame frame, CaptureKeyAction? action)
     {
         var store = _store!;
+        var cards = _cards!;
         var bitmap = FrameImages.ToBitmap(frame);
         var png = FrameImages.Png(bitmap);
         string path;
@@ -152,49 +158,24 @@ internal sealed class CaptureFeature : IFeature
             return;
         }
         Log.Info($"Captured {frame.Width}x{frame.Height} via {frame.Source}{(action is { } a ? $", {a}" : "")}");
+        var item = new CaptureItem(path, bitmap);
 
         switch (action)
         {
             case CaptureKeyAction.Copy:
-                Toast.Show(FrameImages.Copy(bitmap, png) ? Strings.CaptureCopied : Strings.CopyFailed);
+                cards.Actions.Copy(item);
                 break;
             case CaptureKeyAction.Save:
-                try
-                {
-                    var saved = store.SaveCopy(path);
-                    Toast.Show(Strings.CaptureSaved, Path.GetFileName(Path.GetDirectoryName(saved)));
-                }
-                catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-                {
-                    Log.Error("Capture could not be saved to the save folder", e);
-                    Toast.Show(Strings.CaptureSaveFailed);
-                }
+                cards.Actions.Save(item);
+                break;
+            case CaptureKeyAction.Pin:
+                PinWindow.Pin(item, cards);
                 break;
             default:
-                bool copy = _services!.Preferences.Get<bool>(Pref.CaptureAutoCopy);
-                if (copy && !FrameImages.Copy(bitmap, png)) Toast.Show(Strings.CopyFailed);
-                else Toast.Show(copy ? Strings.CaptureCopied : Strings.CaptureStored, Path.GetFileName(path));
+                if (_services!.Preferences.Get<bool>(Pref.CaptureAutoCopy) && !FrameImages.Copy(bitmap, png)) Toast.Show(Strings.CopyFailed);
+                cards.Add(item);
                 break;
         }
-    }
-
-    /// <summary>The text in the picture onto the clipboard (Orbit: <c>recognizeText</c>; QR codes come later).</summary>
-    private static async Task RecognizeAsync(ScreenFrame frame)
-    {
-        var text = await TextRecognition.RecognizeAsync(frame);
-        if (text is null)
-        {
-            Toast.Show(Strings.TextNoLanguage);
-            return;
-        }
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            Toast.Show(Strings.TextNotFound);
-            return;
-        }
-        int words = text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
-        var line = text.ReplaceLineEndings(" ");
-        Clipboards.CopyText(text, Strings.TextCopied(words), line.Length > 80 ? line[..80] + "…" : line);
     }
 
     /// <summary>A white flash over the monitor that was captured whole, as Orbit's.</summary>

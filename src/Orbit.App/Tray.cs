@@ -17,7 +17,7 @@ internal sealed class Tray : IDisposable
     {
         var menu = new ContextMenu();
         foreach (var item in items)
-            menu.Items.Add(item is { } entry ? Item(entry.Header, entry.Action) : new Separator());
+            menu.Items.Add(item is { } entry ? Design.Controls.MenuItem(entry.Header, entry.Action) : new Separator());
 
         _icon = new TaskbarIcon
         {
@@ -32,13 +32,6 @@ internal sealed class Tray : IDisposable
     public void Notify(string title, string message) => _icon.ShowNotification(title, message);
 
     public void Dispose() => _icon.Dispose();
-
-    private static MenuItem Item(string header, Action action)
-    {
-        var item = new MenuItem { Header = header };
-        item.Click += (_, _) => action();
-        return item;
-    }
 
     /// <summary>A plain ring on black until Orbit's icon is drawn: a PNG wrapped in a one-image .ico.</summary>
     private static System.Drawing.Icon DrawIcon()

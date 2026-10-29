@@ -106,3 +106,7 @@ SHGetKnownFolderPath
 
 // Capture: window bounds when DWM has none
 GetWindowRect
+
+// Capture previews: moving a file to the Recycle Bin
+SHFileOperation
+GetWindowRect

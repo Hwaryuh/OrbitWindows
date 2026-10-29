@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Orbit.Core.Capture;
+using Orbit.Core.Display;
 
 namespace Orbit.App.Features.Capture;
 
@@ -15,6 +16,18 @@ internal static class FrameImages
         var bitmap = BitmapSource.Create(frame.Width, frame.Height, dpi, dpi, PixelFormats.Bgr32, null, frame.Pixels, frame.Stride);
         bitmap.Freeze();
         return bitmap;
+    }
+
+    /// <summary>A picture as 32-bit BGRA pixels, for the steps that work on frames (text recognition).</summary>
+    public static ScreenFrame ToFrame(BitmapSource bitmap)
+    {
+        BitmapSource source = bitmap.Format == PixelFormats.Bgra32 || bitmap.Format == PixelFormats.Bgr32
+            ? bitmap
+            : new FormatConvertedBitmap(bitmap, PixelFormats.Bgra32, null, 0);
+        int stride = source.PixelWidth * 4;
+        var pixels = new byte[stride * source.PixelHeight];
+        source.CopyPixels(pixels, stride, 0);
+        return new ScreenFrame(pixels, source.PixelWidth, source.PixelHeight, stride, new PixelRect(0, 0, source.PixelWidth, source.PixelHeight), "File");
     }
 
     public static byte[] Png(BitmapSource bitmap)

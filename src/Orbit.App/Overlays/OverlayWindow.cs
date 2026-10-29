@@ -63,11 +63,17 @@ public class OverlayWindow : Window
     {
         base.OnDpiChanged(oldDpi, newDpi);
         // WPF resized the window to Windows' suggestion for the new monitor; put it back where Orbit wants it.
-        if (!_placement.IsEmpty) Dispatcher.BeginInvoke(() => Place(_placement));
+        if (HoldsPlacement && !_placement.IsEmpty) Dispatcher.BeginInvoke(() => Place(_placement));
         OnMonitorDpiChanged(oldDpi, newDpi);
     }
 
     protected virtual void OnMonitorDpiChanged(DpiScale oldDpi, DpiScale newDpi) { }
+
+    /// <summary>
+    /// Whether a DPI change puts the window back where <see cref="Place"/> last put it. A window the
+    /// user moves (a pin) takes Windows' suggestion instead.
+    /// </summary>
+    protected virtual bool HoldsPlacement => true;
 
     private void ApplyStyles()
     {
