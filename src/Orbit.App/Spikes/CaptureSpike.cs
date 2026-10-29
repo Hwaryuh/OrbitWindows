@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Windows.Media.Imaging;
+using Orbit.App.Features;
 using Orbit.App.Overlays;
 using Orbit.Core;
 using Orbit.Core.Capture;
@@ -13,12 +14,17 @@ namespace Orbit.App.Spikes;
 /// reference; only when all frames are in, show one overlay per monitor. A selection is cropped
 /// from the WGC frame, compared with the reference and saved, both, for a look by eye.
 /// </summary>
-internal sealed class CaptureSpike(WgcCapture? wgc, Action<string, string> notify)
+internal sealed class CaptureSpike : IFeature
 {
     private static readonly TimeSpan FrameTimeout = TimeSpan.FromMilliseconds(500);
 
     private readonly List<CaptureOverlayWindow> _overlays = [];
     private bool _running;
+    private AppServices? _services;
+
+    public void Start(AppServices services) => _services = services;
+
+    private void Notify(string title, string message) => _services?.Notify(title, message);
 
     public async Task RunAsync()
     {
@@ -41,7 +47,7 @@ internal sealed class CaptureSpike(WgcCapture? wgc, Action<string, string> notif
             if (!SameLayout(monitors, Monitors.All()))
             {
                 Log.Warn("Capture spike cancelled: the monitor layout changed while capturing");
-                notify(Strings.CaptureResultTitle, Strings.CaptureCancelled);
+                Notify(Strings.CaptureResultTitle, Strings.CaptureCancelled);
                 return;
             }
             ShowOverlays(monitors, frames, references);
@@ -49,7 +55,7 @@ internal sealed class CaptureSpike(WgcCapture? wgc, Action<string, string> notif
         catch (Exception e)
         {
             Log.Error("Capture spike failed", e);
-            notify(Strings.CaptureResultTitle, Strings.CaptureFailed);
+            Notify(Strings.CaptureResultTitle, Strings.CaptureFailed);
             CloseOverlays();
         }
         finally
@@ -87,7 +93,7 @@ internal sealed class CaptureSpike(WgcCapture? wgc, Action<string, string> notif
 
     private async Task<ScreenFrame> CaptureAsync(MonitorInfo monitor)
     {
-        if (wgc is not null)
+        if (_services?.Capture is { } wgc)
         {
             try
             {
@@ -139,7 +145,7 @@ internal sealed class CaptureSpike(WgcCapture? wgc, Action<string, string> notif
         Save(captured, Path.Combine(folder, $"capture-{stamp}-{captured.Source.ToLowerInvariant()}.png"));
         Save(reference, Path.Combine(folder, $"capture-{stamp}-gdi-reference.png"));
         Log.Info($"Capture spike selection {area} via {captured.Source}: {captured.Width}x{captured.Height}, match with GDI {match:P3}, saved to {folder}");
-        notify(Strings.CaptureResultTitle, Strings.CaptureResult(captured.Width, captured.Height, match, captured.Source));
+        Notify(Strings.CaptureResultTitle, Strings.CaptureResult(captured.Width, captured.Height, match, captured.Source));
     }
 
     private void CloseOverlays()

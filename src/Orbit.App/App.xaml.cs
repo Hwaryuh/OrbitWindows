@@ -1,6 +1,6 @@
-﻿using System.Diagnostics;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Threading;
+using Orbit.App.Features;
 using Orbit.App.Overlays;
 using Orbit.App.Spikes;
 using Orbit.Core;
@@ -12,17 +12,21 @@ using Orbit.Core.Settings;
 
 namespace Orbit.App;
 
+/// <summary>
+/// Starts what every feature shares (preferences, the hooks, capture, the tray), then the features
+/// themselves (<see cref="IFeature"/>), and hands them the hooks' events.
+/// </summary>
 public partial class App : Application
 {
     private Mutex? _instance;
-    private HookThread? _hooks;
-    private Tray? _tray;
-    private WgcCapture? _wgc;
-    private CaptureSpike? _captureSpike;
-    private TestRingWindow? _ring;
     private Preferences? _preferences;
     private ForegroundTracker? _foreground;
+    private HookThread? _hooks;
+    private Tray? _tray;
+    private AppServices? _services;
     private readonly ActionRunner _actions = new();
+    private readonly CaptureSpike _captureSpike = new();
+    private readonly List<IFeature> _features = [];
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -46,31 +50,16 @@ public partial class App : Application
         if (_preferences.Get<bool>(Pref.LaunchAtSignIn) && StartupRegistration.IsEnabled()) StartupRegistration.Apply(true);
         _foreground = new ForegroundTracker();
         _actions.Unavailable += action => Toast.Show(Strings.ActionNotReady(action.Title()));
-        _actions.Register(OrbitAction.Settings, () => Settings.SettingsWindow.ShowOrActivate(_preferences));
-
         _tray = CreateTray();
+
         _hooks = new HookThread();
-        // Defaults from docs/plan/04-shortcuts.md. 0x20 is Space.
-        _hooks.Hotkeys.Register(HotkeyRing, new Hotkey(Modifiers.Ctrl | Modifiers.Alt, 0x20));
-        _hooks.Hotkeys.Register(HotkeyLauncher, new Hotkey(Modifiers.Alt, 0x20));
-        _hooks.Notice += e => Dispatcher.BeginInvoke(() => OnHookNotice(e));
+        _services = new AppServices(_preferences, _actions, _hooks.Hotkeys, _foreground, Notify);
+        _features.AddRange([new SettingsFeature(), new RingFeature(), new LauncherFeature(), _captureSpike]);
+        foreach (var feature in _features) feature.Start(_services);
+        _hooks.Notice += e => Dispatcher.BeginInvoke(() => OnHook(e));
         _hooks.Start();
 
-        if (WgcCapture.IsSupported)
-        {
-            try
-            {
-                _wgc = new WgcCapture();
-                bool borderless = await _wgc.RequestBorderlessAsync();
-                Log.Info($"Windows.Graphics.Capture ready, borderless {borderless}");
-            }
-            catch (Exception error)
-            {
-                Log.Error("Windows.Graphics.Capture unavailable; GDI only", error);
-                _wgc = null;
-            }
-        }
-        _captureSpike = new CaptureSpike(_wgc, Notify);
+        _services.Capture = await StartCaptureAsync();
 
         if (e.Args.Contains("--selftest-capture"))
         {
@@ -83,54 +72,43 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         _hooks?.Dispose();
+        foreach (var feature in _features) feature.Dispose();
         _foreground?.Dispose();
         _preferences?.Dispose();
-        _wgc?.Dispose();
+        _services?.Capture?.Dispose();
         _tray?.Dispose();
         _instance?.Dispose();
         Log.Info("Orbit stopped");
         base.OnExit(e);
     }
 
-    private const int HotkeyRing = 1;
-    private const int HotkeyLauncher = 2;
-
-    private void OnHookNotice(HookEvent e)
+    private void OnHook(HookEvent e)
     {
-        switch (e.Notice)
-        {
-            case HookNotice.RingOpen:
-                OpenRing(e.X, e.Y);
-                break;
-            case HookNotice.HotkeyDown when e.Hotkey == HotkeyRing:
-                var (x, y) = Monitors.Cursor();
-                OpenRing(x, y);
-                break;
-            case HookNotice.HotkeyDown when e.Hotkey == HotkeyLauncher:
-                Log.Info("Launcher shortcut pressed");
-                _actions.Perform(OrbitAction.Launcher);
-                break;
-            case HookNotice.RingRelease:
-            case HookNotice.HotkeyUp when e.Hotkey == HotkeyRing:
-            case HookNotice.HooksReinstalled:
-                _ring?.Release();
-                _ring = null;
-                break;
-        }
+        foreach (var feature in _features) feature.OnHook(e);
     }
 
-    private void OpenRing(int x, int y)
+    private static async Task<WgcCapture?> StartCaptureAsync()
     {
-        _ring?.Release();
-        _ring = new TestRingWindow();
-        _ring.Open(x, y);
+        if (!WgcCapture.IsSupported) return null;
+        try
+        {
+            var wgc = new WgcCapture();
+            bool borderless = await wgc.RequestBorderlessAsync();
+            Log.Info($"Windows.Graphics.Capture ready, borderless {borderless}");
+            return wgc;
+        }
+        catch (Exception error)
+        {
+            Log.Error("Windows.Graphics.Capture unavailable; GDI only", error);
+            return null;
+        }
     }
 
     private Tray CreateTray() => new(
     [
         (Strings.MenuSettings, () => _actions.Perform(OrbitAction.Settings)),
         null,
-        (Strings.MenuCaptureTest, () => _ = _captureSpike?.RunAsync()),
+        (Strings.MenuCaptureTest, () => _ = _captureSpike.RunAsync()),
         (Strings.MenuMonitorReport, () => { LogMonitors(); Notify(Strings.AppName, Strings.MonitorReportSaved); }),
         (Strings.MenuOpenLogs, Shell.OpenLogFolder),
         null,

@@ -36,6 +36,7 @@ public readonly record struct HotkeyDecision(bool Swallow, int Pressed, int Rele
 /// </summary>
 public sealed class HotkeyMatcher
 {
+    public const uint VkSpace = 0x20;
     public const uint VkShift = 0x10, VkControl = 0x11, VkMenu = 0x12;
     public const uint VkLWin = 0x5B, VkRWin = 0x5C;
     public const uint VkLShift = 0xA0, VkRShift = 0xA1, VkLControl = 0xA2, VkRControl = 0xA3, VkLMenu = 0xA4, VkRMenu = 0xA5;
