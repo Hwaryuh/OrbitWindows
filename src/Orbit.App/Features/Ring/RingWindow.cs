@@ -13,6 +13,8 @@ using Orbit.Core.Actions;
 using Orbit.Core.Display;
 using Orbit.Core.Ring;
 
+using static Orbit.App.Features.Ring.RingDrawing;
+
 namespace Orbit.App.Features.Ring;
 
 /// <summary>
@@ -46,12 +48,12 @@ internal sealed class RingWindow : OverlayWindow
     private int? _shownSelection = -1;
     private bool _finished;
 
-    private RingWindow(IReadOnlyList<OrbitAction> slots, bool hold, TimeSpan dwell, Palette palette)
+    private RingWindow(IReadOnlyList<OrbitAction> slots, bool hold, TimeSpan dwell, bool hoverActivates, Palette palette)
         : base(activating: false, transparent: true, clickThrough: false)
     {
         _slots = slots;
         _palette = palette;
-        _tracker = new RingTracker(slots.Count, dwell);
+        _tracker = new RingTracker(slots.Count, dwell, hoverActivates);
         _items = new Item[slots.Count];
 
         var root = new Canvas { Width = Size, Height = Size, RenderTransform = _rootScale };
@@ -61,14 +63,14 @@ internal sealed class RingWindow : OverlayWindow
             Fill = Palette.Fade(palette.Canvas, 0.96), Stroke = palette.Hairline, StrokeThickness = 1,
             Effect = new DropShadowEffect { BlurRadius = 40, ShadowDepth = 12, Direction = 270, Opacity = 0.28, Color = Colors.Black },
         };
-        Place(root, disc, Center, Center);
-        root.Children.Add(Spokes(slots.Count, palette));
+        RingDrawing.Place(root, disc, Center, Center);
+        root.Children.Add(Spokes(slots.Count, Center, 44, Size / 2 - 24, SpokeStroke(palette)));
         var track = new Ellipse
         {
             Width = RingTracker.ItemRadius * 2, Height = RingTracker.ItemRadius * 2,
             Stroke = Palette.Fade(palette.Ink, 0.14), StrokeThickness = 1, StrokeDashArray = [2, 4],
         };
-        Place(root, track, Center, Center);
+        RingDrawing.Place(root, track, Center, Center);
         _sector = new Path { Fill = Palette.Fade(palette.Ink, 0.06), Visibility = Visibility.Collapsed };
         root.Children.Add(_sector);
         _satellite = new Ellipse
@@ -88,10 +90,11 @@ internal sealed class RingWindow : OverlayWindow
         }
 
         var hubDisc = new Ellipse { Width = Hub, Height = Hub, Fill = palette.Surface, Stroke = palette.Hairline, StrokeThickness = 1 };
-        Place(root, hubDisc, Center, Center);
-        _mark = new OrbitMark { Size = 46, Ink = palette.Ink, Accent = palette.Accent, Dot = true };
+        RingDrawing.Place(root, hubDisc, Center, Center);
+        // Centered by itself, as the hub's text is: the hub's content alignment left it in the top left corner.
+        _mark = new OrbitMark { Size = 46, Ink = palette.Ink, Accent = palette.Accent, Dot = true, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
         _hub = new ContentControl { Width = 80, Content = _mark, HorizontalContentAlignment = HorizontalAlignment.Center, VerticalContentAlignment = VerticalAlignment.Center, Height = Hub };
-        Place(root, _hub, Center, Center);
+        RingDrawing.Place(root, _hub, Center, Center);
         hubDisc.MouseLeftButtonUp += (_, e) => { e.Handled = true; Finish(_tracker.Click(null)); };
         _hub.MouseLeftButtonUp += (_, e) => { e.Handled = true; Finish(_tracker.Click(null)); };
 
@@ -113,9 +116,9 @@ internal sealed class RingWindow : OverlayWindow
         set => SetValue(AppearProperty, value);
     }
 
-    public static RingWindow Open(IReadOnlyList<OrbitAction> slots, bool hold, TimeSpan dwell)
+    public static RingWindow Open(IReadOnlyList<OrbitAction> slots, bool hold, TimeSpan dwell, bool hoverActivates)
     {
-        var ring = new RingWindow(slots, hold, dwell, Palette.Current());
+        var ring = new RingWindow(slots, hold, dwell, hoverActivates, Palette.Current());
         ring.ShowAt(new PixelRect(ring._centerX - ring.SizePixels / 2, ring._centerY - ring.SizePixels / 2, ring.SizePixels, ring.SizePixels));
         ring.Animate(1, TimeSpan.FromMilliseconds(320), new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.3 });
         CompositionTarget.Rendering += ring.OnFrame;
@@ -225,37 +228,6 @@ internal sealed class RingWindow : OverlayWindow
             _sector.Visibility = Visibility.Collapsed;
             _hub.Content = _mark;
         }
-    }
-
-    /// <summary>Angle 0 = up, clockwise, y down.</summary>
-    private static (double X, double Y) Offset(double angle, double radius) => (Math.Sin(angle) * radius, -Math.Cos(angle) * radius);
-
-    private static void Place(Canvas canvas, FrameworkElement element, double cx, double cy)
-    {
-        Canvas.SetLeft(element, cx - element.Width / 2);
-        Canvas.SetTop(element, cy - (double.IsNaN(element.Height) ? 0 : element.Height / 2));
-        canvas.Children.Add(element);
-    }
-
-    /// <summary>Faint lines on the boundaries between slots, so each action's area shows.</summary>
-    private static Path Spokes(int count, Palette palette)
-    {
-        var geometry = new StreamGeometry();
-        if (count > 1)
-        {
-            using var g = geometry.Open();
-            double step = 2 * Math.PI / count;
-            for (int i = 0; i < count; i++)
-            {
-                double a = (i + 0.5) * step;
-                var (ix, iy) = Offset(a, 44);
-                var (ox, oy) = Offset(a, Size / 2 - 24);
-                g.BeginFigure(new Point(Center + ix, Center + iy), false, false);
-                g.LineTo(new Point(Center + ox, Center + oy), true, false);
-            }
-        }
-        geometry.Freeze();
-        return new Path { Data = geometry, Stroke = Palette.Fade(palette.Ink, 0.07), StrokeThickness = 1, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round };
     }
 
     /// <summary>An annular sector between two angles (0 = up, clockwise).</summary>

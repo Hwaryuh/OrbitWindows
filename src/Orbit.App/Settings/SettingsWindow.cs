@@ -35,10 +35,11 @@ public sealed class SettingsWindow : Window
     {
         _preferences = preferences;
         Title = Strings.SettingsTitle;
-        Width = 760;
-        Height = 520;
-        MinWidth = 600;
-        MinHeight = 400;
+        // Wide enough for the ring page's ring beside its action list.
+        Width = 960;
+        Height = 700;
+        MinWidth = 860;
+        MinHeight = 480;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         Background = Brushes.White;
         FontFamily = new FontFamily("Segoe UI Variable Text, Segoe UI, Malgun Gothic");
@@ -80,6 +81,7 @@ public sealed class SettingsWindow : Window
     private Func<UIElement> Build(string id, string title) => id switch
     {
         "general" => General,
+        "ring" => () => new RingPage(_preferences),
         "about" => About,
         _ => () => NotReady(title),
     };

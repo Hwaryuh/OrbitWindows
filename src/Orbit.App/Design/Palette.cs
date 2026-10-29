@@ -44,7 +44,29 @@ internal sealed class Palette
         Foreground = Ink, CaretBrush = Ink, VerticalContentAlignment = System.Windows.VerticalAlignment.Center,
     };
 
+    /// <summary>
+    /// <paramref name="field"/> with a hint shown in it while it is empty. The hint sits
+    /// <paramref name="hintIndent"/> in from the field's own left edge, where its text starts.
+    /// </summary>
+    public System.Windows.Controls.Grid WithHint(System.Windows.Controls.TextBox field, string hint, double hintIndent)
+    {
+        var text = new System.Windows.Controls.TextBlock
+        {
+            Text = hint, FontSize = field.FontSize, Foreground = InkSecondary, IsHitTestVisible = false,
+            VerticalAlignment = System.Windows.VerticalAlignment.Center,
+            Margin = new System.Windows.Thickness(field.Margin.Left + hintIndent, 0, 0, 0),
+        };
+        field.TextChanged += (_, _) => text.Visibility = field.Text.Length == 0 ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+        var grid = new System.Windows.Controls.Grid();
+        grid.Children.Add(text);
+        grid.Children.Add(field);
+        return grid;
+    }
+
     public static Palette Current() => new(!AppsUseLightTheme());
+
+    /// <summary>The light palette whatever Windows uses: the settings window is always white.</summary>
+    public static Palette Light { get; } = new(false);
 
     /// <summary><paramref name="brush"/>'s color at <paramref name="opacity"/>.</summary>
     public static SolidColorBrush Fade(SolidColorBrush brush, double opacity)

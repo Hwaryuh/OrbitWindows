@@ -75,7 +75,7 @@ internal sealed class RingFeature : IFeature
         var services = _services!;
         var slots = RingSlots.Parse(services.Preferences.Get<string[]>(Pref.RingSlots));
         var dwell = TimeSpan.FromSeconds(services.Preferences.Get<double>(Pref.RingDwell));
-        var ring = RingWindow.Open(slots, hold: true, dwell);
+        var ring = RingWindow.Open(slots, hold: true, dwell, services.Preferences.Get<bool>(Pref.RingHover));
         ring.Finished += result => OnFinished(ring, slots, result);
         _ring = ring;
         services.Hooks.ReportClicks = true;

@@ -173,9 +173,22 @@ public static class RingSlots
     ];
 
     /// <summary>The stored ids, unknown ones dropped; the defaults unless 3 to 12 remain.</summary>
-    public static IReadOnlyList<OrbitAction> Parse(IEnumerable<string>? ids)
+    public static IReadOnlyList<OrbitAction> Parse(IEnumerable<string>? ids) => TryParse(ids, dropUnknown: true) ?? Default;
+
+    /// <summary>
+    /// The stored ids as a ring, or null when it isn't one: fewer than 3 or more than 12, or (unless
+    /// <paramref name="dropUnknown"/>) an id no action has.
+    /// </summary>
+    public static IReadOnlyList<OrbitAction>? TryParse(IEnumerable<string>? ids, bool dropUnknown = false)
     {
-        var parsed = (ids ?? []).Select(OrbitActions.FromId).OfType<OrbitAction>().ToList();
-        return parsed.Count is >= Min and <= Max ? parsed : Default;
+        if (ids is null) return null;
+        var list = ids.ToList();
+        var parsed = list.Select(OrbitActions.FromId).OfType<OrbitAction>().ToList();
+        if (!dropUnknown && parsed.Count != list.Count) return null;
+        return Valid(parsed) ? parsed : null;
     }
+
+    public static bool Valid(IReadOnlyCollection<OrbitAction> slots) => slots.Count is >= Min and <= Max;
+
+    public static string[] Ids(IEnumerable<OrbitAction> slots) => slots.Select(a => a.Id()).ToArray();
 }

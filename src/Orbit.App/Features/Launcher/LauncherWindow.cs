@@ -54,19 +54,8 @@ internal sealed class LauncherWindow : OverlayWindow
 
         _query = palette.PlainField(18);
         _query.Margin = new Thickness(12, 0, 0, 0);
-        var placeholder = new TextBlock
-        {
-            Text = Strings.LauncherPlaceholder, FontSize = 18, Foreground = palette.InkSecondary, IsHitTestVisible = false,
-            VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(15, 0, 0, 0),
-        };
-        _query.TextChanged += (_, _) =>
-        {
-            placeholder.Visibility = _query.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
-            Rebuild();
-        };
-        var searchField = new Grid();
-        searchField.Children.Add(placeholder);
-        searchField.Children.Add(_query);
+        _query.TextChanged += (_, _) => Rebuild();
+        var searchField = palette.WithHint(_query, Strings.LauncherPlaceholder, 3);
         var search = new DockPanel { Height = SearchHeight, Margin = new Thickness(18, 0, 18, 0) };
         var mark = new OrbitMark { Size = 22, Ink = palette.Ink, Accent = palette.Accent, Dot = true, VerticalAlignment = VerticalAlignment.Center };
         DockPanel.SetDock(mark, Dock.Left);

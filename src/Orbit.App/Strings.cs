@@ -111,6 +111,66 @@ internal static class Strings
     public static string PageAbout => T("정보", "About");
     public static string LaunchAtSignIn => T("로그인할 때 Orbit 실행", "Open Orbit at sign-in");
     public static string LaunchAtSignInDetail => T("Windows에 로그인하면 Orbit이 트레이에서 시작됩니다.", "Orbit starts in the tray when you sign in to Windows.");
+    // Ring page
+    public static string RingSubtitle => T("포인터 주위에 동작이 모입니다. 슬롯을 누른 뒤 동작을 고르세요.", "Actions around your pointer. Click a slot, then pick what it does.");
+    public static string RingSlotsLabel => T("슬롯", "slots");
+    public static string RingFewer => T("슬롯 줄이기", "Fewer slots");
+    public static string RingMore => T("슬롯 늘리기", "More slots");
+    public static string SlotName(int? compass, int index) => compass switch
+    {
+        0 => T("위", "Top"), 1 => T("오른쪽 위", "Top right"), 2 => T("오른쪽", "Right"), 3 => T("오른쪽 아래", "Bottom right"),
+        4 => T("아래", "Bottom"), 5 => T("왼쪽 아래", "Bottom left"), 6 => T("왼쪽", "Left"), 7 => T("왼쪽 위", "Top left"),
+        _ => T($"{index + 1}번", $"Slot {index + 1}"),
+    };
+    public static string SlotTitle(string name) => T($"{name} 슬롯", $"{name} slot");
+    public static string RingLibraryHint => T("동작을 누르거나 링 위로 끌어다 놓으세요.", "Click an action, or drag it onto the ring.");
+    public static string RingSearchActions => T("동작 검색", "Search actions");
+    public static string RingOnRing => T("링에 있음", "On ring");
+    public static string RingPresets => T("프리셋", "Presets");
+    public static string RingPresetApplied => T("프리셋을 적용했습니다.", "Preset applied.");
+    public static string RingUndo => T("되돌리기", "Undo");
+    public static string RingMine => T("내 링", "My ring");
+    public static string RingMineDetail => T("편집할 때마다 저장되는 나만의 배치", "Your own layout, saved as you edit");
+    public static string RingPresetName(Orbit.Core.Ring.BuiltInRing kind) => kind switch
+    {
+        Orbit.Core.Ring.BuiltInRing.Balanced => T("균형", "Balanced"),
+        Orbit.Core.Ring.BuiltInRing.Screenshots => T("스크린샷", "Screenshots"),
+        _ => T("일상", "Everyday"),
+    };
+    public static string RingPresetDetail(Orbit.Core.Ring.BuiltInRing kind) => kind switch
+    {
+        Orbit.Core.Ring.BuiltInRing.Balanced => T("조금씩 다 있는 배치", "A bit of everything"),
+        Orbit.Core.Ring.BuiltInRing.Screenshots => T("모든 캡처 방식", "Every capture mode"),
+        _ => T("클립보드 먼저", "Clipboard first"),
+    };
+    public static string RingSavedDetail => T("저장한 프리셋", "Saved preset");
+    public static string RingSaveAsPreset => T("프리셋으로 저장", "Save as preset");
+    public static string RingSaveDetail => T("지금 링을 그대로 보관합니다", "Keep the ring as it is now");
+    public static string RingPresetNamePlaceholder => T("프리셋 이름", "Preset name");
+    public static string RingDefaultPresetName => T("내 프리셋", "My preset");
+    public static string Save => T("저장", "Save");
+    public static string Cancel => T("취소", "Cancel");
+    public static string Rename => T("이름 바꾸기", "Rename");
+    public static string RingUpdatePreset => T("지금 링으로 바꾸기", "Update to Current Ring");
+    public static string Delete => T("삭제", "Delete");
+    public static string RingOpenTitle => T("링 열기", "Open the ring");
+    public static string RingKeyboard => T("키보드", "Keyboard");
+    public static string RingKeyboardDetail => T("누른 채 방향을 고르고 놓습니다. 짧게 눌렀다 떼면 고를 때까지 열려 있습니다.", "Hold, aim, release. Or tap, then choose.");
+    public static string RingKeyboardFixed => T("단축키 변경은 아직 준비 중입니다.", "Changing the shortcut is not ready yet.");
+    public static string RingMouse => T("마우스 버튼으로 열기", "Open with a mouse button");
+    public static string RingMouseDetail => T("고른 버튼을 누르고 있으면 링이 열립니다. 짧게 누르면 원래 동작을 그대로 합니다.", "Hold the button you pick to open the ring. A quick click still does what it always did.");
+    public static string RingMiddleButton => T("가운데 버튼", "Middle button");
+    public static string RingBackButton => T("뒤로 버튼", "Back button");
+    public static string RingForwardButton => T("앞으로 버튼", "Forward button");
+    public static string RingSideButtonsHint => T("뒤로와 앞으로는 대부분의 마우스 옆면에 있는 두 버튼입니다.", "Back and forward are the two buttons on the side of most mice.");
+    public static string RingMouseOffHint => T("켜면 버튼을 고를 수 있습니다.", "Turn it on to pick a button.");
+    public static string RingChoosing => T("고르기", "Choosing");
+    public static string RingRest => T("머무르면 실행", "Rest to activate");
+    public static string RingRestDetail => T("동작 위에 잠시 머무르면 채워진 뒤 실행됩니다.", "Resting on an action fills it, then runs it.");
+    public static string RingRestTime => T("머무는 시간", "Rest time");
+    public static string Seconds(double seconds) => T($"{seconds:0.00}초", $"{seconds:0.00}s");
+    public static string RingRestFooter => T("짧으면 빠르고, 길면 실수로 고르는 일이 줄어듭니다.", "Shorter feels snappier; longer prevents accidental picks.");
+
     public static string PageNotReady => T("이 기능은 아직 준비 중입니다.", "This feature is not ready yet.");
     public static string AboutVersion(string version) => T($"버전 {version}", $"Version {version}");
     public static string AboutLogs => T("로그 폴더 열기", "Open Log Folder");

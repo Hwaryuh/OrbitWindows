@@ -75,6 +75,7 @@ public static class Pref
         [SpellCloseAfterReplace] = true,
         [RingMouse] = true,
         [RingMouseButton] = "middle",
+        [RingHover] = true,
         [RingDwell] = 0.45,
         // Windows has no Desktop default for screenshots: Pictures\Screenshots, as Snipping Tool uses.
         [CaptureSaveFolder] = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Screenshots"),
