@@ -1,0 +1,11 @@
+# reference clones (read-only, re-clone as needed)
+.refs/
+
+# local agent instructions
+CLAUDE.md
+
+# local research and plans
+docs/
+
+# Serena tool state
+.serena/
