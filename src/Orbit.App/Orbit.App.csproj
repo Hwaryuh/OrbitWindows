@@ -6,10 +6,13 @@
     <AssemblyName>Orbit</AssemblyName>
     <RootNamespace>Orbit.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Program.Main, so Velopack's install and update hooks run before WPF starts. -->
+    <StartupObject>Orbit.App.Program</StartupObject>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="H.NotifyIcon.Wpf" Version="2.4.1" />
+    <PackageReference Include="Velopack" Version="1.2.161" />
   </ItemGroup>
 
   <ItemGroup>

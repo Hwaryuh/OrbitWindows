@@ -1,0 +1,47 @@
+# Builds, tests and packs Orbit for Windows (docs/plan/01-stack.md: .NET 10, WPF, Velopack).
+# The installer is unsigned until a code-signing certificate exists (docs/plan/01-stack.md,
+# "Signing"); vpk then signs with --signParams or --azureTrustedSignFile.
+name: Build
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Version
+        shell: pwsh
+        run: |
+          # A v<version> tag names the release; anything else is 0.1.<run number>.
+          $version = if ("${{ github.ref }}" -like "refs/tags/v*") { "${{ github.ref_name }}".Substring(1) } else { "0.1.${{ github.run_number }}" }
+          "ORBIT_VERSION=$version" >> $env:GITHUB_ENV
+      - name: Build
+        run: dotnet build Orbit.slnx -c Release -p:Version=${{ env.ORBIT_VERSION }}
+      - name: Test
+        run: dotnet test tests/Orbit.Tests -c Release --no-build
+      - name: Publish
+        run: dotnet publish src/Orbit.App -c Release -o artifacts/publish -p:Version=${{ env.ORBIT_VERSION }}
+      - name: Pack
+        run: |
+          dotnet tool restore
+          dotnet vpk pack --packId Orbit --packVersion ${{ env.ORBIT_VERSION }} --packDir artifacts/publish --mainExe Orbit.exe --packTitle Orbit --packAuthors useemeonascreen --framework net10.0-x64-desktop --outputDir artifacts/releases
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Orbit-${{ env.ORBIT_VERSION }}
+          path: artifacts/releases

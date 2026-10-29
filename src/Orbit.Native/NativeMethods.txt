@@ -53,3 +53,15 @@ GetTickCount
 PeekMessage
 MONITORINFOF_PRIMARY
 GetAsyncKeyState
+
+// Paster and the foreground window
+SetWinEventHook
+UnhookWinEvent
+EVENT_SYSTEM_FOREGROUND
+WINEVENT_OUTOFCONTEXT
+WINEVENT_SKIPOWNPROCESS
+GetForegroundWindow
+GetWindowThreadProcessId
+IsWindow
+GetAncestor
+MapVirtualKey

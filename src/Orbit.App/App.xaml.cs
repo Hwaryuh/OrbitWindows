@@ -4,9 +4,11 @@ using System.Windows.Threading;
 using Orbit.App.Overlays;
 using Orbit.App.Spikes;
 using Orbit.Core;
+using Orbit.Core.Actions;
 using Orbit.Core.Capture;
 using Orbit.Core.Display;
 using Orbit.Core.Input;
+using Orbit.Core.Settings;
 
 namespace Orbit.App;
 
@@ -18,6 +20,9 @@ public partial class App : Application
     private WgcCapture? _wgc;
     private CaptureSpike? _captureSpike;
     private TestRingWindow? _ring;
+    private Preferences? _preferences;
+    private ForegroundTracker? _foreground;
+    private readonly ActionRunner _actions = new();
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -33,6 +38,15 @@ public partial class App : Application
         DispatcherUnhandledException += OnUnhandledException;
         Log.Info($"Orbit {typeof(App).Assembly.GetName().Version} starting on Windows {Environment.OSVersion.Version}");
         LogMonitors();
+        foreach (var action in ActionText.Missing()) Log.Error($"Action {action.Id()} has no title");
+
+        _preferences = Preferences.OpenDefault();
+        // Refresh an installed copy's sign-in entry (an update moves the executable); never add one
+        // here: the installer's first run does. Apply leaves the Run value alone for a dev build.
+        if (_preferences.Get<bool>(Pref.LaunchAtSignIn) && StartupRegistration.IsEnabled()) StartupRegistration.Apply(true);
+        _foreground = new ForegroundTracker();
+        _actions.Unavailable += action => Toast.Show(Strings.ActionNotReady(action.Title()));
+        _actions.Register(OrbitAction.Settings, () => Settings.SettingsWindow.ShowOrActivate(_preferences));
 
         _tray = CreateTray();
         _hooks = new HookThread();
@@ -69,6 +83,8 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         _hooks?.Dispose();
+        _foreground?.Dispose();
+        _preferences?.Dispose();
         _wgc?.Dispose();
         _tray?.Dispose();
         _instance?.Dispose();
@@ -91,7 +107,8 @@ public partial class App : Application
                 OpenRing(x, y);
                 break;
             case HookNotice.HotkeyDown when e.Hotkey == HotkeyLauncher:
-                Log.Info("Launcher shortcut pressed (no launcher yet)");
+                Log.Info("Launcher shortcut pressed");
+                _actions.Perform(OrbitAction.Launcher);
                 break;
             case HookNotice.RingRelease:
             case HookNotice.HotkeyUp when e.Hotkey == HotkeyRing:
@@ -111,9 +128,11 @@ public partial class App : Application
 
     private Tray CreateTray() => new(
     [
+        (Strings.MenuSettings, () => _actions.Perform(OrbitAction.Settings)),
+        null,
         (Strings.MenuCaptureTest, () => _ = _captureSpike?.RunAsync()),
         (Strings.MenuMonitorReport, () => { LogMonitors(); Notify(Strings.AppName, Strings.MonitorReportSaved); }),
-        (Strings.MenuOpenLogs, () => Process.Start(new ProcessStartInfo(Log.Folder) { UseShellExecute = true })),
+        (Strings.MenuOpenLogs, Shell.OpenLogFolder),
         null,
         (Strings.MenuQuit, Shutdown),
     ]);

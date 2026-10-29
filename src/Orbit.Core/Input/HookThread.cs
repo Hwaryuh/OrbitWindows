@@ -208,16 +208,8 @@ public sealed class HookThread : IDisposable
     private static unsafe void SendMenuMask()
     {
         Span<INPUT> inputs = stackalloc INPUT[2];
-        for (int i = 0; i < 2; i++)
-        {
-            inputs[i].type = INPUT_TYPE.INPUT_KEYBOARD;
-            inputs[i].Anonymous.ki = new KEYBDINPUT
-            {
-                wVk = (VIRTUAL_KEY)HotkeyMatcher.VkMenuMask,
-                dwFlags = i == 0 ? 0 : KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP,
-                dwExtraInfo = OrbitMarker,
-            };
-        }
+        inputs[0] = OrbitInput.Key(HotkeyMatcher.VkMenuMask, up: false);
+        inputs[1] = OrbitInput.Key(HotkeyMatcher.VkMenuMask, up: true);
         PInvoke.SendInput(inputs, sizeof(INPUT));
     }
 
