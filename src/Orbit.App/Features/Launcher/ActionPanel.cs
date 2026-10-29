@@ -96,11 +96,14 @@ internal sealed class ActionPanel : Border
             var glyph = new TextBlock { Text = action.Glyph, FontFamily = Glyphs.Font, FontSize = 13, Foreground = _palette.InkSecondary, Width = 22, VerticalAlignment = VerticalAlignment.Center };
             DockPanel.SetDock(glyph, Dock.Left);
             row.Children.Add(glyph);
-            if (i == 0)
+            // The first runs with Enter; others show their own keys ("Ctrl ↵").
+            var keys = i == 0 ? "↵" : action.Keys;
+            if (keys is not null)
             {
-                var key = KeyCap.Make("↵", _palette);
-                DockPanel.SetDock(key, Dock.Right);
-                row.Children.Add(key);
+                var caps = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+                foreach (var key in keys.Split(' ')) caps.Children.Add(KeyCap.Make(key, _palette));
+                DockPanel.SetDock(caps, Dock.Right);
+                row.Children.Add(caps);
             }
             row.Children.Add(new TextBlock { Text = action.Title, FontSize = 13, Foreground = _palette.Ink, VerticalAlignment = VerticalAlignment.Center });
             var cell = new Border { CornerRadius = new CornerRadius(6), Background = Brushes.Transparent, Child = row, Cursor = Cursors.Hand };

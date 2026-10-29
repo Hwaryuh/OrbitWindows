@@ -10,7 +10,8 @@ namespace Orbit.Core.Launcher;
 
 /// <summary>One app as Start's All Apps lists it: desktop programs and Store apps alike.</summary>
 /// <param name="ParsingName">Its name inside shell:AppsFolder: an AppUserModelID or a known-folder path.</param>
-public sealed record AppEntry(string Name, string ParsingName);
+/// <param name="TargetPath">The program file a desktop app starts; null for Store apps, which have none to show or elevate.</param>
+public sealed record AppEntry(string Name, string ParsingName, string? TargetPath = null);
 
 /// <summary>An icon's pixels: 32-bit premultiplied BGRA, top-down.</summary>
 public sealed record IconPixels(int Width, int Height, byte[] Pixels);
@@ -124,10 +125,12 @@ public sealed class AppIndex(ShellWorker worker)
                 if (fetched == 0) break;
                 var item = one[0];
                 string name, parsing;
+                string? target;
                 try
                 {
                     name = DisplayName(item, SIGDN.SIGDN_NORMALDISPLAY);
                     parsing = DisplayName(item, SIGDN.SIGDN_PARENTRELATIVEPARSING);
+                    target = TargetOf(item, parsing);
                 }
                 finally
                 {
@@ -135,7 +138,7 @@ public sealed class AppIndex(ShellWorker worker)
                 }
                 if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(parsing)) continue;
                 if (NotApps.Any(e => parsing.EndsWith(e, StringComparison.OrdinalIgnoreCase))) continue;
-                if (seen.Add(parsing)) result.Add(new AppEntry(name, parsing));
+                if (seen.Add(parsing)) result.Add(new AppEntry(name, parsing, target));
             }
         }
         finally
@@ -147,17 +150,44 @@ public sealed class AppIndex(ShellWorker worker)
         return result;
     }
 
-    private static unsafe string DisplayName(IShellItem item, SIGDN kind)
+    /// <summary>
+    /// The file a Start menu entry runs: its shortcut's target, else a parsing name of the form
+    /// "{known folder}\rest" resolved. Null when there is no file (Store apps) or it is gone.
+    /// </summary>
+    private static unsafe string? TargetOf(IShellItem item, string parsing)
+    {
+        // Not a shortcut: no target property, and the call fails.
+        if (item is IShellItem2 properties &&
+            ShellString(text => { properties.GetString(PInvoke.PKEY_Link_TargetParsingPath, out var value); *text = value; }) is { } path &&
+            Path.IsPathRooted(path) && File.Exists(path))
+            return path;
+
+        int end = parsing.IndexOf("}\\", StringComparison.Ordinal);
+        if (!parsing.StartsWith('{') || end < 0 || !Guid.TryParse(parsing[..(end + 1)], out var folder)) return null;
+        if (PInvoke.SHGetKnownFolderPath(in folder, 0, null, out var root).Failed) return null;
+        using (root)
+        {
+            var resolved = Path.Combine(root.ToString() ?? "", parsing[(end + 2)..]);
+            return File.Exists(resolved) ? resolved : null;
+        }
+    }
+
+    private static unsafe string DisplayName(IShellItem item, SIGDN kind) => ShellString(text => item.GetDisplayName(kind, text)) ?? "";
+
+    private unsafe delegate void StringGetter(PWSTR* text);
+
+    /// <summary>A string a shell call allocates for its caller: read and freed; null if the call failed.</summary>
+    private static unsafe string? ShellString(StringGetter get)
     {
         PWSTR text = default;
         try
         {
-            item.GetDisplayName(kind, &text);
+            get(&text);
             return text.ToString();
         }
         catch (COMException)
         {
-            return "";
+            return null;
         }
         finally
         {

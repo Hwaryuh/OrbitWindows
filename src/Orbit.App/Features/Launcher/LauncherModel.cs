@@ -105,9 +105,44 @@ internal sealed class LauncherModel(AppServices services, AppIndex apps, Frecenc
         new(CommandId(action), action.Title(), action.GroupTitle(), IconKind.Glyph, Glyphs.Of(action), null, section,
             [new LauncherAction(Strings.ActionRunCommand, Glyphs.Enter, () => services.Actions.Perform(action))]);
 
-    private static LauncherItem App(AppEntry app, string section) =>
-        new(AppId(app), app.Name, null, IconKind.App, app.ParsingName, Strings.AccessoryApp, section,
-            [new LauncherAction(Strings.ActionOpen, Glyphs.OpenInNew, () => Run(() => AppIndex.Launch(app)))]);
+    /// <summary>An app: open it; a desktop app also shows its file (Ctrl+Enter), runs elevated, copies its path.</summary>
+    private static LauncherItem App(AppEntry app, string section)
+    {
+        var open = new LauncherAction(Strings.ActionOpen, Glyphs.OpenInNew, () => Run(() => AppIndex.Launch(app)));
+        if (app.TargetPath is not { } path)
+            return new(AppId(app), app.Name, null, IconKind.App, app.ParsingName, Strings.AccessoryApp, section, [open]);
+        return new(AppId(app), app.Name, null, IconKind.App, app.ParsingName, Strings.AccessoryApp, section,
+        [
+            open,
+            new LauncherAction(Strings.ActionOpenFileLocation, Glyphs.Folder, () => Run(() => ShowInExplorer(path)), "Ctrl ↵"),
+            new LauncherAction(Strings.ActionRunAsAdmin, Glyphs.Shield, () => RunAsAdministrator(path)),
+            new LauncherAction(Strings.ActionCopyPath, Glyphs.Copy, () => Copy(path)),
+        ]);
+    }
+
+    private static void ShowInExplorer(string path) =>
+        Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = false });
+
+    /// <summary>Through UAC; saying no there is the user's choice, not a failure.</summary>
+    private static void RunAsAdministrator(string path)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(path) { UseShellExecute = true, Verb = "runas", WorkingDirectory = Path.GetDirectoryName(path) ?? "" });
+        }
+        catch (System.ComponentModel.Win32Exception e) when (e.NativeErrorCode == ErrorCancelled)
+        {
+            Log.Info("Run as administrator cancelled at the UAC prompt");
+        }
+        catch (System.ComponentModel.Win32Exception e)
+        {
+            Log.Error("Run as administrator failed", e);
+            Toast.Show(Strings.OpenFailed);
+        }
+    }
+
+    /// <summary>ERROR_CANCELLED: the UAC prompt was declined.</summary>
+    private const int ErrorCancelled = 1223;
 
     private static LauncherItem Window(OpenWindow window) =>
         new($"win.{window.Handle}", window.Title, window.AppName.Length > 0 ? window.AppName : null,

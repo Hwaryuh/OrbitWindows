@@ -51,6 +51,9 @@ internal static class Strings
     public static string ActionSwitchToWindow => T("창으로 전환", "Switch to Window");
     public static string ActionCloseWindow => T("창 닫기", "Close Window");
     public static string ActionCopyAnswer => T("답 복사", "Copy Answer");
+    public static string ActionOpenFileLocation => T("파일 위치 열기", "Open File Location");
+    public static string ActionRunAsAdmin => T("관리자 권한으로 실행", "Run as Administrator");
+    public static string ActionCopyPath => T("경로 복사", "Copy Path");
     public static string ActionSearch => T("검색", "Search");
     public static string SearchGoogleFor(string query) => T($"Google에서 “{query}” 검색", $"Search Google for “{query}”");
     public static string Copied => T("복사했습니다.", "Copied.");

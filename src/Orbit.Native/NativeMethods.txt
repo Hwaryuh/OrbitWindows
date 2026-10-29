@@ -98,3 +98,8 @@ BringWindowToTop
 AttachThreadInput
 BITMAP
 GetClassName
+
+// Launcher: an app entry's target file
+IShellItem2
+PKEY_Link_TargetParsingPath
+SHGetKnownFolderPath

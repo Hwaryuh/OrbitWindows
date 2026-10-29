@@ -23,6 +23,8 @@ internal sealed class LauncherWindow : OverlayWindow
 {
     private const double PanelWidth = 680, PanelHeight = 480, ShadowMargin = 24;
     private const double SearchHeight = 56, FooterHeight = 36, RowHeight = 40;
+    /// <summary>The panel's corner, and the same corner inside its 1-DIP border.</summary>
+    private const double CornerRadiusOutside = 16, CornerRadiusInside = 15;
     private static readonly TimeSpan RunDelay = TimeSpan.FromMilliseconds(50);
 
     private readonly LauncherModel _model;
@@ -106,11 +108,14 @@ internal sealed class LauncherWindow : OverlayWindow
         var layers = new Grid();
         layers.Children.Add(body);
         layers.Children.Add(_actionPanel);
+        // ClipToBounds cuts square: the footer's fill showed past the rounded corners. Clip to the rounded shape instead.
+        var inner = new Border { Child = layers };
+        inner.SizeChanged += (_, e) => inner.Clip = new RectangleGeometry(new Rect(e.NewSize), CornerRadiusInside, CornerRadiusInside);
         Content = new Border
         {
             Margin = new Thickness(ShadowMargin), Background = palette.Canvas, BorderBrush = palette.Hairline, BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(16), Effect = new DropShadowEffect { BlurRadius = 40, ShadowDepth = 12, Direction = 270, Opacity = 0.25 },
-            Child = new Border { CornerRadius = new CornerRadius(16), ClipToBounds = true, Child = layers },
+            CornerRadius = new CornerRadius(CornerRadiusOutside), Effect = new DropShadowEffect { BlurRadius = 40, ShadowDepth = 12, Direction = 270, Opacity = 0.25 },
+            Child = inner,
         };
 
         PreviewKeyDown += OnKey;
