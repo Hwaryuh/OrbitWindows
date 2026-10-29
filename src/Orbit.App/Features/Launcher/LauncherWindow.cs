@@ -196,7 +196,13 @@ internal sealed class LauncherWindow : OverlayWindow
         var icon = IconFor(item);
         DockPanel.SetDock(icon, Dock.Left);
         row.Children.Add(icon);
-        if (item.Accessory is { } accessory)
+        if (item.Keys is { Count: > 0 } keys)
+        {
+            var caps = KeyCap.Row(keys, _palette);
+            DockPanel.SetDock(caps, Dock.Right);
+            row.Children.Add(caps);
+        }
+        else if (item.Accessory is { } accessory)
         {
             var label = new TextBlock { Text = accessory, FontSize = 12, Foreground = _palette.InkSecondary, VerticalAlignment = VerticalAlignment.Center };
             DockPanel.SetDock(label, Dock.Right);

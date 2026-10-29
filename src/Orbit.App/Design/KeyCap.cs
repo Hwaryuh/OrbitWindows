@@ -6,6 +6,19 @@ namespace Orbit.App.Design;
 /// <summary>A key drawn as a small cap ("Ctrl", "K", "↵"), as Orbit's hints show shortcuts.</summary>
 internal static class KeyCap
 {
+    /// <summary>A shortcut as a row of keys, 4 apart.</summary>
+    public static StackPanel Row(IEnumerable<string> labels, Palette palette)
+    {
+        var row = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        foreach (var label in labels)
+        {
+            var cap = Make(label, palette);
+            if (row.Children.Count == 0) cap.Margin = new Thickness(0);
+            row.Children.Add(cap);
+        }
+        return row;
+    }
+
     public static FrameworkElement Make(string label, Palette palette) => new Border
     {
         MinWidth = 20, Height = 20, Padding = new Thickness(5, 0, 5, 0), Margin = new Thickness(4, 0, 0, 0), CornerRadius = new CornerRadius(5),

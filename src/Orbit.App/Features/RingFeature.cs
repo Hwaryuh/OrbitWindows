@@ -18,6 +18,9 @@ internal sealed class RingFeature : IFeature
     private static readonly TimeSpan CaptureDelay = TimeSpan.FromMilliseconds(160);
     private static readonly TimeSpan ActionDelay = TimeSpan.FromMilliseconds(20);
 
+    /// <summary>Holding it opens the ring; the ring page shows it.</summary>
+    public static readonly Hotkey Shortcut = new(Modifiers.Ctrl | Modifiers.Alt, HotkeyMatcher.VkSpace);
+
     private AppServices? _services;
     private int _hotkey;
     private RingWindow? _ring;
@@ -26,7 +29,7 @@ internal sealed class RingFeature : IFeature
     public void Start(AppServices services)
     {
         _services = services;
-        _hotkey = services.AddHotkey(new Hotkey(Modifiers.Ctrl | Modifiers.Alt, HotkeyMatcher.VkSpace));
+        _hotkey = services.AddHotkey(Shortcut);
         ApplyMouseTrigger();
         services.Preferences.Changed += key =>
         {

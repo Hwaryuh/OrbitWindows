@@ -37,11 +37,20 @@ internal sealed class AppServices(Preferences preferences, ActionRunner actions,
     /// <summary>A tray notification.</summary>
     public void Notify(string title, string message) => notify(title, message);
 
-    /// <summary>Takes a shortcut. The id comes back in <see cref="HookEvent.Hotkey"/>.</summary>
-    public int AddHotkey(Hotkey hotkey)
+    private readonly Dictionary<OrbitAction, Hotkey> _shortcuts = [];
+
+    /// <summary>
+    /// Takes a shortcut. The id comes back in <see cref="HookEvent.Hotkey"/>. With an action, the
+    /// launcher shows the keys beside that command.
+    /// </summary>
+    public int AddHotkey(Hotkey hotkey, OrbitAction? action = null)
     {
         int id = _nextHotkey++;
         Hooks.Hotkeys.Register(id, hotkey);
+        if (action is { } a) _shortcuts[a] = hotkey;
         return id;
     }
+
+    /// <summary>The shortcut that runs an action, if one was taken for it.</summary>
+    public Hotkey? ShortcutFor(OrbitAction action) => _shortcuts.TryGetValue(action, out var hotkey) ? hotkey : null;
 }

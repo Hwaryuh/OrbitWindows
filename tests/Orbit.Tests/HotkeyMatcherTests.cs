@@ -5,6 +5,16 @@ namespace Orbit.Tests;
 
 public class HotkeyMatcherTests
 {
+    [Fact]
+    public void LabelsReadAsOnTheKeyboard()
+    {
+        Assert.Equal(["Alt", "Space"], new Hotkey(Modifiers.Alt, HotkeyMatcher.VkSpace).Labels());
+        Assert.Equal(["Ctrl", "Alt", "4"], new Hotkey(Modifiers.Alt | Modifiers.Ctrl, 0x34).Labels());
+        Assert.Equal(["Win", "Alt", "V"], new Hotkey(Modifiers.Win | Modifiers.Alt, 0x56).Labels());
+        Assert.Equal(["PrtScn"], new Hotkey(Modifiers.None, 0x2C).Labels());
+        Assert.Equal(["Ctrl", "F12"], new Hotkey(Modifiers.Ctrl, 0x7B).Labels());
+    }
+
     private const uint Space = 0x20, Q = 0x51;
     private const int Ring = 1, Launcher = 2;
 

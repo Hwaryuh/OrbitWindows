@@ -17,8 +17,9 @@ internal enum IconKind { Glyph, App, File, Mark }
 internal sealed record LauncherAction(string Title, string Glyph, Action Perform, string? Keys = null, bool BeforeHide = false);
 
 /// <param name="Icon">A glyph, an app's parsing name, or a file path, by <paramref name="IconKind"/>.</param>
+/// <param name="Keys">A command's shortcut, shown as keys in place of <paramref name="Accessory"/>.</param>
 internal sealed record LauncherItem(string Id, string Title, string? Subtitle, IconKind IconKind, string Icon,
-    string? Accessory, string Section, IReadOnlyList<LauncherAction> Actions);
+    string? Accessory, string Section, IReadOnlyList<LauncherAction> Actions, IReadOnlyList<string>? Keys = null);
 
 /// <summary>
 /// What the launcher lists for a query (Orbit: LauncherModel.swift): answers first (calculator,
@@ -216,7 +217,8 @@ internal sealed class LauncherModel(AppServices services, AppIndex apps, Frecenc
 
     private LauncherItem Command(OrbitAction action, string section) =>
         new(CommandId(action), action.Title(), action.GroupTitle(), IconKind.Glyph, Glyphs.Of(action), null, section,
-            [new LauncherAction(Strings.ActionRunCommand, Glyphs.Enter, () => services.Actions.Perform(action))]);
+            [new LauncherAction(Strings.ActionRunCommand, Glyphs.Enter, () => services.Actions.Perform(action))],
+            services.ShortcutFor(action)?.Labels());
 
     /// <summary>An app: open it; a desktop app also shows its file (Ctrl+Enter), runs elevated, copies its path.</summary>
     private static LauncherItem App(AppEntry app, string section)

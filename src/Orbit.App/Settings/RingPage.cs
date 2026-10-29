@@ -169,13 +169,9 @@ internal sealed class RingPage : StackPanel
         var section = new StackPanel { Margin = new Thickness(0, 0, 0, 28) };
         section.Children.Add(SectionTitle(Strings.RingOpenTitle, bottom: 10));
 
-        var keys = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 12, 0, 0) };
-        foreach (var key in new[] { "Ctrl", "Alt", "Space" })
-        {
-            var cap = KeyCap.Make(key, _palette);
-            cap.Margin = new Thickness(0, 0, 4, 0);
-            keys.Children.Add(cap);
-        }
+        var keys = KeyCap.Row(Features.RingFeature.Shortcut.Labels(), _palette);
+        keys.HorizontalAlignment = HorizontalAlignment.Left;
+        keys.Margin = new Thickness(0, 12, 0, 0);
         var keyboard = new StackPanel();
         keyboard.Children.Add(CardTitle(Glyphs.Keyboard, Strings.RingKeyboard, Strings.RingKeyboardDetail));
         keyboard.Children.Add(keys);

@@ -7,6 +7,32 @@ public enum Modifiers { None = 0, Ctrl = 1, Alt = 2, Shift = 4, Win = 8 }
 public readonly record struct Hotkey(Modifiers Modifiers, uint Key)
 {
     public override string ToString() => $"{Modifiers}+0x{Key:X2}";
+
+    /// <summary>The keys as printed on a keyboard, modifiers in the order Windows writes them (Win, Ctrl, Alt, Shift), then the key.</summary>
+    public IReadOnlyList<string> Labels()
+    {
+        var labels = new List<string>(5);
+        if (Modifiers.HasFlag(Modifiers.Win)) labels.Add("Win");
+        if (Modifiers.HasFlag(Modifiers.Ctrl)) labels.Add("Ctrl");
+        if (Modifiers.HasFlag(Modifiers.Alt)) labels.Add("Alt");
+        if (Modifiers.HasFlag(Modifiers.Shift)) labels.Add("Shift");
+        labels.Add(KeyName(Key));
+        return labels;
+    }
+
+    private static string KeyName(uint vk) => vk switch
+    {
+        >= 0x30 and <= 0x39 or >= 0x41 and <= 0x5A => ((char)vk).ToString(),
+        >= 0x70 and <= 0x87 => $"F{vk - 0x6F}",
+        >= 0x60 and <= 0x69 => $"Num {vk - 0x60}",
+        0x08 => "Backspace", 0x09 => "Tab", 0x0D => "Enter", 0x1B => "Esc", 0x20 => "Space",
+        0x21 => "PgUp", 0x22 => "PgDn", 0x23 => "End", 0x24 => "Home",
+        0x25 => "←", 0x26 => "↑", 0x27 => "→", 0x28 => "↓",
+        0x2C => "PrtScn", 0x2D => "Ins", 0x2E => "Del",
+        0xBA => ";", 0xBB => "=", 0xBC => ",", 0xBD => "-", 0xBE => ".", 0xBF => "/", 0xC0 => "`",
+        0xDB => "[", 0xDC => "\\", 0xDD => "]", 0xDE => "'",
+        _ => $"0x{vk:X2}",
+    };
 }
 
 /// <summary>Which keys are down right now, by virtual-key code.</summary>
