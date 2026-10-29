@@ -162,4 +162,33 @@ public class HotkeyMatcherTests
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => new HotkeyMatcher().Register(0, new Hotkey(Modifiers.Alt, Q)));
     }
+
+    [Fact]
+    public void APassedThroughShortcutGoesToTheAppAndOthersStillMatch()
+    {
+        var matcher = Matcher();
+        const int Area = 3;
+        matcher.Register(Area, new Hotkey(Modifiers.Ctrl | Modifiers.Alt, 0x34));
+        matcher.SetPassThrough(matcher.Slots(h => PassThroughRule.Passes(PassThroughRule.Defaults, "winword.exe", h)));
+        var ctrlAlt = new Keys(VkLControl, VkLMenu);
+        Assert.Equal(HotkeyDecision.Pass, matcher.KeyDown(0x34, ctrlAlt));
+        Assert.Equal(HotkeyDecision.Pass, matcher.KeyUp(0x34));
+        Assert.Equal(Ring, matcher.KeyDown(Space, ctrlAlt).Pressed);
+        matcher.KeyUp(Space);
+        // Back in another app, Orbit takes it again.
+        matcher.SetPassThrough(matcher.Slots(h => PassThroughRule.Passes(PassThroughRule.Defaults, "notepad.exe", h)));
+        Assert.Equal(Area, matcher.KeyDown(0x34, ctrlAlt).Pressed);
+    }
+
+    [Fact]
+    public void DefaultRulesCoverCtrlAltDigitsInWordAndOneNoteOnly()
+    {
+        var rules = PassThroughRule.Defaults;
+        Assert.True(PassThroughRule.Passes(rules, "WINWORD.EXE", new Hotkey(Modifiers.Ctrl | Modifiers.Alt, 0x32)));
+        Assert.True(PassThroughRule.Passes(rules, "onenote.exe", new Hotkey(Modifiers.Ctrl | Modifiers.Alt, 0x35)));
+        Assert.False(PassThroughRule.Passes(rules, "winword.exe", new Hotkey(Modifiers.Ctrl | Modifiers.Alt, Space)));
+        Assert.False(PassThroughRule.Passes(rules, "winword.exe", new Hotkey(Modifiers.Ctrl | Modifiers.Alt | Modifiers.Shift, 0x32)));
+        Assert.False(PassThroughRule.Passes(rules, "excel.exe", new Hotkey(Modifiers.Ctrl | Modifiers.Alt, 0x32)));
+        Assert.False(PassThroughRule.Passes(rules, "", new Hotkey(Modifiers.Ctrl | Modifiers.Alt, 0x32)));
+    }
 }

@@ -6,6 +6,25 @@ using Orbit.Core.Capture;
 
 namespace Orbit.App.Features.Capture;
 
+/// <summary>The shutter sound (capture.sound), made once and played without waiting.</summary>
+internal static class Shutter
+{
+    private static System.Media.SoundPlayer? _player;
+
+    public static void Play()
+    {
+        try
+        {
+            _player ??= new System.Media.SoundPlayer(new MemoryStream(ShutterSound.Wave()));
+            _player.Play();
+        }
+        catch (Exception e) when (e is InvalidOperationException or IOException)
+        {
+            Log.Warn($"The shutter sound could not be played ({e.GetType().Name})");
+        }
+    }
+}
+
 /// <summary>A capture in the library: its file and its picture (Orbit: <c>Capture</c>). Compared by identity.</summary>
 internal sealed class CaptureItem(string path, BitmapSource image)
 {
@@ -102,9 +121,20 @@ internal sealed class CaptureActions(CaptureStore store)
         }
     }
 
-    /// <summary>The text in the picture onto the clipboard (Orbit: <c>recognizeText</c>; QR codes come later).</summary>
+    /// <summary>
+    /// The text in the picture onto the clipboard (Orbit: <c>recognizeText</c>); a QR code or
+    /// barcode in it wins over the words, and its payload is copied instead.
+    /// </summary>
     public static async Task RecognizeAsync(ScreenFrame frame)
     {
+        var codes = await Task.Run(() => Barcodes.Read(frame));
+        if (codes.Count > 0)
+        {
+            var code = codes[0];
+            var flat = code.ReplaceLineEndings(" ");
+            Clipboards.CopyText(code, Strings.CodeCopied, flat.Length > 80 ? flat[..80] + "…" : flat);
+            return;
+        }
         var text = await TextRecognition.RecognizeAsync(frame);
         if (text is null)
         {

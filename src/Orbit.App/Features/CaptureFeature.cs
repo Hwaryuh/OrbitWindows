@@ -163,6 +163,7 @@ internal sealed class CaptureFeature : IFeature
             return;
         }
         Log.Info($"Captured {frame.Width}x{frame.Height} via {frame.Source}{(action is { } a ? $", {a}" : "")}");
+        if (_services!.Preferences.Get<bool>(Pref.CaptureSound)) Shutter.Play();
         var item = new CaptureItem(path, bitmap);
 
         switch (action)

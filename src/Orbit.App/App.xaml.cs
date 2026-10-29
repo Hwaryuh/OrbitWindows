@@ -56,6 +56,9 @@ public partial class App : Application
         _features.AddRange([new SettingsFeature(), new RingFeature(), new LauncherFeature(), new CaptureFeature()]);
         foreach (var feature in _features) feature.Start(_services);
         _hooks.Notice += e => Dispatcher.BeginInvoke(() => OnHook(e));
+        // Shortcuts the app in front keeps, worked out here so the hook never asks which app it is.
+        _foreground.Changed += UpdatePassThrough;
+        UpdatePassThrough();
         _hooks.Start();
 
         _services.Capture = await StartCaptureAsync();
@@ -79,6 +82,12 @@ public partial class App : Application
         _instance?.Dispose();
         Log.Info("Orbit stopped");
         base.OnExit(e);
+    }
+
+    private void UpdatePassThrough()
+    {
+        var process = _foreground!.ForegroundProcess;
+        _hooks!.Hotkeys.SetPassThrough(_hooks.Hotkeys.Slots(hotkey => PassThroughRule.Passes(PassThroughRule.Defaults, process, hotkey)));
     }
 
     private void OnHook(HookEvent e)

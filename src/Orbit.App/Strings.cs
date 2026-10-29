@@ -45,6 +45,7 @@ internal static class Strings
     public static string CaptureStored => T("캡처를 보관했습니다.", "Capture kept.");
     public static string CaptureSaveFailed => T("캡처를 저장하지 못했습니다.", "The capture could not be saved.");
     public static string CaptureNoLastArea => T("다시 캡처할 지난 영역이 없습니다.", "There is no previous area to capture again.");
+    public static string CodeCopied => T("QR 코드를 복사했습니다.", "Copied QR code.");
     public static string TextNotFound => T("글자를 찾지 못했습니다.", "No text found.");
     public static string TextCopied(int words) => T($"{words}단어를 복사했습니다.", words == 1 ? "Copied 1 word." : $"Copied {words} words.");
     public static string TextNoLanguage => T("글자 인식 언어가 없습니다. 설정 > 시간 및 언어 > 언어에서 언어 팩을 추가하세요.", "No text recognition language is installed. Add a language pack in Settings > Time & language > Language.");
@@ -349,6 +350,6 @@ internal static class Strings
     public static string AboutVersion(string version) => T($"버전 {version}", $"Version {version}");
     public static string AboutLogs => T("로그 폴더 열기", "Open Log Folder");
     public static string AboutNotice => T(
-        "Orbit for Windows는 3x-haust/Orbit(MIT)을 바탕으로 만들었습니다. 한/영 자동 전환은 nyttastudio/araso(MIT, 한국어 빈도 목록 CC BY-SA 4.0)를 사용합니다.",
-        "Orbit for Windows is based on 3x-haust/Orbit (MIT). Automatic Korean/English switching uses nyttastudio/araso (MIT; Korean frequency list CC BY-SA 4.0).");
+        "Orbit for Windows는 3x-haust/Orbit(MIT)을 바탕으로 만들었습니다. 한/영 자동 전환은 nyttastudio/araso(MIT, 한국어 빈도 목록 CC BY-SA 4.0)를, QR 코드 인식은 ZXing.Net(Apache 2.0)을 사용합니다.",
+        "Orbit for Windows is based on 3x-haust/Orbit (MIT). Automatic Korean/English switching uses nyttastudio/araso (MIT; Korean frequency list CC BY-SA 4.0). QR codes are read with ZXing.Net (Apache 2.0).");
 }

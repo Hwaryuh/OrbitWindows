@@ -76,6 +76,8 @@ public sealed class HotkeyMatcher
     private int _count;
     private uint _ownedKey;
     private int _ownedId;
+    /// <summary>Registration slots whose shortcut goes to the app in front instead, one bit each.</summary>
+    private long _passSlots;
 
     /// <summary>Set before the hook starts; not while it runs.</summary>
     public void Register(int id, Hotkey hotkey)
@@ -86,6 +88,24 @@ public sealed class HotkeyMatcher
         _keys[_count] = hotkey;
         _count++;
     }
+
+    /// <summary>
+    /// The slots of the registered shortcuts <paramref name="passes"/> picks, as a mask for
+    /// <see cref="SetPassThrough"/>. Off the hook thread: it reads the registrations only.
+    /// </summary>
+    public long Slots(Func<Hotkey, bool> passes)
+    {
+        long mask = 0;
+        for (int i = 0; i < _count; i++)
+            if (passes(_keys[i])) mask |= 1L << i;
+        return mask;
+    }
+
+    /// <summary>
+    /// The shortcuts that go to the app in front, worked out when it came to the front (from any
+    /// thread): the hook only reads the mask, never asks which app it is.
+    /// </summary>
+    public void SetPassThrough(long slots) => Volatile.Write(ref _passSlots, slots);
 
     public static bool IsModifier(uint vk) => vk is VkShift or VkControl or VkMenu or VkLWin or VkRWin
         or >= VkLShift and <= VkRMenu;
@@ -102,9 +122,12 @@ public sealed class HotkeyMatcher
 
         var held = Held(state);
         if (held == Forbidden) return HotkeyDecision.Pass;
+        long pass = Volatile.Read(ref _passSlots);
         for (int i = 0; i < _count; i++)
         {
             if (_keys[i].Key != vk || _keys[i].Modifiers != (Modifiers)held) continue;
+            // The app in front keeps this one: the key goes on to it untouched.
+            if ((pass & (1L << i)) != 0) return HotkeyDecision.Pass;
             _ownedKey = vk;
             _ownedId = _ids[i];
             return new HotkeyDecision(true, _ownedId, 0, (held & (int)(Modifiers.Alt | Modifiers.Win)) != 0);

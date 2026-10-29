@@ -18,9 +18,9 @@ public enum PasteResult
 }
 
 /// <summary>
-/// The last window in front that isn't Orbit's: where a paste from Orbit's panels belongs (Orbit:
-/// <c>Paster.lastExternal</c>). Follows EVENT_SYSTEM_FOREGROUND; create it on a thread with a
-/// message loop (the UI thread).
+/// The window in front and its program, and the last one that isn't Orbit's: where a paste from
+/// Orbit's panels belongs (Orbit: <c>Paster.lastExternal</c>). Follows EVENT_SYSTEM_FOREGROUND;
+/// create it on a thread with a message loop (the UI thread), where <see cref="Changed"/> comes.
 /// </summary>
 public sealed class ForegroundTracker : IDisposable
 {
@@ -32,11 +32,17 @@ public sealed class ForegroundTracker : IDisposable
     {
         _callback = OnForeground;
         _hook = PInvoke.SetWinEventHook(PInvoke.EVENT_SYSTEM_FOREGROUND, PInvoke.EVENT_SYSTEM_FOREGROUND,
-            HMODULE.Null, _callback, 0, 0, PInvoke.WINEVENT_OUTOFCONTEXT | PInvoke.WINEVENT_SKIPOWNPROCESS);
+            HMODULE.Null, _callback, 0, 0, PInvoke.WINEVENT_OUTOFCONTEXT);
         Remember(PInvoke.GetForegroundWindow());
     }
 
     public nint LastExternal { get; private set; }
+
+    /// <summary>The file name of the program in front, lowercase ("winword.exe"); empty for Orbit or one it may not open.</summary>
+    public string ForegroundProcess { get; private set; } = "";
+
+    /// <summary>Another program came to the front.</summary>
+    public event Action? Changed;
 
     public void Dispose()
     {
@@ -52,6 +58,10 @@ public sealed class ForegroundTracker : IDisposable
         uint process = 0;
         PInvoke.GetWindowThreadProcessId(window, &process);
         if (process != _process) LastExternal = window;
+        var name = process == _process ? "" : Path.GetFileName(Processes.ImagePath(process) ?? "").ToLowerInvariant();
+        if (name == ForegroundProcess) return;
+        ForegroundProcess = name;
+        Changed?.Invoke();
     }
 }
 

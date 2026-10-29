@@ -194,3 +194,39 @@ public sealed class CaptureLibraryTests : IDisposable
         Assert.False(CaptureLibrary.SameFolder(lib, Path.Combine(_root, "save")));
     }
 }
+
+public class BarcodeAndSoundTests
+{
+    [Fact]
+    public void AQrCodeInACaptureIsRead()
+    {
+        var writer = new ZXing.BarcodeWriterPixelData
+        {
+            Format = ZXing.BarcodeFormat.QR_CODE,
+            Options = new ZXing.QrCode.QrCodeEncodingOptions { Width = 200, Height = 200, Margin = 2, CharacterSet = "UTF-8" },
+        };
+        var data = writer.Write("https://example.com/오르빗");
+        var frame = new ScreenFrame(data.Pixels, data.Width, data.Height, data.Width * 4, new PixelRect(0, 0, data.Width, data.Height), "GDI");
+        Assert.Equal(["https://example.com/오르빗"], Barcodes.Read(frame));
+    }
+
+    [Fact]
+    public void APlainPictureHasNoCode()
+    {
+        var pixels = Enumerable.Repeat((byte)200, 64 * 64 * 4).ToArray();
+        Assert.Empty(Barcodes.Read(new ScreenFrame(pixels, 64, 64, 256, new PixelRect(0, 0, 64, 64), "GDI")));
+    }
+
+    [Fact]
+    public void ShutterIsAShortPcmWave()
+    {
+        var wave = ShutterSound.Wave();
+        Assert.Equal("RIFF", System.Text.Encoding.ASCII.GetString(wave, 0, 4));
+        Assert.Equal("WAVE", System.Text.Encoding.ASCII.GetString(wave, 8, 4));
+        Assert.Equal(wave.Length - 8, BitConverter.ToInt32(wave, 4));
+        int samples = (wave.Length - 44) / 2;
+        Assert.InRange(samples / (double)ShutterSound.SampleRate, 0.1, 0.3);
+        Assert.Contains(Enumerable.Range(0, samples), i => Math.Abs(BitConverter.ToInt16(wave, 44 + i * 2)) > 3000);
+        Assert.Same(wave, ShutterSound.Wave());
+    }
+}

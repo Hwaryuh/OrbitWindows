@@ -90,32 +90,19 @@ public static class OpenWindows
     }
 
     /// <summary>The program's name (its file description) and path; a process Orbit may not open gets neither.</summary>
-    private static unsafe (string Name, string? Path) AppOf(uint process)
+    private static (string Name, string? Path) AppOf(uint process)
     {
-        var handle = PInvoke.OpenProcess(PROCESS_ACCESS_RIGHTS.PROCESS_QUERY_LIMITED_INFORMATION, false, process);
-        if (handle.IsNull) return ("", null);
+        if (Processes.ImagePath(process) is not { } path) return ("", null);
+        string name;
         try
         {
-            Span<char> buffer = stackalloc char[1024];
-            uint size = (uint)buffer.Length;
-            fixed (char* p = buffer)
-                if (!PInvoke.QueryFullProcessImageName(handle, PROCESS_NAME_FORMAT.PROCESS_NAME_WIN32, p, &size)) return ("", null);
-            var path = new string(buffer[..(int)size]);
-            string name;
-            try
-            {
-                var info = FileVersionInfo.GetVersionInfo(path);
-                name = !string.IsNullOrWhiteSpace(info.FileDescription) ? info.FileDescription : System.IO.Path.GetFileNameWithoutExtension(path);
-            }
-            catch (FileNotFoundException)
-            {
-                name = System.IO.Path.GetFileNameWithoutExtension(path);
-            }
-            return (name, path);
+            var info = FileVersionInfo.GetVersionInfo(path);
+            name = !string.IsNullOrWhiteSpace(info.FileDescription) ? info.FileDescription : System.IO.Path.GetFileNameWithoutExtension(path);
         }
-        finally
+        catch (FileNotFoundException)
         {
-            PInvoke.CloseHandle(handle);
+            name = System.IO.Path.GetFileNameWithoutExtension(path);
         }
+        return (name, path);
     }
 }
