@@ -33,11 +33,16 @@ public static class Monitors
         return list;
     }
 
-    public static MonitorInfo? FromPoint(int x, int y)
-    {
-        var monitor = PInvoke.MonitorFromPoint(new System.Drawing.Point(x, y), MONITOR_FROM_FLAGS.MONITOR_DEFAULTTONEAREST);
-        return Describe(monitor);
-    }
+    public static MonitorInfo? FromPoint(int x, int y) => Describe(Nearest(x, y));
+
+    /// <summary>The effective DPI of the monitor at a point. Allocation-free, for the hook thread.</summary>
+    public static uint DpiAt(int x, int y) => DpiOf(Nearest(x, y));
+
+    private static HMONITOR Nearest(int x, int y) =>
+        PInvoke.MonitorFromPoint(new System.Drawing.Point(x, y), MONITOR_FROM_FLAGS.MONITOR_DEFAULTTONEAREST);
+
+    private static uint DpiOf(HMONITOR monitor) =>
+        PInvoke.GetDpiForMonitor(monitor, MONITOR_DPI_TYPE.MDT_EFFECTIVE_DPI, out var dpiX, out _).Succeeded ? dpiX : 96;
 
     public static (int X, int Y) Cursor()
     {
@@ -60,9 +65,7 @@ public static class Monitors
         info.monitorInfo.cbSize = (uint)sizeof(MONITORINFOEXW);
         if (!PInvoke.GetMonitorInfo(monitor, (MONITORINFO*)&info)) return null;
 
-        uint dpi = 96;
-        if (PInvoke.GetDpiForMonitor(monitor, MONITOR_DPI_TYPE.MDT_EFFECTIVE_DPI, out var dpiX, out _).Succeeded)
-            dpi = dpiX;
+        uint dpi = DpiOf(monitor);
 
         var name = info.szDevice.ToString();
         var bounds = ToPixelRect(info.monitorInfo.rcMonitor);

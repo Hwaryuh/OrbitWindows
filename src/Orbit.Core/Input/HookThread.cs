@@ -1,4 +1,5 @@
 using Windows.Win32;
+using Orbit.Core.Display;
 using Windows.Win32.Foundation;
 using Windows.Win32.UI.Input.KeyboardAndMouse;
 using Windows.Win32.UI.WindowsAndMessaging;
@@ -139,7 +140,7 @@ public sealed class HookThread : IDisposable
                 CheckHooks();
                 break;
             case WmReplay:
-                ReplayClick((MouseButton)(int)msg.wParam.Value);
+                SendButton((MouseButton)(int)msg.wParam.Value);
                 break;
             case WmNotify:
                 Raise(new HookEvent((HookNotice)(int)msg.wParam.Value));
@@ -183,12 +184,24 @@ public sealed class HookThread : IDisposable
             var info = (MSLLHOOKSTRUCT*)lParam.Value;
             if (info->dwExtraInfo != OrbitMarker)
             {
-                var (button, down) = Decode((uint)wParam.Value, info->mouseData);
+                uint message = (uint)wParam.Value;
+                if (message == PInvoke.WM_MOUSEMOVE)
+                {
+                    if (RingTrigger.IsPressed)
+                    {
+                        var action = RingTrigger.Move(info->pt.X, info->pt.Y);
+                        if (action != TriggerAction.None) Apply(action, RingTrigger.PressedButton);
+                    }
+                    return PInvoke.CallNextHookEx(HHOOK.Null, code, wParam, lParam);
+                }
+                var (button, down) = Decode(message, info->mouseData);
                 if (down && _reportClicks && button is MouseButton.Left or MouseButton.Right)
                     PInvoke.PostThreadMessage(_threadId, WmClick, (nuint)(nint)info->pt.X, info->pt.Y);
                 if (button != MouseButton.None)
                 {
-                    var action = down ? RingTrigger.Down(button, info->pt.X, info->pt.Y) : RingTrigger.Up(button);
+                    var action = down
+                        ? RingTrigger.Down(button, info->pt.X, info->pt.Y, button == RingTrigger.Button ? DragDistanceAt(info->pt) : 0)
+                        : RingTrigger.Up(button);
                     if (action != TriggerAction.None)
                     {
                         Apply(action, button);
@@ -275,6 +288,10 @@ public sealed class HookThread : IDisposable
             _holdTimer = PInvoke.SetTimer(HWND.Null, 0, (uint)MouseHoldTrigger.HoldDelay.TotalMilliseconds, null);
         if ((action & TriggerAction.ReplayClick) != 0)
             PInvoke.PostThreadMessage(_threadId, WmReplay, (nuint)(int)button, default);
+        // Now, not posted: the real release of a fast drag reaches this hook before posted messages,
+        // and the press must reach the app before that release.
+        if ((action & TriggerAction.ReplayPress) != 0 && !SendButton(button, release: false))
+            RingTrigger.PressNotReplayed();
         if ((action & TriggerAction.Release) != 0)
             PInvoke.PostThreadMessage(_threadId, WmNotify, (nuint)(int)HookNotice.RingRelease, default);
     }
@@ -301,7 +318,17 @@ public sealed class HookThread : IDisposable
 
     private static MouseButton XButton(uint mouseData) => (mouseData >> 16) == 1 ? MouseButton.X1 : MouseButton.X2;
 
-    private static unsafe void ReplayClick(MouseButton button)
+    /// <summary><see cref="MouseHoldTrigger.DragDistance"/> in physical pixels on the monitor at <paramref name="point"/>.</summary>
+    private static int DragDistanceAt(System.Drawing.Point point)
+    {
+        return (int)Math.Round(MouseHoldTrigger.DragDistance * Monitors.DpiAt(point.X, point.Y) / 96.0);
+    }
+
+    /// <summary>
+    /// The button's press, and its release too unless <paramref name="release"/> is false, marked as
+    /// Orbit's. False if nothing was sent.
+    /// </summary>
+    private static unsafe bool SendButton(MouseButton button, bool release = true)
     {
         var (downFlag, upFlag, data) = button switch
         {
@@ -312,14 +339,14 @@ public sealed class HookThread : IDisposable
             MouseButton.X2 => (MOUSE_EVENT_FLAGS.MOUSEEVENTF_XDOWN, MOUSE_EVENT_FLAGS.MOUSEEVENTF_XUP, 2u),
             _ => (default(MOUSE_EVENT_FLAGS), default(MOUSE_EVENT_FLAGS), 0u),
         };
-        if (downFlag == default) return;
+        if (downFlag == default) return false;
 
         Span<INPUT> inputs = stackalloc INPUT[2];
         inputs[0].type = INPUT_TYPE.INPUT_MOUSE;
         inputs[0].Anonymous.mi = new MOUSEINPUT { dwFlags = downFlag, mouseData = data, dwExtraInfo = OrbitMarker };
         inputs[1].type = INPUT_TYPE.INPUT_MOUSE;
         inputs[1].Anonymous.mi = new MOUSEINPUT { dwFlags = upFlag, mouseData = data, dwExtraInfo = OrbitMarker };
-        PInvoke.SendInput(inputs, sizeof(INPUT));
+        return PInvoke.SendInput(release ? inputs : inputs[..1], sizeof(INPUT)) != 0;
     }
 
     private void Install()
