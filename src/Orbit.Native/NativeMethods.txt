@@ -141,3 +141,17 @@ PowerClearRequest
 GetSystemPowerStatus
 REASON_CONTEXT
 POWER_REQUEST_CONTEXT_FLAGS
+
+// Per-app volume: audio sessions on the default output
+MMDeviceEnumerator
+IMMDeviceEnumerator
+IMMDevice
+IAudioSessionManager2
+IAudioSessionEnumerator
+IAudioSessionControl2
+ISimpleAudioVolume
+IAudioMeterInformation
+IAudioEndpointVolume
+CoCreateInstance
+CLSCTX
+PROPERTYKEY

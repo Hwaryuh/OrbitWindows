@@ -390,6 +390,15 @@ internal static class Strings
     public static string AwakeBatteryFloorDetail => T("배터리로 쓸 때만 해당합니다.", "Only while running on battery.");
     public static string AwakeOffChip => T("끔", "Off");
     public static string AwakeFooter => T("덮개를 닫거나 전원 단추를 누르면 평소대로 잠듭니다.", "Closing the lid or pressing the power button still sleeps.");
+    // Sound
+    public static string SoundSubtitle => T("프로그램마다 소리 크기를 정합니다.", "Set the volume of each program.");
+    public static string SoundOutput => T("출력 장치 전체", "Output");
+    public static string SoundApps => T("프로그램", "Programs");
+    public static string SoundSystem => T("시스템 소리", "System sounds");
+    public static string SoundMute => T("음소거", "Mute");
+    public static string SoundNoApps => T("지금 소리를 내는 프로그램이 없습니다.", "No program has sound open right now.");
+    public static string SoundNoOutput => T("출력 장치가 없습니다.", "There is no output device.");
+    public static string SoundFooter => T("Windows가 프로그램마다 소리 크기를 기억합니다. 100%보다 크게 할 수는 없습니다.", "Windows remembers each program's level. It can't go above 100%.");
     public static string ColorCopied(string hex) => T($"{hex} 색을 복사했습니다.", $"{hex} copied to the clipboard.");
 
     public static string MenuSettings => T("설정", "Settings");

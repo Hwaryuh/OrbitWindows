@@ -89,6 +89,7 @@ internal sealed class SettingsWindow : Window
         "translate" => () => new TranslatePage(_services),
         "snippets" => () => new SnippetsPage(_services),
         "keepAwake" => () => new KeepAwakePage(_services),
+        "sound" => () => new SoundPage(),
         "about" => About,
         _ => () => NotReady(title),
     };
