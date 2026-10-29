@@ -1,0 +1,220 @@
+using System.IO;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using Rectangle = System.Windows.Shapes.Rectangle;
+using Orbit.App.Features.Capture;
+using Orbit.App.Overlays;
+using Orbit.Core;
+using Orbit.Core.Actions;
+using Orbit.Core.Capture;
+using Orbit.Core.Display;
+using Orbit.Core.Input;
+using Orbit.Core.Launcher;
+using Orbit.Core.Settings;
+
+namespace Orbit.App.Features;
+
+/// <summary>
+/// Screen capture (Orbit: Modules/Capture/CaptureService.swift): area, window, full screen and
+/// text, and the last area again. Every monitor is frozen first; only then does the selection
+/// show. Each picture goes into the library (recognized text only onto the clipboard, as Orbit);
+/// then it is copied (capture.autoCopy), or what the key
+/// picked in the selection happens. Shortcuts: docs/plan/04-shortcuts.md. Quick access cards,
+/// pins and the editor come in the next slices of M2.
+/// </summary>
+internal sealed class CaptureFeature : IFeature
+{
+    private static readonly TimeSpan WindowTimeout = TimeSpan.FromSeconds(1);
+
+    private enum Mode { Area, Window, Screen, Text, Repeat }
+
+    private readonly Dictionary<int, OrbitAction> _hotkeys = [];
+    private AppServices? _services;
+    private CaptureStore? _store;
+    private bool _busy;
+
+    public void Start(AppServices services)
+    {
+        _services = services;
+        _store = new CaptureStore(services.Preferences);
+        Register(OrbitAction.CaptureArea, Mode.Area, 0x34);
+        Register(OrbitAction.CaptureWindow, Mode.Window, 0x35);
+        Register(OrbitAction.CaptureScreen, Mode.Screen, 0x33);
+        Register(OrbitAction.CaptureText, Mode.Text, 0x32);
+        Register(OrbitAction.CaptureRepeat, Mode.Repeat, key: null);
+    }
+
+    /// <param name="key">The digit with Ctrl+Alt, as Orbit's ⌥⇧ digits; null for no shortcut.</param>
+    private void Register(OrbitAction action, Mode mode, uint? key)
+    {
+        var services = _services!;
+        services.Actions.Register(action, () => _ = RunAsync(mode));
+        if (key is { } vk) _hotkeys[services.AddHotkey(new Hotkey(Modifiers.Ctrl | Modifiers.Alt, vk), action)] = action;
+    }
+
+    public void OnHook(HookEvent e)
+    {
+        if (e.Notice == HookNotice.HotkeyDown && _hotkeys.TryGetValue(e.Hotkey, out var action)) _services!.Actions.Perform(action);
+    }
+
+    private async Task RunAsync(Mode mode)
+    {
+        if (_busy) return;
+        _busy = true;
+        var services = _services!;
+        var store = _store!;
+        try
+        {
+            var monitors = Monitors.All();
+            var frames = await ScreenFreeze.AllAsync(services.Capture, monitors);
+            if (!ScreenFreeze.SameLayout(monitors, Monitors.All()))
+            {
+                Log.Warn("Capture cancelled: the monitor layout changed while capturing");
+                Toast.Show(Strings.CaptureCancelled);
+                return;
+            }
+            var lastArea = CaptureStore.Usable(store.LastArea, monitors);
+
+            if (mode == Mode.Screen)
+            {
+                var (x, y) = Monitors.Cursor();
+                int index = Math.Max(0, monitors.ToList().FindIndex(m => m.Bounds.Contains(x, y)));
+                Flash.On(monitors[index]);
+                Deliver(frames[index], null);
+                return;
+            }
+            if (mode == Mode.Repeat)
+            {
+                if (lastArea is { } area && Array.FindIndex(frames, f => f.Bounds.Contains(area.X, area.Y)) is var i and >= 0)
+                {
+                    Deliver(frames[i].Crop(area), null);
+                    return;
+                }
+                Toast.Show(Strings.CaptureNoLastArea);
+                mode = Mode.Area;
+            }
+
+            var targets = mode is Mode.Area or Mode.Window
+                ? OpenWindows.List().Where(w => !w.Minimized && w.Bounds.Width > 40 && w.Bounds.Height > 40).ToList()
+                : [];
+            var result = await SelectionSession.RunAsync(monitors, frames, targets, mode == Mode.Window, mode == Mode.Text,
+                lastArea, services.Preferences.Get<bool>(Pref.CaptureKeyHints));
+            if (result is null) return;
+            if (mode != Mode.Text && result.Window is null) store.LastArea = new LastArea(result.Area, result.Monitor.DeviceName);
+
+            var image = result.Window is { } window ? await WindowImageAsync(window, result) : result.Frame.Crop(result.Area);
+            if (mode == Mode.Text || result.Action == CaptureKeyAction.Text) await RecognizeAsync(image);
+            else Deliver(image, result.Action);
+        }
+        catch (Exception e)
+        {
+            Log.Error("Capture failed", e);
+            Toast.Show(Strings.CaptureFailed);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    /// <summary>The window on its own (no overlapping windows); what of it the frozen monitor shows if that fails.</summary>
+    private async Task<ScreenFrame> WindowImageAsync(OpenWindow window, SelectionResult result)
+    {
+        if (_services!.Capture is { } wgc)
+        {
+            try
+            {
+                return await wgc.CaptureWindowAsync(window.Handle, window.Bounds, WindowTimeout);
+            }
+            catch (Exception e)
+            {
+                Log.Warn($"Window capture failed ({e.GetType().Name}); using the frozen screen");
+            }
+        }
+        return result.Frame.Crop(result.Area);
+    }
+
+    /// <summary>Into the library, then copied, saved or kept, as the key picked (Orbit: <c>deliver</c>, <c>finish</c>).</summary>
+    private void Deliver(ScreenFrame frame, CaptureKeyAction? action)
+    {
+        var store = _store!;
+        var bitmap = FrameImages.ToBitmap(frame);
+        var png = FrameImages.Png(bitmap);
+        string path;
+        try
+        {
+            path = store.Write(png, DateTime.Now);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            Log.Error("Capture could not be written to the library", e);
+            Toast.Show(Strings.CaptureSaveFailed);
+            return;
+        }
+        Log.Info($"Captured {frame.Width}x{frame.Height} via {frame.Source}{(action is { } a ? $", {a}" : "")}");
+
+        switch (action)
+        {
+            case CaptureKeyAction.Copy:
+                Toast.Show(FrameImages.Copy(bitmap, png) ? Strings.CaptureCopied : Strings.CopyFailed);
+                break;
+            case CaptureKeyAction.Save:
+                try
+                {
+                    var saved = store.SaveCopy(path);
+                    Toast.Show(Strings.CaptureSaved, Path.GetFileName(Path.GetDirectoryName(saved)));
+                }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+                {
+                    Log.Error("Capture could not be saved to the save folder", e);
+                    Toast.Show(Strings.CaptureSaveFailed);
+                }
+                break;
+            default:
+                bool copy = _services!.Preferences.Get<bool>(Pref.CaptureAutoCopy);
+                if (copy && !FrameImages.Copy(bitmap, png)) Toast.Show(Strings.CopyFailed);
+                else Toast.Show(copy ? Strings.CaptureCopied : Strings.CaptureStored, Path.GetFileName(path));
+                break;
+        }
+    }
+
+    /// <summary>The text in the picture onto the clipboard (Orbit: <c>recognizeText</c>; QR codes come later).</summary>
+    private static async Task RecognizeAsync(ScreenFrame frame)
+    {
+        var text = await TextRecognition.RecognizeAsync(frame);
+        if (text is null)
+        {
+            Toast.Show(Strings.TextNoLanguage);
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            Toast.Show(Strings.TextNotFound);
+            return;
+        }
+        int words = text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
+        var line = text.ReplaceLineEndings(" ");
+        Clipboards.CopyText(text, Strings.TextCopied(words), line.Length > 80 ? line[..80] + "…" : line);
+    }
+
+    /// <summary>A white flash over the monitor that was captured whole, as Orbit's.</summary>
+    private sealed class Flash : OverlayWindow
+    {
+        private Flash() : base(activating: false, transparent: true, clickThrough: true)
+        {
+            Content = new Rectangle { Fill = Brushes.White };
+            Opacity = 0;
+        }
+
+        public static void On(MonitorInfo monitor)
+        {
+            var flash = new Flash();
+            flash.ShowAt(monitor.Bounds);
+            var fade = new DoubleAnimationUsingKeyFrames();
+            fade.KeyFrames.Add(new LinearDoubleKeyFrame(0.35, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(50))));
+            fade.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(300))));
+            fade.Completed += (_, _) => flash.Close();
+            flash.BeginAnimation(OpacityProperty, fade);
+        }
+    }
+}

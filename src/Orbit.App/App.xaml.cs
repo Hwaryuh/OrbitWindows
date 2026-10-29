@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Threading;
 using Orbit.App.Features;
 using Orbit.App.Overlays;
@@ -54,7 +54,7 @@ public partial class App : Application
 
         _hooks = new HookThread();
         _services = new AppServices(_preferences, _actions, _hooks, _foreground, Notify);
-        _features.AddRange([new SettingsFeature(), new RingFeature(), new LauncherFeature(), _captureSpike]);
+        _features.AddRange([new SettingsFeature(), new RingFeature(), new LauncherFeature(), new CaptureFeature(), _captureSpike]);
         foreach (var feature in _features) feature.Start(_services);
         _hooks.Notice += e => Dispatcher.BeginInvoke(() => OnHook(e));
         _hooks.Start();

@@ -47,9 +47,18 @@ public sealed class WgcCapture : IDisposable
         return _borderless;
     }
 
-    public async Task<ScreenFrame> CaptureMonitorAsync(MonitorInfo monitor, TimeSpan timeout)
+    public Task<ScreenFrame> CaptureMonitorAsync(MonitorInfo monitor, TimeSpan timeout) =>
+        CaptureAsync(CreateItem(monitor.Handle, forWindow: false), monitor.Bounds, timeout);
+
+    /// <summary>
+    /// One window on its own: its pixels without what overlaps it (Orbit: <c>captureWindow</c>).
+    /// <paramref name="bounds"/> is only recorded on the frame; the frame has the window's own size.
+    /// </summary>
+    public Task<ScreenFrame> CaptureWindowAsync(nint window, PixelRect bounds, TimeSpan timeout) =>
+        CaptureAsync(CreateItem(window, forWindow: true), bounds, timeout);
+
+    private async Task<ScreenFrame> CaptureAsync(GraphicsCaptureItem item, PixelRect bounds, TimeSpan timeout)
     {
-        var item = CreateItemForMonitor(monitor.Handle);
         using var pool = Direct3D11CaptureFramePool.CreateFreeThreaded(_device, DirectXPixelFormat.B8G8R8A8UIntNormalized, 1, item.Size);
         using var session = pool.CreateCaptureSession(item);
         session.IsCursorCaptureEnabled = false;
@@ -77,7 +86,7 @@ public sealed class WgcCapture : IDisposable
         {
             using var first = await arrived.Task.WaitAsync(timeout);
             using var bitmap = await SoftwareBitmap.CreateCopyFromSurfaceAsync(first.Surface, BitmapAlphaMode.Premultiplied);
-            return ToFrame(bitmap, monitor.Bounds);
+            return ToFrame(bitmap, bounds);
         }
         catch (TimeoutException)
         {
@@ -117,12 +126,13 @@ public sealed class WgcCapture : IDisposable
         return new ScreenFrame(pixels, width, height, stride, bounds with { Width = width, Height = height }, "WGC");
     }
 
-    private static GraphicsCaptureItem CreateItemForMonitor(nint monitor)
+    private static GraphicsCaptureItem CreateItem(nint handle, bool forWindow)
     {
         var factory = ActivationFactory.Get("Windows.Graphics.Capture.GraphicsCaptureItem");
         var interop = factory.AsInterface<IGraphicsCaptureItemInterop>();
         var iid = GraphicsCaptureItemIid;
-        return Adopt(interop.CreateForMonitor(monitor, ref iid), GraphicsCaptureItem.FromAbi);
+        var pointer = forWindow ? interop.CreateForWindow(handle, ref iid) : interop.CreateForMonitor(handle, ref iid);
+        return Adopt(pointer, GraphicsCaptureItem.FromAbi);
     }
 
     private static IDirect3DDevice CreateDevice()

@@ -103,3 +103,6 @@ GetClassName
 IShellItem2
 PKEY_Link_TargetParsingPath
 SHGetKnownFolderPath
+
+// Capture: window bounds when DWM has none
+GetWindowRect

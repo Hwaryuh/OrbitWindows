@@ -301,20 +301,6 @@ internal sealed class LauncherModel(AppServices services, AppIndex apps, Frecenc
 
     private static void Copy(string text)
     {
-        for (int attempt = 0; attempt < 5; attempt++)
-        {
-            try
-            {
-                System.Windows.Clipboard.SetText(text);
-                Toast.Show(Strings.Copied, text);
-                return;
-            }
-            catch (System.Runtime.InteropServices.COMException)
-            {
-                // Another app holds the clipboard for a moment.
-                Thread.Sleep(30);
-            }
-        }
-        Toast.Show(Strings.CopyFailed);
+        Capture.Clipboards.CopyText(text, Strings.Copied, text);
     }
 }

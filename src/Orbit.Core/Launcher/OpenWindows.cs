@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Orbit.Core.Display;
 using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.Graphics.Dwm;
@@ -7,7 +8,8 @@ using Windows.Win32.UI.WindowsAndMessaging;
 
 namespace Orbit.Core.Launcher;
 
-public sealed record OpenWindow(nint Handle, string Title, string AppName, string? ExePath, bool Minimized);
+/// <param name="Bounds">Where the window is drawn, without its invisible resize border or shadow (physical pixels).</param>
+public sealed record OpenWindow(nint Handle, string Title, string AppName, string? ExePath, bool Minimized, PixelRect Bounds);
 
 /// <summary>
 /// The windows Alt+Tab would show (Orbit: Launcher/OpenWindows.swift reads them through
@@ -27,7 +29,7 @@ public static class OpenWindows
             if (Counts(window, own, out uint process))
             {
                 if (!names.TryGetValue(process, out var app)) names[process] = app = AppOf(process);
-                found.Add(new OpenWindow(window, Title(window), app.Name, app.Path, PInvoke.IsIconic(window)));
+                found.Add(new OpenWindow(window, Title(window), app.Name, app.Path, PInvoke.IsIconic(window), Bounds(window)));
             }
             return true;
         }, default);
@@ -69,6 +71,15 @@ public static class OpenWindows
         Span<char> name = stackalloc char[32];
         int length = PInvoke.GetClassName(window, name);
         return !name[..length].SequenceEqual("Progman");
+    }
+
+    private static unsafe PixelRect Bounds(HWND window)
+    {
+        RECT r;
+        if (PInvoke.DwmGetWindowAttribute(window, DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS, &r, (uint)sizeof(RECT)).Failed
+            && !PInvoke.GetWindowRect(window, out r))
+            return default;
+        return new PixelRect(r.left, r.top, r.right - r.left, r.bottom - r.top);
     }
 
     private static string Title(HWND window)

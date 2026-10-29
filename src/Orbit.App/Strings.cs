@@ -23,6 +23,34 @@ internal static class Strings
     public static string CaptureFailed => T("화면을 캡처하지 못했습니다. 다시 시도하세요.", "The screen could not be captured. Please try again.");
     public static string CaptureCancelled => T("모니터 구성이 바뀌어 캡처를 취소했습니다.", "The monitor setup changed, so the capture was cancelled.");
 
+    // Capture
+    public static string CaptureHintArea => T("드래그해서 캡처  ·  Space 창 선택  ·  Enter 전체 화면  ·  Esc 취소", "Drag to capture  ·  Space for window  ·  Enter full screen  ·  Esc to cancel");
+    public static string CaptureHintWindow => T("창을 누르세요  ·  Space 영역 선택  ·  Esc 취소", "Click a window  ·  Space for area  ·  Esc to cancel");
+    public static string CaptureHintText => T("글자를 복사할 영역을 고르세요  ·  Esc 취소", "Select text to copy  ·  Esc to cancel");
+    public static string KeyLockRatio => T("비율 고정", "Lock ratio");
+    public static string KeyFromCenter => T("가운데부터", "From center");
+    public static string KeyRatio => T("비율", "Ratio");
+    public static string KeyLastArea => T("마지막 영역", "Last area");
+    public static string KeyCopyColor => T("색 복사", "Copy color");
+    public static string KeyMoveSelection => T("선택 옮기기", "Move selection");
+    public static string KeyNudge => T("미세 조정", "Nudge");
+    public static string KeySelectArea => T("영역 선택", "Select an area");
+    public static string KeyCaptureIt => T("캡처하기", "Capture it");
+    public static string KeyPickAgain => T("다시 고르기", "Pick again");
+    public static string KeyAction => T("동작", "Action");
+    public static string CaptureActionCopy => T("복사만", "Copy only");
+    public static string CaptureActionSave => T("파일로 저장", "Save to file");
+    public static string CaptureActionText => T("글자 인식", "Recognize text");
+    public static string CaptureCopied => T("캡처를 복사했습니다.", "Capture copied.");
+    public static string CaptureSaved => T("캡처를 저장했습니다.", "Capture saved.");
+    public static string CaptureStored => T("캡처를 보관했습니다.", "Capture kept.");
+    public static string CaptureSaveFailed => T("캡처를 저장하지 못했습니다.", "The capture could not be saved.");
+    public static string CaptureNoLastArea => T("다시 캡처할 지난 영역이 없습니다.", "There is no previous area to capture again.");
+    public static string TextNotFound => T("글자를 찾지 못했습니다.", "No text found.");
+    public static string TextCopied(int words) => T($"{words}단어를 복사했습니다.", words == 1 ? "Copied 1 word." : $"Copied {words} words.");
+    public static string TextNoLanguage => T("글자 인식 언어가 없습니다. 설정 > 시간 및 언어 > 언어에서 언어 팩을 추가하세요.", "No text recognition language is installed. Add a language pack in Settings > Time & language > Language.");
+    public static string ColorCopied(string hex) => T($"{hex} 색을 복사했습니다.", $"{hex} copied to the clipboard.");
+
     public static string CaptureResultTitle => T("캡처 테스트 결과", "Capture test result");
 
     public static string MenuSettings => T("설정", "Settings");

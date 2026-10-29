@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.IO;
-using System.Windows.Media.Imaging;
 using Orbit.App.Features;
 using Orbit.App.Overlays;
 using Orbit.Core;
@@ -16,8 +15,6 @@ namespace Orbit.App.Spikes;
 /// </summary>
 internal sealed class CaptureSpike : IFeature
 {
-    private static readonly TimeSpan FrameTimeout = TimeSpan.FromMilliseconds(500);
-
     private readonly List<CaptureOverlayWindow> _overlays = [];
     private bool _running;
     private AppServices? _services;
@@ -44,7 +41,7 @@ internal sealed class CaptureSpike : IFeature
             }
             Log.Info($"Capture spike: {monitors.Count} monitors frozen in {frozenMs} ms");
 
-            if (!SameLayout(monitors, Monitors.All()))
+            if (!ScreenFreeze.SameLayout(monitors, Monitors.All()))
             {
                 Log.Warn("Capture spike cancelled: the monitor layout changed while capturing");
                 Notify(Strings.CaptureResultTitle, Strings.CaptureCancelled);
@@ -85,32 +82,11 @@ internal sealed class CaptureSpike : IFeature
     private async Task<(ScreenFrame[] Frames, ScreenFrame[] References, long FrozenMs)> FreezeAsync(IReadOnlyList<MonitorInfo> monitors)
     {
         var clock = Stopwatch.StartNew();
-        var frames = await Task.WhenAll(monitors.Select(CaptureAsync));
+        var frames = await ScreenFreeze.AllAsync(_services?.Capture, monitors);
         long frozenMs = clock.ElapsedMilliseconds;
         var references = monitors.Select(m => GdiCapture.Capture(m.Bounds)).ToArray();
         return (frames, references, frozenMs);
     }
-
-    private async Task<ScreenFrame> CaptureAsync(MonitorInfo monitor)
-    {
-        if (_services?.Capture is { } wgc)
-        {
-            try
-            {
-                return await wgc.CaptureMonitorAsync(monitor, FrameTimeout);
-            }
-            catch (Exception e)
-            {
-                Log.Warn($"WGC failed on {monitor.DeviceName} ({e.GetType().Name}); using GDI");
-            }
-        }
-        return await Task.Run(() => GdiCapture.Capture(monitor.Bounds));
-    }
-
-    /// <summary>Same monitors, bounds and scale; the work area may change (an auto-hiding taskbar).</summary>
-    private static bool SameLayout(IReadOnlyList<MonitorInfo> before, IReadOnlyList<MonitorInfo> after) =>
-        before.Count == after.Count && before.Zip(after).All(p =>
-            p.First.Handle == p.Second.Handle && p.First.Bounds == p.Second.Bounds && p.First.Dpi == p.Second.Dpi);
 
     private void ShowOverlays(IReadOnlyList<MonitorInfo> monitors, ScreenFrame[] frames, ScreenFrame[] references)
     {
@@ -157,11 +133,6 @@ internal sealed class CaptureSpike : IFeature
         _running = false;
     }
 
-    private static void Save(ScreenFrame frame, string path)
-    {
-        var encoder = new PngBitmapEncoder();
-        encoder.Frames.Add(BitmapFrame.Create(CaptureOverlayWindow.ToBitmap(frame, 96)));
-        using var stream = File.Create(path);
-        encoder.Save(stream);
-    }
+    private static void Save(ScreenFrame frame, string path) =>
+        File.WriteAllBytes(path, Features.Capture.FrameImages.Png(Features.Capture.FrameImages.ToBitmap(frame)));
 }

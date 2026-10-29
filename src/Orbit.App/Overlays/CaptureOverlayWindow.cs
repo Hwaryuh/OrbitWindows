@@ -27,7 +27,7 @@ public sealed class CaptureOverlayWindow : OverlayWindow
         Cursor = Cursors.Cross;
 
         double width = monitor.ToDip(monitor.Bounds.Width), height = monitor.ToDip(monitor.Bounds.Height);
-        var image = new Image { Source = ToBitmap(frame, monitor.Dpi), Stretch = Stretch.None };
+        var image = new Image { Source = Features.Capture.FrameImages.ToBitmap(frame, monitor.Dpi), Stretch = Stretch.None };
         RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.NearestNeighbor);
 
         var dim = new Path
@@ -84,11 +84,4 @@ public sealed class CaptureOverlayWindow : OverlayWindow
         Selected?.Invoke(selection);
     }
 
-    /// <summary>A bitmap at the monitor's DPI, so WPF draws it one image pixel per screen pixel.</summary>
-    internal static BitmapSource ToBitmap(ScreenFrame frame, double dpi)
-    {
-        var bitmap = BitmapSource.Create(frame.Width, frame.Height, dpi, dpi, PixelFormats.Bgr32, null, frame.Pixels, frame.Stride);
-        bitmap.Freeze();
-        return bitmap;
-    }
 }

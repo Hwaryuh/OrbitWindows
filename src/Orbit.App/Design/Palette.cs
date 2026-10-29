@@ -68,6 +68,9 @@ internal sealed class Palette
     /// <summary>The light palette whatever Windows uses: the settings window is always white.</summary>
     public static Palette Light { get; } = new(false);
 
+    /// <summary>The dark palette whatever Windows uses: labels over the capture overlay's dimmed screen.</summary>
+    public static Palette DarkTheme { get; } = new(true);
+
     /// <summary><paramref name="brush"/>'s color at <paramref name="opacity"/>.</summary>
     public static SolidColorBrush Fade(SolidColorBrush brush, double opacity)
     {
