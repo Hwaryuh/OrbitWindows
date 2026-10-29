@@ -42,6 +42,8 @@ internal sealed class LauncherWindow : OverlayWindow
     private IReadOnlyList<LauncherItem> _items = [];
     private int _selection;
     private (int X, int Y) _openedAt;
+    /// <summary>Answers arrived while the action panel was open: build again when it closes.</summary>
+    private bool _answersArrived;
 
     public LauncherWindow(LauncherModel model, AppIndex apps, Palette palette) : base(activating: true, transparent: true, clickThrough: false)
     {
@@ -121,6 +123,14 @@ internal sealed class LauncherWindow : OverlayWindow
         PreviewKeyDown += OnKey;
         Deactivated += (_, _) => Dismiss();
         apps.Changed += () => Dispatcher.BeginInvoke(() => { if (IsVisible) Rebuild(); });
+        // Built again from the query as it is now: a late result for an older query has nothing to show.
+        // While the action panel is open the list stays put, so a key meant for the panel never lands on a changed row.
+        model.AnswersChanged += () => Dispatcher.BeginInvoke(() =>
+        {
+            if (!IsVisible) return;
+            if (_actionPanel.IsOpen) _answersArrived = true;
+            else Rebuild(keepSelection: true);
+        });
     }
 
     public Palette Palette => _palette;
@@ -156,12 +166,14 @@ internal sealed class LauncherWindow : OverlayWindow
         Hide();
     }
 
-    private void Rebuild()
+    /// <param name="keepSelection">Results arrived while the query stayed: stay on the selected row if it is still there.</param>
+    private void Rebuild(bool keepSelection = false)
     {
         // The list changes under an open action panel: its result may be gone.
         if (_actionPanel.IsOpen) CloseActions();
+        var kept = keepSelection && _selection < _items.Count ? _items[_selection].Id : null;
         _items = _model.Build(_query.Text, _windows);
-        _selection = 0;
+        _selection = kept is null ? 0 : Math.Max(0, _items.ToList().FindIndex(i => i.Id == kept));
         _rows.Children.Clear();
         string? section = null;
         for (int i = 0; i < _items.Count; i++)
@@ -179,7 +191,7 @@ internal sealed class LauncherWindow : OverlayWindow
             _rows.Children.Add(Row(item, i));
         }
         _empty.Visibility = _items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        _scroll.ScrollToTop();
+        if (kept is null) _scroll.ScrollToTop();
         ShowSelection();
     }
 
@@ -352,6 +364,9 @@ internal sealed class LauncherWindow : OverlayWindow
     {
         _actionPanel.Close();
         _query.Focus();
+        if (!_answersArrived) return;
+        _answersArrived = false;
+        if (IsVisible) Rebuild(keepSelection: true);
     }
 
     private static FrameworkElement EmptyState(Palette palette)

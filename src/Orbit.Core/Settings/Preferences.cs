@@ -48,7 +48,7 @@ public sealed class Preferences : IDisposable
         {
             return node.Deserialize<T>() ?? default!;
         }
-        catch (Exception e) when (e is JsonException or InvalidOperationException or FormatException)
+        catch (Exception e) when (JsonErrors.IsUnreadable(e))
         {
             // A value of the wrong type (an edited file, an older version): use the default.
             Log.Warn($"Preference {key} has an unreadable value; using the default");

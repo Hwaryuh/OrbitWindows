@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using Orbit.App.Design;
 using Orbit.App.Overlays;
@@ -20,12 +21,31 @@ internal sealed record LauncherItem(string Id, string Title, string? Subtitle, I
     string? Accessory, string Section, IReadOnlyList<LauncherAction> Actions);
 
 /// <summary>
-/// What the launcher lists for a query (Orbit: LauncherModel.swift): an answer first, then Orbit's
-/// pages, commands and apps ordered by their best match, open windows, Windows Settings pages, and
-/// a web search only when nothing here fits. Empty: suggestions from what was used before.
+/// What the launcher lists for a query (Orbit: LauncherModel.swift): answers first (calculator,
+/// currency or a conversion, world clock, weather), then Orbit's pages, commands and apps ordered
+/// by their best match, open windows, Windows Settings pages, files, and a web search only when
+/// nothing here fits. Empty: suggestions from what was used before.
 /// </summary>
-internal sealed class LauncherModel(AppServices services, AppIndex apps, Frecency frecency)
+internal sealed class LauncherModel(AppServices services, AppIndex apps, Frecency frecency,
+    ExchangeRates rates, WeatherService weather, FileSearch files)
 {
+    /// <summary>Rates, a weather report or file results arrived: build again. Raised on a background thread.</summary>
+    public event Action? AnswersChanged
+    {
+        add
+        {
+            rates.Changed += value;
+            weather.Changed += value;
+            files.Changed += value;
+        }
+        remove
+        {
+            rates.Changed -= value;
+            weather.Changed -= value;
+            files.Changed -= value;
+        }
+    }
+
     private static readonly OrbitAction[] Favorites =
     [
         OrbitAction.CaptureArea, OrbitAction.CaptureText, OrbitAction.Clipboard, OrbitAction.CaptureScreen,
@@ -40,12 +60,23 @@ internal sealed class LauncherModel(AppServices services, AppIndex apps, Frecenc
         if (Calculator.Evaluate(q) is { } value)
         {
             var text = Calculator.Format(value);
-            result.Add(new LauncherItem("calc", text, $"= {q}", IconKind.Glyph, Glyphs.Calculator, Strings.SectionCalculator,
-                Strings.SectionCalculator, [new LauncherAction(Strings.ActionCopyAnswer, Glyphs.Copy, () => Copy(text))]));
+            result.Add(Answer("calc", text, $"= {q}", Glyphs.Calculator, Strings.SectionCalculator, text));
         }
 
-        if (q.Length == 0) return [.. result, .. Suggestions()];
+        if (q.Length == 0)
+        {
+            files.Results("");
+            weather.Forget();
+            return [.. result, .. Suggestions()];
+        }
         bool answered = result.Count > 0;
+        // Orbit's order: currency, else a conversion; then a world clock and the weather.
+        foreach (var answer in new[] { CurrencyAnswer(q) ?? UnitAnswer(q), ClockAnswer(q), WeatherAnswer(q) })
+        {
+            if (answer is not { } a) continue;
+            result.Add(a.Item);
+            answered |= a.Answers;
+        }
 
         var pageScores = SettingsWindow.PageTitles.Select(p => (p, Fuzzy.Score(q, p.Title))).Where(x => x.Item2 is not null).Select(x => (x.p, x.Item2!.Value)).ToList();
         var commandScores = OrbitActions.All.Select(a => (a, Fuzzy.Score(q, a.Title(), a.Keywords()))).Where(x => x.Item2 is not null).Select(x => (x.a, x.Item2!.Value)).ToList();
@@ -73,9 +104,11 @@ internal sealed class LauncherModel(AppServices services, AppIndex apps, Frecenc
 
         result.AddRange(windowScores.Where(x => x.Item2 >= floor).OrderByDescending(x => x.Item2).Take(5).Select(x => Window(x.w)));
         result.AddRange(paneScores.Where(x => x.Item2 >= Math.Max(floor, Fuzzy.Keyword)).OrderByDescending(x => x.Item2).Take(3).Select(x => Pane(x.p)));
+        var found = files.Results(q);
+        result.AddRange(found.Take(8).Select(File));
 
         // Searching the web is the way out when nothing here fits, not an extra under every search.
-        if (q.Length > 1 && best < Fuzzy.Substring - 100 && !answered)
+        if (q.Length > 1 && best < Fuzzy.Substring - 100 && !answered && found.Count == 0)
         {
             var url = "https://www.google.com/search?q=" + Uri.EscapeDataString(q);
             result.Add(new LauncherItem("web", Strings.SearchGoogleFor(q), null, IconKind.Glyph, Glyphs.Globe, Strings.SectionWeb, Strings.SectionWeb,
@@ -86,11 +119,91 @@ internal sealed class LauncherModel(AppServices services, AppIndex apps, Frecenc
 
     public void OpenSettings() => SettingsWindow.ShowOrActivate(services.Preferences);
 
-    /// <summary>Remembers the choice (windows come and go, so not those) and runs it.</summary>
+    /// <summary>Remembers the choice: not windows (they come and go), answers, or files (paths stay out of the settings).</summary>
     public void Bump(LauncherItem item)
     {
-        if (!item.Id.StartsWith("win.", StringComparison.Ordinal) && item.Id is not ("calc" or "web")) frecency.Bump(item.Id);
+        if (item.Id is "calc" or "web" or "fx" or "unit" or "weather") return;
+        if (item.Id.StartsWith("win.", StringComparison.Ordinal) || item.Id.StartsWith("clock.", StringComparison.Ordinal)
+            || item.Id.StartsWith("file.", StringComparison.Ordinal))
+            return;
+        frecency.Bump(item.Id);
     }
+
+    /// <summary>The amount in another currency. While no rates are in hand, a row says they are loading or failed.</summary>
+    private (LauncherItem Item, bool Answers)? CurrencyAnswer(string q)
+    {
+        if (Currencies.Parse(q, Currencies.Local) is not { } query) return null;
+        if (rates.Rate(query.From, query.To) is { } rate)
+        {
+            double converted = query.Value * rate;
+            var updated = rates.Updated is { } when ? " · " + Strings.RatesFrom(when) : "";
+            var subtitle = $"{Currencies.Format(query.Value, query.From)} · 1 {query.From} = {QueryWords.Format(rate, 6)} {query.To}{updated}";
+            return (Answer("fx", Currencies.Format(converted, query.To), subtitle, Glyphs.Currency, Strings.SectionCurrency, QueryWords.Format(converted, 2)), true);
+        }
+        // Rates are in hand but not for this code: no answer, as Orbit.
+        if (rates.HasRates) return null;
+        var pair = $"{query.From} → {query.To}";
+        return rates.Failed
+            ? (Status("fx", Strings.RatesFailed, pair, Glyphs.Currency, Strings.SectionCurrency), false)
+            : (Status("fx", Strings.RatesLoading, pair, Glyphs.Currency, Strings.SectionCurrency), true);
+    }
+
+    private static (LauncherItem Item, bool Answers)? UnitAnswer(string q)
+    {
+        if (Units.Answer(q) is not { } a) return null;
+        return (Answer("unit", Units.Format(a.Converted, a.To), "= " + Units.Format(a.Value, a.From), Glyphs.Ruler,
+            Strings.SectionConversion, QueryWords.Format(a.Converted)), true);
+    }
+
+    /// <summary>The time in a city now, its date, and how far it is from here (to the minute: India is +3:30 from Korea).</summary>
+    private static (LauncherItem Item, bool Answers)? ClockAnswer(string q)
+    {
+        if (WorldClock.Parse(q) is not { } city) return null;
+        var now = DateTimeOffset.Now;
+        var there = TimeZoneInfo.ConvertTime(now, city.Zone);
+        var time = there.ToString("t", CultureInfo.CurrentCulture);
+        var date = $"{there.ToString("m", CultureInfo.CurrentCulture)} ({there.ToString("ddd", CultureInfo.CurrentCulture)})";
+        var offset = WorldClock.OffsetFromLocal(city.Zone, now);
+        var span = Strings.Hours((int)Math.Abs(offset.TotalHours), Math.Abs(offset.Minutes));
+        var relation = offset == TimeSpan.Zero ? Strings.ClockSame : offset > TimeSpan.Zero ? Strings.ClockAhead(span) : Strings.ClockBehind(span);
+        return (Answer($"clock.{city.Zone.Id}", time, $"{city.Name} · {date} · {relation}", Glyphs.Clock, Strings.SectionWorldClock, time), true);
+    }
+
+    private (LauncherItem Item, bool Answers)? WeatherAnswer(string q)
+    {
+        if (WeatherService.Parse(q) is not { } place)
+        {
+            weather.Forget();
+            return null;
+        }
+        var (status, report) = weather.Get(place);
+        if (report is { } r)
+        {
+            var title = $"{(int)Math.Round(r.Temperature)}° · {Strings.WeatherLabel(r.Kind)}";
+            var subtitle = $"{r.City} · {Strings.HighLow((int)Math.Round(r.High), (int)Math.Round(r.Low))}";
+            return (new LauncherItem("weather", title, subtitle, IconKind.Glyph, r.Kind == WeatherKind.Clear ? Glyphs.Sun : Glyphs.Cloud,
+                Strings.SectionWeather, Strings.SectionWeather, [new LauncherAction(Strings.ActionCopy, Glyphs.Copy, () => Copy($"{r.City} {title}"))]), true);
+        }
+        return status == WeatherStatus.Failed
+            ? (Status("weather", Strings.WeatherFailed, place, Glyphs.Cloud, Strings.SectionWeather), false)
+            : (Status("weather", Strings.WeatherLoading, place, Glyphs.Cloud, Strings.SectionWeather), true);
+    }
+
+    private static LauncherItem Answer(string id, string title, string subtitle, string glyph, string section, string copy) =>
+        new(id, title, subtitle, IconKind.Glyph, glyph, section, section, [new LauncherAction(Strings.ActionCopyAnswer, Glyphs.Copy, () => Copy(copy))]);
+
+    /// <summary>A row that only tells something (loading, failed): Enter does nothing.</summary>
+    private static LauncherItem Status(string id, string title, string subtitle, string glyph, string section) =>
+        new(id, title, subtitle, IconKind.Glyph, glyph, section, section, []);
+
+    /// <summary>A file or folder: open it, show it in Explorer (Ctrl+Enter), copy its path.</summary>
+    private static LauncherItem File(string path) =>
+        new($"file.{path}", Path.GetFileName(path), Path.GetDirectoryName(path), IconKind.File, path, Strings.AccessoryFile, Strings.SectionFiles,
+        [
+            new LauncherAction(Strings.ActionOpen, Glyphs.OpenInNew, () => Open(path)),
+            new LauncherAction(Strings.ActionOpenFileLocation, Glyphs.Folder, () => Run(() => ShowInExplorer(path)), "Ctrl ↵"),
+            new LauncherAction(Strings.ActionCopyPath, Glyphs.Copy, () => Copy(path)),
+        ]);
 
     private IEnumerable<LauncherItem> Suggestions()
     {

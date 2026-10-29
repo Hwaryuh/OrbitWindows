@@ -56,6 +56,41 @@ internal static class Strings
     public static string ActionCopyPath => T("경로 복사", "Copy Path");
     public static string ActionSearch => T("검색", "Search");
     public static string SearchGoogleFor(string query) => T($"Google에서 “{query}” 검색", $"Search Google for “{query}”");
+    public static string SectionCurrency => T("환율", "Currency");
+    public static string SectionConversion => T("변환", "Conversion");
+    public static string SectionWorldClock => T("세계 시각", "World Clock");
+    public static string SectionWeather => T("날씨", "Weather");
+    public static string SectionFiles => T("파일", "Files");
+    public static string AccessoryFile => T("파일", "File");
+    public static string ActionCopy => T("복사", "Copy");
+    public static string RatesLoading => T("환율을 불러오는 중입니다…", "Getting exchange rates…");
+    public static string RatesFailed => T("환율을 불러오지 못했습니다. 인터넷 연결을 확인하세요.", "Exchange rates could not be loaded. Check your internet connection.");
+    public static string RatesFrom(DateTimeOffset when) =>
+        T($"{when.LocalDateTime:g} 기준", $"Rates from {when.LocalDateTime:g}");
+    public static string ClockSame => T("여기와 같은 시각입니다", "Same time as here");
+    public static string ClockAhead(string span) => T($"여기보다 {span} 빠릅니다", $"{span} ahead");
+    public static string ClockBehind(string span) => T($"여기보다 {span} 느립니다", $"{span} behind");
+    public static string Hours(int hours, int minutes) => (hours, minutes) switch
+    {
+        (_, 0) => T($"{hours}시간", hours == 1 ? "1 hour" : $"{hours} hours"),
+        (0, _) => T($"{minutes}분", $"{minutes} minutes"),
+        _ => T($"{hours}시간 {minutes}분", $"{hours} h {minutes} min"),
+    };
+    public static string WeatherLoading => T("날씨를 확인하는 중입니다…", "Checking the weather…");
+    public static string WeatherFailed => T("날씨를 불러오지 못했습니다.", "The weather could not be loaded.");
+    public static string HighLow(int high, int low) => T($"최고 {high}° 최저 {low}°", $"High {high}° Low {low}°");
+    public static string WeatherLabel(Orbit.Core.Launcher.WeatherKind kind) => kind switch
+    {
+        Orbit.Core.Launcher.WeatherKind.Clear => T("맑음", "Clear sky"),
+        Orbit.Core.Launcher.WeatherKind.PartlyCloudy => T("구름 조금", "Partly cloudy"),
+        Orbit.Core.Launcher.WeatherKind.Cloudy => T("흐림", "Cloudy"),
+        Orbit.Core.Launcher.WeatherKind.Fog => T("안개", "Fog"),
+        Orbit.Core.Launcher.WeatherKind.Drizzle => T("이슬비", "Drizzle"),
+        Orbit.Core.Launcher.WeatherKind.Rain => T("비", "Rain"),
+        Orbit.Core.Launcher.WeatherKind.Snow => T("눈", "Snow"),
+        Orbit.Core.Launcher.WeatherKind.Thunderstorm => T("뇌우", "Thunderstorm"),
+        _ => T("날씨", "Weather"),
+    };
     public static string Copied => T("복사했습니다.", "Copied.");
     public static string CopyFailed => T("클립보드에 복사하지 못했습니다. 다시 시도하세요.", "Could not copy to the clipboard. Please try again.");
     public static string OpenFailed => T("열지 못했습니다.", "Could not open it.");

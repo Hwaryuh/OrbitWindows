@@ -18,6 +18,7 @@ internal sealed class LauncherFeature : IFeature
     private AppServices? _services;
     private ShellWorker? _shell;
     private AppIndex? _apps;
+    private WeatherService? _weather;
     private LauncherModel? _model;
     private LauncherWindow? _window;
 
@@ -27,7 +28,9 @@ internal sealed class LauncherFeature : IFeature
         _shell = new ShellWorker();
         _apps = new AppIndex(_shell);
         _apps.RefreshIfOlderThan(TimeSpan.Zero);
-        _model = new LauncherModel(services, _apps, new Frecency(services.Preferences));
+        _weather = new WeatherService();
+        _model = new LauncherModel(services, _apps, new Frecency(services.Preferences),
+            new ExchangeRates(services.Preferences), _weather, new FileSearch());
         _hotkey = services.AddHotkey(new Hotkey(Modifiers.Alt, HotkeyMatcher.VkSpace));
         services.Actions.Register(OrbitAction.Launcher, Toggle);
     }
@@ -43,6 +46,7 @@ internal sealed class LauncherFeature : IFeature
     {
         _window?.Close();
         _shell?.Dispose();
+        _weather?.Dispose();
     }
 
     private void Toggle()

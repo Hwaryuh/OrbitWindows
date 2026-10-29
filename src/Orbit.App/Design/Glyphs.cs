@@ -23,6 +23,12 @@ internal static class Glyphs
     public const string OpenInNew = "\uE8A7";
     public const string Keyboard = "\uE765";
     public const string Shield = "\uE7EF";
+    public const string Currency = "\uE825";
+    public const string Ruler = "\uECC6";
+    public const string Clock = "\uE121";
+    public const string Cloud = "\uE753";
+    public const string Sun = "\uE706";
+    public const string Document = "\uE8A5";
 
     private static readonly Dictionary<OrbitAction, string> ForAction = new()
     {
