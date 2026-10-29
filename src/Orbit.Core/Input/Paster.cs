@@ -110,9 +110,46 @@ public static class Paster
     }
 
     /// <summary>Lets go of held modifiers (masking a held Alt or Win first), then Ctrl+V.</summary>
-    private static unsafe bool SendPaste()
+    private static bool SendPaste() => SendReplace(0);
+
+    private const uint VkBack = 0x08;
+
+    /// <summary>
+    /// <paramref name="backspaces"/> Backspaces, then Ctrl+V, in one SendInput so nothing typed in
+    /// between can land among them. Held modifiers are let go first. To the window in front.
+    /// </summary>
+    public static unsafe bool SendReplace(int backspaces)
     {
-        Span<INPUT> inputs = stackalloc INPUT[16];
+        var inputs = new INPUT[16 + backspaces * 2];
+        int count = ReleaseHeld(inputs);
+        for (int i = 0; i < backspaces; i++)
+        {
+            inputs[count++] = OrbitInput.Key(VkBack, up: false);
+            inputs[count++] = OrbitInput.Key(VkBack, up: true);
+        }
+        inputs[count++] = OrbitInput.Key(HotkeyMatcher.VkLControl, up: false);
+        inputs[count++] = OrbitInput.Key(VkV, up: false);
+        inputs[count++] = OrbitInput.Key(VkV, up: true);
+        inputs[count++] = OrbitInput.Key(HotkeyMatcher.VkLControl, up: true);
+        return PInvoke.SendInput(inputs.AsSpan(0, count), sizeof(INPUT)) == count;
+    }
+
+    /// <summary>A key pressed <paramref name="times"/> times (the caret stepping back over a snippet's tail).</summary>
+    public static unsafe bool SendPresses(uint vk, int times)
+    {
+        if (times <= 0) return true;
+        var inputs = new INPUT[times * 2];
+        for (int i = 0; i < times; i++)
+        {
+            inputs[i * 2] = OrbitInput.Key(vk, up: false);
+            inputs[i * 2 + 1] = OrbitInput.Key(vk, up: true);
+        }
+        return PInvoke.SendInput(inputs, sizeof(INPUT)) == inputs.Length;
+    }
+
+    /// <summary>Ups for every modifier held now, with a menu mask first if Alt or Win is among them. How many inputs it wrote.</summary>
+    private static int ReleaseHeld(Span<INPUT> inputs)
+    {
         int count = 0;
         bool altOrWin = false;
         foreach (var vk in Modifiers)
@@ -125,11 +162,6 @@ public static class Paster
         }
         foreach (var vk in Modifiers)
             if ((PInvoke.GetAsyncKeyState((int)vk) & 0x8000) != 0) inputs[count++] = OrbitInput.Key(vk, up: true);
-
-        inputs[count++] = OrbitInput.Key(HotkeyMatcher.VkLControl, up: false);
-        inputs[count++] = OrbitInput.Key(VkV, up: false);
-        inputs[count++] = OrbitInput.Key(VkV, up: true);
-        inputs[count++] = OrbitInput.Key(HotkeyMatcher.VkLControl, up: true);
-        return PInvoke.SendInput(inputs[..count], sizeof(INPUT)) == count;
+        return count;
     }
 }

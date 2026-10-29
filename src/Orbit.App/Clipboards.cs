@@ -28,9 +28,11 @@ internal static class Clipboards
     public static bool Set(DataObject data) => Set(data, out _);
 
     /// <param name="sequence">The clipboard sequence number read at once after the write: the write's own.</param>
-    public static bool Set(DataObject data, out uint sequence)
+    /// <param name="excludeFromHistory">Also kept out of Windows' clipboard history (Win+V): a snippet borrowing the clipboard, or the user's own clipboard coming back.</param>
+    public static bool Set(DataObject data, out uint sequence, bool excludeFromHistory = false)
     {
         sequence = 0;
+        if (excludeFromHistory) data.SetData(ClipboardRules.ExcludeFormat, new System.IO.MemoryStream([0, 0, 0, 0]));
         // A stream goes onto the clipboard as is; other objects would need a serializer.
         data.SetData(ClipboardRules.OwnFormat, new System.IO.MemoryStream([1]));
         for (int attempt = 0; attempt < 5; attempt++)

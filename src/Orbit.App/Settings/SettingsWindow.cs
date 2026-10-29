@@ -87,6 +87,7 @@ internal sealed class SettingsWindow : Window
         "capture" => () => new CapturePage(_services),
         "clipboard" => () => new ClipboardPage(_services),
         "translate" => () => new TranslatePage(_services),
+        "snippets" => () => new SnippetsPage(_services),
         "about" => About,
         _ => () => NotReady(title),
     };

@@ -201,33 +201,5 @@ internal sealed class ClipboardPage : StackPanel
         _cleanUrl.Children.Add(mine);
     }
 
-    private void FillIgnored()
-    {
-        _ignored.Children.Clear();
-        var list = _preferences.Get<string[]>(Pref.IgnoredApps);
-        foreach (var process in list)
-        {
-            var name = process;
-            var remove = _parts.PillButton(Strings.ClipRemove, prominent: false, () =>
-            {
-                _preferences.Set(Pref.IgnoredApps, _preferences.Get<string[]>(Pref.IgnoredApps).Where(p => p != name).ToArray());
-                FillIgnored();
-            });
-            _ignored.Children.Add(_parts.Row(name, null, remove));
-            _ignored.Children.Add(new Border { Height = 1, Background = _palette.Hairline, Margin = new Thickness(0, 12, 0, 12) });
-        }
-        _ignored.Children.Add(_parts.Row(Strings.ClipAddApp, null, _parts.PillButton(Strings.ClipChoose, prominent: false, () =>
-        {
-            var dialog = new Microsoft.Win32.OpenFileDialog
-            {
-                Filter = $"{Strings.ClipPrograms}|*.exe",
-                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
-            };
-            if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
-            var file = Path.GetFileName(dialog.FileName).ToLowerInvariant();
-            var current = _preferences.Get<string[]>(Pref.IgnoredApps);
-            if (!current.Contains(file)) _preferences.Set(Pref.IgnoredApps, current.Append(file).ToArray());
-            FillIgnored();
-        })));
-    }
+    private void FillIgnored() => _parts.ProgramList(_ignored, _preferences, Pref.IgnoredApps);
 }

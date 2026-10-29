@@ -51,6 +51,12 @@ public static class Pref
     public const string CleanUrlDisabled = "cleanUrl.disabled";
     /// <summary>What the last automatic clean removed, for the settings page.</summary>
     public const string CleanUrlLastRemoved = "cleanUrl.lastRemoved";
+    /// <summary>Snippets expand as they're typed (Orbit: SnippetStore keys).</summary>
+    public const string SnippetsEnabled = "snippets.enabled";
+    /// <summary>"immediate" or "delimiter".</summary>
+    public const string SnippetsTrigger = "snippets.trigger";
+    public const string SnippetsExcludedApps = "snippets.excludedApps";
+    public const string SnippetsInTerminals = "snippets.inTerminals";
     public const string RingMouse = "ring.mouse";
     public const string RingMouseButton = "ring.mouseButton";
     public const string RingSlots = "ring.slots";
@@ -91,6 +97,11 @@ public static class Pref
         [CleanUrlAdded] = Array.Empty<string>(),
         [CleanUrlDisabled] = Array.Empty<string>(),
         [CleanUrlLastRemoved] = Array.Empty<string>(),
+        [SnippetsEnabled] = true,
+        [SnippetsTrigger] = "immediate",
+        // Password managers, as Orbit's list by bundle ID.
+        [SnippetsExcludedApps] = new[] { "1password.exe", "bitwarden.exe", "keepass.exe", "keepassxc.exe", "dashlane.exe", "enpass.exe", "lastpass.exe" },
+        [SnippetsInTerminals] = true,
         [RingMouse] = true,
         [RingMouseButton] = "middle",
         [RingHover] = true,

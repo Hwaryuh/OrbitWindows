@@ -6,11 +6,17 @@ using Windows.Win32.UI.WindowsAndMessaging;
 
 namespace Orbit.Core.Input;
 
-public enum HookNotice { RingOpen, RingRelease, HooksReinstalled, HotkeyDown, HotkeyUp, Click, Escape, CopyPressed }
+public enum HookNotice { RingOpen, RingRelease, HooksReinstalled, HotkeyDown, HotkeyUp, Click, Escape, CopyPressed, KeyTyped, TypingReset }
+
+/// <summary>Modifier and lock state with a <see cref="HookNotice.KeyTyped"/> key, as it was when the key went down.</summary>
+[Flags]
+public enum TypedState { None = 0, Shift = 1, Ctrl = 2, Alt = 4, Win = 8, CapsLock = 16, AltGr = 32 }
 
 /// <summary>
 /// What the hooks report. X and Y: the ring's press or a click, in physical pixels. Hotkey: the
 /// matched id. At: when it happened, Environment.TickCount64 milliseconds (Ctrl+C presses).
+/// For <see cref="HookNotice.KeyTyped"/>: X is the virtual key, Y the <see cref="TypedState"/>,
+/// Hotkey the scan code.
 /// </summary>
 public readonly record struct HookEvent(HookNotice Notice, int X = 0, int Y = 0, int Hotkey = 0, long At = 0);
 
@@ -33,6 +39,9 @@ public sealed class HookThread : IDisposable
     private const uint WmClick = PInvoke.WM_APP + 5;
     private const uint WmEscape = PInvoke.WM_APP + 6;
     private const uint WmCopyPressed = PInvoke.WM_APP + 7;
+    private const uint WmKeyTyped = PInvoke.WM_APP + 8;
+    private const uint WmTypingReset = PInvoke.WM_APP + 9;
+    private const uint VkCapital = 0x14, VkRMenu = 0xA5;
     private const uint VkC = 0x43, VkControl = 0x11, VkMenu = 0x12, VkShift = 0x10, VkLWin = 0x5B, VkRWin = 0x5C;
     private const uint VkEscape = 0x1B;
     private const uint WatchdogMs = 2000;
@@ -56,6 +65,7 @@ public sealed class HookThread : IDisposable
     private volatile bool _reportClicks;
     private volatile bool _captureEscape;
     private volatile bool _reportCopies;
+    private volatile bool _reportTyping;
     private bool _cDown;
     private bool _escapeOwned;
     private bool _escapePassed;
@@ -94,6 +104,13 @@ public sealed class HookThread : IDisposable
     /// <see cref="HookNotice.CopyPressed"/> with its time. The key still goes to the app.
     /// </summary>
     public bool ReportCopies { set => _reportCopies = value; }
+
+    /// <summary>
+    /// While set (snippets are on), every key down that reaches the app is reported as
+    /// <see cref="HookNotice.KeyTyped"/>, and every mouse press as <see cref="HookNotice.TypingReset"/>.
+    /// Only key codes and states travel; the text they make is worked out by the listener.
+    /// </summary>
+    public bool ReportTyping { set => _reportTyping = value; }
 
     public void Start()
     {
@@ -173,6 +190,12 @@ public sealed class HookThread : IDisposable
             case WmCopyPressed:
                 Raise(new HookEvent(HookNotice.CopyPressed, At: (long)msg.wParam.Value));
                 break;
+            case WmKeyTyped:
+                Raise(new HookEvent(HookNotice.KeyTyped, X: (int)(msg.wParam.Value & 0xFFFF), Y: (int)(msg.wParam.Value >> 16), Hotkey: (int)msg.lParam.Value));
+                break;
+            case WmTypingReset:
+                Raise(new HookEvent(HookNotice.TypingReset));
+                break;
             default:
                 PInvoke.TranslateMessage(in msg);
                 PInvoke.DispatchMessage(in msg);
@@ -211,6 +234,7 @@ public sealed class HookThread : IDisposable
                     return PInvoke.CallNextHookEx(HHOOK.Null, code, wParam, lParam);
                 }
                 var (button, down) = Decode(message, info->mouseData);
+                if (down && _reportTyping) PInvoke.PostThreadMessage(_threadId, WmTypingReset, default, default);
                 if (down && _reportClicks && button is MouseButton.Left or MouseButton.Right)
                     PInvoke.PostThreadMessage(_threadId, WmClick, (nuint)(nint)info->pt.X, info->pt.Y);
                 if (button != MouseButton.None)
@@ -278,12 +302,26 @@ public sealed class HookThread : IDisposable
                 if (decision.Pressed != 0) PInvoke.PostThreadMessage(_threadId, WmHotkeyDown, (nuint)decision.Pressed, default);
                 if (decision.Released != 0) PInvoke.PostThreadMessage(_threadId, WmHotkeyUp, (nuint)decision.Released, default);
                 if (decision.Swallow) return (LRESULT)1;
+                if (down && _reportTyping && !HotkeyMatcher.IsModifier(info->vkCode)) PostTyped(info->vkCode, info->scanCode);
             }
         }
         return PInvoke.CallNextHookEx(HHOOK.Null, code, wParam, lParam);
     }
 
     private static bool IsDown(uint vk) => (PInvoke.GetAsyncKeyState((int)vk) & 0x8000) != 0;
+
+    /// <summary>A key and the state it was typed in, posted for the snippet listener. Allocation-free.</summary>
+    private void PostTyped(uint vk, uint scan)
+    {
+        var state = TypedState.None;
+        if (IsDown(VkShift)) state |= TypedState.Shift;
+        if (IsDown(VkControl)) state |= TypedState.Ctrl;
+        if (IsDown(VkMenu)) state |= TypedState.Alt;
+        if (IsDown(VkLWin) || IsDown(VkRWin)) state |= TypedState.Win;
+        if (IsDown(VkRMenu) && IsDown(VkControl)) state |= TypedState.AltGr;
+        if ((PInvoke.GetKeyState((int)VkCapital) & 1) != 0) state |= TypedState.CapsLock;
+        PInvoke.PostThreadMessage(_threadId, WmKeyTyped, (nuint)(vk | ((uint)state << 16)), (nint)scan);
+    }
 
     /// <summary>The key state as of the event before the current one (the hook runs before Windows records it).</summary>
     private sealed class AsyncKeyState : IKeyState

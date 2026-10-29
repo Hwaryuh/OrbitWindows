@@ -111,4 +111,37 @@ internal sealed class PageParts(Palette palette)
         Fill();
         return row;
     }
+
+    /// <summary>
+    /// Programs by file name (a string list in <paramref name="key"/>): one row each with Remove,
+    /// and a last row that adds a program picked from disk. Rebuilt in <paramref name="host"/>.
+    /// </summary>
+    public void ProgramList(StackPanel host, Orbit.Core.Settings.Preferences preferences, string key)
+    {
+        host.Children.Clear();
+        foreach (var process in preferences.Get<string[]>(key))
+        {
+            var name = process;
+            var remove = PillButton(Strings.ClipRemove, prominent: false, () =>
+            {
+                preferences.Set(key, preferences.Get<string[]>(key).Where(p => p != name).ToArray());
+                ProgramList(host, preferences, key);
+            });
+            host.Children.Add(Row(name, null, remove));
+            host.Children.Add(new Border { Height = 1, Background = _palette.Hairline, Margin = new Thickness(0, 12, 0, 12) });
+        }
+        host.Children.Add(Row(Strings.ClipAddApp, null, PillButton(Strings.ClipChoose, prominent: false, () =>
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = $"{Strings.ClipPrograms}|*.exe",
+                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            };
+            if (dialog.ShowDialog(Window.GetWindow(host)) != true) return;
+            var file = System.IO.Path.GetFileName(dialog.FileName).ToLowerInvariant();
+            var current = preferences.Get<string[]>(key);
+            if (!current.Contains(file)) preferences.Set(key, current.Append(file).ToArray());
+            ProgramList(host, preferences, key);
+        })));
+    }
 }

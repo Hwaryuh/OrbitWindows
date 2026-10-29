@@ -54,7 +54,7 @@ public partial class App : Application
         _hooks = new HookThread();
         _services = new AppServices(_preferences, _actions, _hooks, _foreground, Notify);
         _services.Clipboard.Start();
-        _features.AddRange([new SettingsFeature(), new RingFeature(), new LauncherFeature(), new CaptureFeature(), new CleanUrlFeature(), new ClipboardFeature(), new TranslateFeature()]);
+        _features.AddRange([new SettingsFeature(), new RingFeature(), new LauncherFeature(), new CaptureFeature(), new CleanUrlFeature(), new ClipboardFeature(), new TranslateFeature(), new SnippetFeature()]);
         foreach (var feature in _features) feature.Start(_services);
         _hooks.Notice += e => Dispatcher.BeginInvoke(() => OnHook(e));
         // Shortcuts the app in front keeps, worked out here so the hook never asks which app it is.
