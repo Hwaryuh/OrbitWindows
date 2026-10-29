@@ -133,3 +133,11 @@ GlobalFree
 // Snippets: what a key types, and the keyboard layout of the window in front
 GetKeyboardLayout
 GetKeyState
+
+// Keep Awake: power requests and the battery
+PowerCreateRequest
+PowerSetRequest
+PowerClearRequest
+GetSystemPowerStatus
+REASON_CONTEXT
+POWER_REQUEST_CONTEXT_FLAGS

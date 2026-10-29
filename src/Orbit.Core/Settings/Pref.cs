@@ -26,6 +26,8 @@ public static class Pref
     public const string LaunchAtSignIn = "app.launchAtSignIn";
     public const string AwakeDisplay = "awake.keepDisplayOn";
     public const string AwakeBatteryFloor = "awake.batteryFloor";
+    /// <summary>The running session, so it comes back if Orbit restarts (Orbit: KeepAwake.resumeKey).</summary>
+    public const string AwakeResume = "awake.resume";
     public const string ShelfEdge = "shelf.edgeReveal";
     public const string TranslateDoubleCopy = "translate.doubleCopy";
     public const string TranslateInterval = "translate.interval";
@@ -77,6 +79,7 @@ public static class Pref
         [LaunchAtSignIn] = true,
         [AwakeDisplay] = true,
         [AwakeBatteryFloor] = 20,
+        [AwakeResume] = "",
         [ShelfEdge] = true,
         [TranslateDoubleCopy] = true,
         [TranslateInterval] = 0.4,

@@ -43,6 +43,9 @@ internal sealed class AppServices(Preferences preferences, ActionRunner actions,
     /// <summary>Clean URL; null until that feature starts. The history asks it first about every copy.</summary>
     public CleanUrlFeature? CleanUrl { get; set; }
 
+    /// <summary>Keep Awake; null until that feature starts.</summary>
+    public KeepAwakeFeature? KeepAwake { get; set; }
+
     /// <summary>Snippets; null until that feature starts.</summary>
     public SnippetFeature? Snippets { get; set; }
 

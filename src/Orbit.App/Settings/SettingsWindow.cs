@@ -88,6 +88,7 @@ internal sealed class SettingsWindow : Window
         "clipboard" => () => new ClipboardPage(_services),
         "translate" => () => new TranslatePage(_services),
         "snippets" => () => new SnippetsPage(_services),
+        "keepAwake" => () => new KeepAwakePage(_services),
         "about" => About,
         _ => () => NotReady(title),
     };

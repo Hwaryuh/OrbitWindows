@@ -359,6 +359,37 @@ internal static class Strings
     public static string SnippetPlaceholders => T("{clipboard} 클립보드, {cursor} 커서 위치, {date} {time} {datetime} 날짜와 시각 ({date:yyyy-MM-dd}처럼 형식 지정), {input:이름} 넣을 때 묻기, {snippet:키워드} 다른 스니펫, {uuid}", "{clipboard}, {cursor}, {date} {time} {datetime} (with a pattern such as {date:yyyy-MM-dd}), {input:Name} asks when inserting, {snippet:keyword} another snippet, {uuid}");
     public static string SnippetExcluded => T("바꾸지 않을 앱", "Never expand in");
     public static string SnippetFiles => T("스니펫 파일", "Snippet files");
+    // Keep Awake
+    public static string AwakeStarted => T("잠자기를 막고 있습니다.", "Keeping your PC awake.");
+    public static string AwakeStopped => T("잠자기가 원래대로 돌아왔습니다.", "Sleep is back to normal.");
+    public static string AwakeFinished => T("잠자기 방지가 끝났습니다.", "Keep awake finished.");
+    public static string AwakeAppQuit(string name) => T($"{name} 종료로 잠자기가 원래대로 돌아왔습니다.", $"{name} quit. Sleep is back to normal.");
+    public static string AwakeBatteryLow(int percent) => T($"배터리 {percent}%라서 잠자기가 원래대로 돌아왔습니다.", $"Battery at {percent}%. Sleep is back to normal.");
+    public static string AwakeFailed => T("잠자기를 막지 못했습니다.", "Couldn't keep your PC awake.");
+    public static string AwakeIndefinite => T("끌 때까지", "Until you turn it off");
+    public static string AwakeUntil(string time) => T($"{time}까지", $"Until {time}");
+    public static string AwakeWhile(string name) => T($"{name} 실행 중에", $"While {name} is open");
+    public static string AwakeSubtitle => T("PC가 잠들지 않게 합니다.", "Keep your PC from sleeping.");
+    public static string AwakeOn => T("깨어 있는 중", "Awake");
+    public static string AwakeOff => T("꺼져 있음", "Off");
+    public static string AwakeRemaining(string left) => T($"남은 시간 {left}", $"{left} left");
+    public static string AwakeStop => T("멈추기", "Stop");
+    public static string AwakeStart => T("시작", "Start");
+    public static string AwakeStartSession => T("세션 시작", "Start a session");
+    public static string AwakeForever => T("끌 때까지", "Until off");
+    public static string AwakeMinutes(int m) => T($"{m}분", $"{m}m");
+    public static string AwakeHours(int h) => T($"{h}시간", $"{h}h");
+    public static string AwakeUntilTime => T("정한 시각까지", "Until a time");
+    public static string AwakeTimeInvalid => T("시각을 13:30처럼 입력하세요.", "Enter a time such as 13:30.");
+    public static string AwakeWhileApp => T("프로그램이 실행되는 동안", "While a program is open");
+    public static string AwakeWhileAppDetail => T("그 프로그램을 모두 닫으면 끝납니다. 다운로드나 렌더링에 좋습니다.", "Ends when every window of it is closed and it quits. Good for downloads and renders.");
+    public static string AwakeKeepScreen => T("화면도 켜 두기", "Keep the screen on");
+    public static string AwakeKeepScreenDetail => T("끄면 화면은 평소대로 꺼지고 PC만 깨어 있습니다.", "Off: the screen sleeps as usual and the PC stays awake.");
+    public static string AwakeSafety => T("안전", "Safety");
+    public static string AwakeBatteryFloor => T("배터리가 적으면 멈추기", "Stop when the battery is low");
+    public static string AwakeBatteryFloorDetail => T("배터리로 쓸 때만 해당합니다.", "Only while running on battery.");
+    public static string AwakeOffChip => T("끔", "Off");
+    public static string AwakeFooter => T("덮개를 닫거나 전원 단추를 누르면 평소대로 잠듭니다.", "Closing the lid or pressing the power button still sleeps.");
     public static string ColorCopied(string hex) => T($"{hex} 색을 복사했습니다.", $"{hex} copied to the clipboard.");
 
     public static string MenuSettings => T("설정", "Settings");
