@@ -36,6 +36,8 @@ public static class Pref
     public const string TranslateFontSize = "translate.fontSize";
     public const string TranslateShowSource = "translate.showSource";
     public const string TranslateCloseOnBlur = "translate.closeOnBlur";
+    /// <summary>The DeepL key, DPAPI-protected for the current user (Orbit keeps it in the Keychain).</summary>
+    public const string TranslateDeepLKey = "translate.deeplKey";
     public const string SpellEnabled = "spell.enabled";
     public const string SpellTripleCopy = "spell.tripleCopy";
     public const string SpellWebConsent = "spell.web.consent";
@@ -79,6 +81,7 @@ public static class Pref
         [TranslateFontSize] = 16.0,
         [TranslateShowSource] = true,
         [TranslateCloseOnBlur] = true,
+        [TranslateDeepLKey] = "",
         [SpellEnabled] = true,
         [SpellTripleCopy] = false,
         [SpellWebConsent] = false,

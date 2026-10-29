@@ -161,6 +161,7 @@ internal static class Strings
     public static string CapturePlaySound => T("소리 내기", "Play sound");
     public static string CaptureKeepPreview => T("미리보기 표시 시간", "Keep preview on screen");
     public static string CaptureKeepPreviewDetail => T("마우스를 올려 두면 계속 보입니다.", "Hovering keeps it open.");
+    public static string ShortSeconds(double seconds) => T($"{seconds:0.##}초", $"{seconds:0.##} s");
     public static string WholeSeconds(int seconds) => T($"{seconds}초", $"{seconds} s");
     public static string CaptureUntilClosed => T("닫을 때까지", "Until closed");
     public static string CapturePreviewPosition => T("미리보기 위치", "Preview position");
@@ -273,6 +274,53 @@ internal static class Strings
     public static string CleanUrlAddHint => T("이름 입력", "Parameter name");
     public static string CleanUrlAdd => T("추가", "Add");
     public static string CleanUrlFooter => T("사이트별 이름(si, t 등)은 그 사이트의 링크에서만 지웁니다. 링크 하나만 있을 때만 정리합니다.", "Site names (si, t and others) are removed only from links to that site. Only a clipboard that is one link is cleaned.");
+    // Translate
+    public static string TranslateCopyFirst => T("먼저 텍스트를 복사하세요.", "Copy some text first.");
+    public static string TranslatePrivate => T("비밀번호 관리자가 숨긴 내용은 번역하지 않습니다.", "Content a password manager marked as private is not translated.");
+    public static string TranslateAuto => T("자동", "Auto");
+    public static string TranslateSwap => T("방향 바꾸기 (Ctrl+Shift+S)", "Swap direction (Ctrl+Shift+S)");
+    public static string TranslateInto => T("번역할 언어", "Translate into…");
+    public static string TranslateClose => T("닫기 (Esc)", "Close (Esc)");
+    public static string TranslateTryAgain => T("다시 시도", "Try Again");
+    public static string TranslateUseGoogle => T("Google 사용", "Use Google");
+    public static string TranslateReplace => T("바꾸기", "Replace");
+    public static string TranslateCopied => T("번역을 복사했습니다.", "Translation copied.");
+    public static string TranslateCharacters(int count) => T($"{count}자", $"{count} characters");
+    public static string TranslateDrag => T("끌어서 옮기기", "Drag to move");
+    public static string TranslateFailure(Orbit.Core.Translate.TranslationFailure failure) => failure switch
+    {
+        Orbit.Core.Translate.TranslationFailure.NeedsKey => T("설정 > 번역에서 DeepL API 키를 넣으세요.", "Add a DeepL API key in Settings > Translate."),
+        Orbit.Core.Translate.TranslationFailure.BadKey => T("DeepL이 API 키를 받아들이지 않았습니다.", "DeepL didn't accept the API key."),
+        Orbit.Core.Translate.TranslationFailure.Quota => T("DeepL의 이번 달 무료 사용량을 다 썼습니다.", "DeepL's monthly free limit is used up."),
+        Orbit.Core.Translate.TranslationFailure.RateLimited => T("요청이 너무 많습니다. 잠시 뒤에 다시 시도하세요.", "Too many requests. Try again in a moment."),
+        Orbit.Core.Translate.TranslationFailure.Offline => T("인터넷에 연결되어 있지 않은 것 같습니다.", "You seem to be offline."),
+        _ => T("번역 서비스가 응답하지 않았습니다. 잠시 뒤에 다시 시도하세요.", "The translation service didn't answer. Try again in a moment."),
+    };
+    public static string TranslatePageSubtitle => T("Ctrl+C를 두 번 누르면 선택한 글을 번역합니다.", "Press Ctrl+C twice to translate what you selected.");
+    public static string TranslateDoubleCopy => T("Ctrl+C 두 번으로 번역", "Translate with Ctrl+C twice");
+    public static string TranslateDoubleCopyDetail => T("두 번째 Ctrl+C로 클립보드가 바뀔 때만 번역합니다.", "Translates only when the second Ctrl+C changes the clipboard.");
+    public static string TranslateInterval => T("두 번 누르는 간격", "Double-press window");
+    public static string TranslateEngineTitle => T("번역 엔진", "Engine");
+    public static string TranslateGoogleDetail => T("설정 없이 무료로 씁니다. 글이 Google로 전송됩니다. 공식 API가 아니어서 막힐 수 있습니다.", "Free, no setup. Text is sent to Google. Not an official API; it may be limited.");
+    public static string TranslateDeepLDetail => T("가장 자연스럽습니다. 무료 API 키로 한 달 500,000자까지 씁니다.", "Most natural results. Free API key: 500,000 characters a month.");
+    public static string TranslateDeepLKey => T("DeepL API 키", "DeepL API key");
+    public static string TranslateDeepLKeyDetail => T("이 Windows 사용자만 읽을 수 있게 암호화해서 저장합니다.", "Stored encrypted so only this Windows user can read it.");
+    public static string TranslateDeepLKeySaved => T("키를 저장했습니다.", "Key saved.");
+    public static string TranslateDeepLKeyRemoved => T("키를 지웠습니다.", "Key removed.");
+    public static string TranslateDeepLKeyHint => T("키를 붙여넣으세요", "Paste your key");
+    public static string TranslatePrimary => T("기본 언어", "Translate into");
+    public static string TranslatePrimaryDetail => T("글이 이미 이 언어면 두 번째 언어로 번역합니다.", "Text already in it goes to the second language.");
+    public static string TranslateSecondary => T("두 번째 언어", "Second language");
+    public static string TranslateFormality => T("말투 (DeepL)", "Formality (DeepL)");
+    public static string TranslateFormalityName(Orbit.Core.Translate.Formality f) => f switch
+    {
+        Orbit.Core.Translate.Formality.Formal => T("격식", "Formal"),
+        Orbit.Core.Translate.Formality.Casual => T("편하게", "Casual"),
+        _ => T("자동", "Auto"),
+    };
+    public static string TranslateFontSize => T("글자 크기", "Text size");
+    public static string TranslateShowSource => T("원문 보이기", "Show the original");
+    public static string TranslateCloseOnBlur => T("바깥을 누르면 닫기", "Close when clicking elsewhere");
     public static string ColorCopied(string hex) => T($"{hex} 색을 복사했습니다.", $"{hex} copied to the clipboard.");
 
     public static string MenuSettings => T("설정", "Settings");

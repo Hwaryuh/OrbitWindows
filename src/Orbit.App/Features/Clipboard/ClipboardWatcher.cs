@@ -18,6 +18,8 @@ namespace Orbit.App.Features.Clipboard;
 /// </summary>
 internal sealed record ClipboardCopy(uint Sequence, DateTime At, bool Own, bool Private)
 {
+    /// <summary>When Windows announced the change, Environment.TickCount64 milliseconds (Translate pairs it with Ctrl+C).</summary>
+    public long ObservedAt { get; init; }
     /// <summary>The copying program's file name, lowercase, when Windows names an owner.</summary>
     public string? OwnerProcess { get; init; }
     public string? OwnerName { get; init; }
@@ -49,6 +51,7 @@ internal sealed class ClipboardWatcher : IDisposable
     private HwndSource? _window;
     private bool _pending;
     private volatile bool _stopped;
+    private long _lastUpdate;
 
     public event Action<ClipboardCopy>? Copied;
 
@@ -93,6 +96,7 @@ internal sealed class ClipboardWatcher : IDisposable
     {
         if (message != WmClipboardUpdate) return 0;
         handled = true;
+        _lastUpdate = Environment.TickCount64;
         // A burst of updates is read once.
         if (!_pending)
         {
@@ -121,6 +125,7 @@ internal sealed class ClipboardWatcher : IDisposable
             // It changed while being read: what was read may mix two copies. The next update reads it again.
             return;
         }
+        if (copy is not null) copy = copy with { ObservedAt = _lastUpdate };
         if (copy is not null) _ui!.BeginInvoke(() =>
         {
             if (!_stopped) Copied?.Invoke(copy);

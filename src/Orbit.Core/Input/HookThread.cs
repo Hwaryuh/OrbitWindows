@@ -6,10 +6,13 @@ using Windows.Win32.UI.WindowsAndMessaging;
 
 namespace Orbit.Core.Input;
 
-public enum HookNotice { RingOpen, RingRelease, HooksReinstalled, HotkeyDown, HotkeyUp, Click, Escape }
+public enum HookNotice { RingOpen, RingRelease, HooksReinstalled, HotkeyDown, HotkeyUp, Click, Escape, CopyPressed }
 
-/// <summary>What the hooks report. X and Y: the ring's press or a click, in physical pixels. Hotkey: the matched id.</summary>
-public readonly record struct HookEvent(HookNotice Notice, int X = 0, int Y = 0, int Hotkey = 0);
+/// <summary>
+/// What the hooks report. X and Y: the ring's press or a click, in physical pixels. Hotkey: the
+/// matched id. At: when it happened, Environment.TickCount64 milliseconds (Ctrl+C presses).
+/// </summary>
+public readonly record struct HookEvent(HookNotice Notice, int X = 0, int Y = 0, int Hotkey = 0, long At = 0);
 
 /// <summary>
 /// The low-level keyboard and mouse hooks, on a thread of their own with its own message loop, so
@@ -29,6 +32,8 @@ public sealed class HookThread : IDisposable
     private const uint WmHotkeyUp = PInvoke.WM_APP + 4;
     private const uint WmClick = PInvoke.WM_APP + 5;
     private const uint WmEscape = PInvoke.WM_APP + 6;
+    private const uint WmCopyPressed = PInvoke.WM_APP + 7;
+    private const uint VkC = 0x43, VkControl = 0x11, VkMenu = 0x12, VkShift = 0x10, VkLWin = 0x5B, VkRWin = 0x5C;
     private const uint VkEscape = 0x1B;
     private const uint WatchdogMs = 2000;
 
@@ -50,6 +55,8 @@ public sealed class HookThread : IDisposable
     private uint _lastReinstallLog;
     private volatile bool _reportClicks;
     private volatile bool _captureEscape;
+    private volatile bool _reportCopies;
+    private bool _cDown;
     private bool _escapeOwned;
     private bool _escapePassed;
 
@@ -81,6 +88,12 @@ public sealed class HookThread : IDisposable
     /// and kept from the app, its repeats and up too, even if this is turned off in between.
     /// </summary>
     public bool CaptureEscape { set => _captureEscape = value; }
+
+    /// <summary>
+    /// While set (Translate's Ctrl+C twice is on), every fresh Ctrl+C is reported as
+    /// <see cref="HookNotice.CopyPressed"/> with its time. The key still goes to the app.
+    /// </summary>
+    public bool ReportCopies { set => _reportCopies = value; }
 
     public void Start()
     {
@@ -156,6 +169,9 @@ public sealed class HookThread : IDisposable
                 break;
             case WmEscape:
                 Raise(new HookEvent(HookNotice.Escape));
+                break;
+            case WmCopyPressed:
+                Raise(new HookEvent(HookNotice.CopyPressed, At: (long)msg.wParam.Value));
                 break;
             default:
                 PInvoke.TranslateMessage(in msg);
@@ -248,6 +264,13 @@ public sealed class HookThread : IDisposable
                         }
                     }
                 }
+                if (info->vkCode == VkC)
+                {
+                    // A first press only (not its repeats), with Ctrl and nothing else: AltGr is Ctrl+Alt.
+                    if (down && !_cDown && _reportCopies && IsDown(VkControl) && !IsDown(VkMenu) && !IsDown(VkShift) && !IsDown(VkLWin) && !IsDown(VkRWin))
+                        PInvoke.PostThreadMessage(_threadId, WmCopyPressed, (nuint)Environment.TickCount64, default);
+                    _cDown = down;
+                }
                 var decision = down ? Hotkeys.KeyDown(info->vkCode, AsyncKeyState.Instance) : Hotkeys.KeyUp(info->vkCode);
                 // Now, not posted: input that arrives meanwhile (Alt's up) reaches this thread's hook
                 // before its posted messages, and the mask must reach the app before that up.
@@ -259,6 +282,8 @@ public sealed class HookThread : IDisposable
         }
         return PInvoke.CallNextHookEx(HHOOK.Null, code, wParam, lParam);
     }
+
+    private static bool IsDown(uint vk) => (PInvoke.GetAsyncKeyState((int)vk) & 0x8000) != 0;
 
     /// <summary>The key state as of the event before the current one (the hook runs before Windows records it).</summary>
     private sealed class AsyncKeyState : IKeyState
