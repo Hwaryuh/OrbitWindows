@@ -42,6 +42,17 @@ public readonly record struct Area(double X, double Y, double Width, double Heig
     public bool Contains(double x, double y) => x >= X && x <= Right && y >= Y && y <= Bottom;
 
     public Area Offset(double dx, double dy) => this with { X = X + dx, Y = Y + dy };
+
+    /// <summary>Grown by <paramref name="by"/> on every side (shrunk when negative).</summary>
+    public Area Inflate(double by) => new(X - by, Y - by, Width + by * 2, Height + by * 2);
+
+    /// <summary>The overlap, or null when there is none.</summary>
+    public Area? Intersect(Area other)
+    {
+        double left = Math.Max(X, other.X), top = Math.Max(Y, other.Y);
+        double right = Math.Min(Right, other.Right), bottom = Math.Min(Bottom, other.Bottom);
+        return right <= left || bottom <= top ? null : new Area(left, top, right - left, bottom - top);
+    }
 }
 
 /// <summary>

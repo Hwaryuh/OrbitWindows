@@ -17,6 +17,8 @@ public static class Pref
     public const string CaptureThumbnailSeconds = "capture.thumbnailSeconds";
     public const string CaptureThumbnailCorner = "capture.thumbnailCorner";
     public const string CaptureKeyHints = "capture.keyHints";
+    /// <summary>The editor floats over other apps' windows (Orbit: EditorWindow.floatingKey).</summary>
+    public const string CaptureEditorFloating = "capture.editorFloating";
     /// <summary>[x, y, width, height] in virtual-screen physical pixels, and the monitor's device name.</summary>
     public const string CaptureLastArea = "capture.lastArea";
     public const string TimedCaptureSeconds = "capture.timerSeconds";
@@ -54,6 +56,7 @@ public static class Pref
         [CaptureThumbnailSeconds] = 8.0,
         [CaptureThumbnailCorner] = "bottomRight",
         [CaptureKeyHints] = true,
+        [CaptureEditorFloating] = true,
         [TimedCaptureSeconds] = 5,
         [LaunchAtSignIn] = true,
         [AwakeDisplay] = true,

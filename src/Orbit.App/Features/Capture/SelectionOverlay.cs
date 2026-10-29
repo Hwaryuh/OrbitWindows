@@ -15,7 +15,7 @@ using Orbit.Core.Launcher;
 namespace Orbit.App.Features.Capture;
 
 /// <summary>What happens to a capture instead of the usual steps, picked with a key while selecting (Orbit: <c>CaptureAction</c>).</summary>
-internal enum CaptureKeyAction { Copy, Save, Text, Pin }
+internal enum CaptureKeyAction { Copy, Save, Text, Pin, Edit }
 
 /// <summary>
 /// The selection: a frozen monitor and an area on it (virtual-screen pixels), or a window to
@@ -27,8 +27,8 @@ internal sealed record SelectionResult(MonitorInfo Monitor, ScreenFrame Frame, P
 /// Selecting over frozen monitors (Orbit: SelectionOverlay.swift), one overlay per monitor. Drag to
 /// select an area, Space toggles window mode, Enter takes the whole monitor, Esc cancels. While
 /// dragging: Shift locks a square, Alt grows from the center, Space moves, arrows nudge. Before:
-/// Tab cycles ratios, R brings back the last area, Ctrl+C copies the color under the loupe. C S T P
-/// pick what happens to the result (Orbit's E comes with the editor; V L, recording, are not ported).
+/// Tab cycles ratios, R brings back the last area, Ctrl+C copies the color under the loupe. C S T P E
+/// pick what happens to the result (Orbit's V and L, recording, are not ported).
 /// </summary>
 internal sealed class SelectionSession
 {
@@ -404,8 +404,13 @@ internal sealed class SelectionOverlay : OverlayWindow
             case Key.C when ctrl:
                 CopyColor();
                 break;
-            case Key.C or Key.S or Key.T or Key.P when !ctrl:
-                if (!e.IsRepeat) _session.ToggleAction(key switch { Key.C => CaptureKeyAction.Copy, Key.S => CaptureKeyAction.Save, Key.P => CaptureKeyAction.Pin, _ => CaptureKeyAction.Text });
+            case Key.C or Key.S or Key.T or Key.P or Key.E when !ctrl:
+                if (!e.IsRepeat)
+                    _session.ToggleAction(key switch
+                    {
+                        Key.C => CaptureKeyAction.Copy, Key.S => CaptureKeyAction.Save, Key.P => CaptureKeyAction.Pin, Key.E => CaptureKeyAction.Edit,
+                        _ => CaptureKeyAction.Text,
+                    });
                 break;
             case Key.LeftShift or Key.RightShift or Key.LeftAlt or Key.RightAlt:
                 UpdateSelection();
@@ -493,7 +498,7 @@ internal sealed class SelectionOverlay : OverlayWindow
 
     private IReadOnlyList<(string Keys, string Title)> CurrentHints()
     {
-        (string, string)[] actions = _session.AllowsActions ? [("C · S · T · P", Strings.KeyAction)] : [];
+        (string, string)[] actions = _session.AllowsActions ? [("C · S · T · P · E", Strings.KeyAction)] : [];
         if (_restored)
             return [("Enter", Strings.KeyCaptureIt), ("Esc", Strings.KeyPickAgain), ("←↑↓→", Strings.KeyMoveSelection), .. actions];
         if (Dragging)
@@ -646,6 +651,7 @@ internal sealed class SelectionOverlay : OverlayWindow
         CaptureKeyAction.Copy => Strings.CaptureActionCopy,
         CaptureKeyAction.Save => Strings.CaptureActionSave,
         CaptureKeyAction.Pin => Strings.CaptureActionPin,
+        CaptureKeyAction.Edit => Strings.CaptureActionEdit,
         _ => Strings.CaptureActionText,
     };
 

@@ -109,4 +109,6 @@ GetWindowRect
 
 // Capture previews: moving a file to the Recycle Bin
 SHFileOperation
-GetWindowRect
+
+// Capture editor: a dark title bar
+DwmSetWindowAttribute

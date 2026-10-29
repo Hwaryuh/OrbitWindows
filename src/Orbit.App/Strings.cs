@@ -68,6 +68,73 @@ internal static class Strings
     public static string PinUnpin => T("고정 해제", "Unpin");
     public static string PinUnpinHint => T("고정을 풀고 미리보기로 돌려놓습니다.", "Unpin and put it back with the previews.");
     public static string PinCloseHint => T("닫기 (Esc)", "Close (Esc)");
+    public static string CaptureActionEdit => T("편집", "Edit");
+
+    // Capture editor
+    public static string EditorTitle => T("캡처 편집", "Annotate");
+    public static string EditorToolTitle(Orbit.Core.Capture.Editor.EditorTool tool) => tool switch
+    {
+        Orbit.Core.Capture.Editor.EditorTool.Select => T("선택", "Select"),
+        Orbit.Core.Capture.Editor.EditorTool.Arrow => T("화살표", "Arrow"),
+        Orbit.Core.Capture.Editor.EditorTool.Line => T("선", "Line"),
+        Orbit.Core.Capture.Editor.EditorTool.Rect => T("사각형", "Rectangle"),
+        Orbit.Core.Capture.Editor.EditorTool.Ellipse => T("타원", "Ellipse"),
+        Orbit.Core.Capture.Editor.EditorTool.Pen => T("펜", "Pen"),
+        Orbit.Core.Capture.Editor.EditorTool.Highlight => T("형광펜", "Highlighter"),
+        Orbit.Core.Capture.Editor.EditorTool.Text => T("글자", "Text"),
+        Orbit.Core.Capture.Editor.EditorTool.Counter => T("번호", "Counter"),
+        Orbit.Core.Capture.Editor.EditorTool.Blur => T("흐림", "Blur"),
+        Orbit.Core.Capture.Editor.EditorTool.Pixelate => T("모자이크", "Pixelate"),
+        Orbit.Core.Capture.Editor.EditorTool.Erase => T("지우기", "Erase"),
+        Orbit.Core.Capture.Editor.EditorTool.Spotlight => T("스포트라이트", "Spotlight"),
+        Orbit.Core.Capture.Editor.EditorTool.Loupe => T("돋보기", "Magnifier"),
+        Orbit.Core.Capture.Editor.EditorTool.Measure => T("자", "Ruler"),
+        Orbit.Core.Capture.Editor.EditorTool.Picker => T("색 추출", "Color Picker"),
+        _ => T("자르기", "Crop"),
+    };
+    public static string EditorStyle => T("스타일", "Style");
+    public static string EditorThickness => T("두께", "Thickness");
+    public static string EditorSize => T("크기", "Size");
+    public static string EditorFilled => T("채우기", "Filled");
+    public static string EditorCorners => T("모서리", "Corners");
+    public static string EditorShape => T("모양", "Shape");
+    public static string EditorStraight => T("곧게", "Straight");
+    public static string EditorCurved => T("휘게", "Curved");
+    public static string EditorWeight => T("굵기", "Weight");
+    public static string EditorWeightName(Orbit.Core.Capture.Editor.TextWeight weight) => weight switch
+    {
+        Orbit.Core.Capture.Editor.TextWeight.Regular => T("보통", "Regular"),
+        Orbit.Core.Capture.Editor.TextWeight.Semibold => T("중간", "Medium"),
+        Orbit.Core.Capture.Editor.TextWeight.Bold => T("굵게", "Bold"),
+        _ => T("아주 굵게", "Heavy"),
+    };
+    public static string EditorTextStyle => T("모양", "Style");
+    public static string EditorTextStyleName(Orbit.Core.Capture.Editor.TextStyle style) => style switch
+    {
+        Orbit.Core.Capture.Editor.TextStyle.Shadow => T("그림자", "Shadow"),
+        Orbit.Core.Capture.Editor.TextStyle.Plain => T("기본", "Plain"),
+        Orbit.Core.Capture.Editor.TextStyle.Pill => T("라벨", "Label"),
+        _ => T("외곽선", "Outline"),
+    };
+    public static string EditorStrength => T("강도", "Strength");
+    public static string EditorTextNote => T("글자를 두 번 누르면 고칠 수 있습니다.", "Double-click a text to change it.");
+    public static string EditorCounterNote => T("누를 때마다 다음 번호를 붙입니다.", "Each click places the next number.");
+    public static string EditorLoupeNote => T("볼 곳에서 렌즈를 둘 곳까지 끄세요.", "Drag from the spot to where the lens goes.");
+    public static string EditorEraseNote => T("영역을 주변 색으로 덮습니다. 단색 배경의 글자를 지울 때 좋습니다.", "Covers an area with the color around it, good for removing text from a plain background.");
+    public static string EditorSpotlightNote => T("그린 상자 바깥을 어둡게 합니다.", "Dims everything outside the boxes you draw.");
+    public static string EditorPickerNote => T("누르면 그 색의 16진수 코드를 복사합니다.", "Click to copy a color's hex code.");
+    public static string EditorNothingNote => T("이 도구에는 조정할 것이 없습니다.", "Nothing to adjust for this tool.");
+    public static string EditorTextHint => T("입력하세요 (Shift+Enter 줄바꿈)", "Type… (Shift+Enter new line)");
+    public static string EditorAlwaysOnTop => T("항상 위", "Always on top");
+    public static string EditorAlwaysOnTopOff => T("항상 위: 꺼짐", "Always on top: off");
+    public static string EditorUndo => T("실행 취소 (Ctrl+Z)", "Undo (Ctrl+Z)");
+    public static string EditorRedo => T("다시 실행 (Ctrl+Shift+Z)", "Redo (Ctrl+Shift+Z)");
+    public static string EditorResetCrop => T("자르기 초기화", "Reset Crop");
+    public static string EditorSaveHint => T("저장 (Ctrl+S) · 다른 이름으로 저장 (Ctrl+Shift+S)", "Save (Ctrl+S) · Save As (Ctrl+Shift+S)");
+    public static string EditorCopyHint => T("복사 (Ctrl+C)", "Copy (Ctrl+C)");
+    public static string EditorFitHint => T("화면에 맞추기 (Ctrl+0)", "Fit (Ctrl+0)");
+    public static string EditorColor(int index) => T($"색 {index}", $"Color {index}");
+    public static string EditorPngFiles => T("PNG 그림", "PNG image");
     public static string ColorCopied(string hex) => T($"{hex} 색을 복사했습니다.", $"{hex} copied to the clipboard.");
 
     public static string MenuSettings => T("설정", "Settings");

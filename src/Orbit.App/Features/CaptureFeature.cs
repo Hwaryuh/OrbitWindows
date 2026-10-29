@@ -3,6 +3,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using Rectangle = System.Windows.Shapes.Rectangle;
 using Orbit.App.Features.Capture;
+using Orbit.App.Features.Capture.Editor;
 using Orbit.App.Overlays;
 using Orbit.Core;
 using Orbit.Core.Actions;
@@ -19,7 +20,7 @@ namespace Orbit.App.Features;
 /// text, and the last area again. Every monitor is frozen first; only then does the selection
 /// show. Each picture goes into the library (recognized text only onto the clipboard, as Orbit);
 /// then it is copied (capture.autoCopy) and shown as a preview card, or what the key picked in the
-/// selection happens. Shortcuts: docs/plan/04-shortcuts.md. The editor comes in the next slice of M2.
+/// selection happens. Shortcuts: docs/plan/04-shortcuts.md.
 /// </summary>
 internal sealed class CaptureFeature : IFeature
 {
@@ -39,6 +40,7 @@ internal sealed class CaptureFeature : IFeature
         _store = new CaptureStore(services.Preferences);
         _cards = new QuickAccess(services.Preferences, new CaptureActions(_store));
         _cards.Pin = item => PinWindow.Pin(item, _cards);
+        _cards.Edit = item => EditorWindow.Open(item, _cards, services.Preferences);
         Register(OrbitAction.CaptureArea, Mode.Area, 0x34);
         Register(OrbitAction.CaptureWindow, Mode.Window, 0x35);
         Register(OrbitAction.CaptureScreen, Mode.Screen, 0x33);
@@ -82,14 +84,14 @@ internal sealed class CaptureFeature : IFeature
                 var (x, y) = Monitors.Cursor();
                 int index = Math.Max(0, monitors.ToList().FindIndex(m => m.Bounds.Contains(x, y)));
                 Flash.On(monitors[index]);
-                Deliver(frames[index], null);
+                Deliver(frames[index], monitors[index].Dpi, null);
                 return;
             }
             if (mode == Mode.Repeat)
             {
                 if (lastArea is { } area && Array.FindIndex(frames, f => f.Bounds.Contains(area.X, area.Y)) is var i and >= 0)
                 {
-                    Deliver(frames[i].Crop(area), null);
+                    Deliver(frames[i].Crop(area), monitors[i].Dpi, null);
                     return;
                 }
                 Toast.Show(Strings.CaptureNoLastArea);
@@ -106,7 +108,7 @@ internal sealed class CaptureFeature : IFeature
 
             var image = result.Window is { } window ? await WindowImageAsync(window, result) : result.Frame.Crop(result.Area);
             if (mode == Mode.Text || result.Action == CaptureKeyAction.Text) await CaptureActions.RecognizeAsync(image);
-            else Deliver(image, result.Action);
+            else Deliver(image, result.Monitor.Dpi, result.Action);
         }
         catch (Exception e)
         {
@@ -140,11 +142,12 @@ internal sealed class CaptureFeature : IFeature
     /// Into the library, then copied, saved or pinned as the key picked; else copied
     /// (capture.autoCopy) and shown as a card (Orbit: <c>deliver</c>, <c>finish</c>).
     /// </summary>
-    private void Deliver(ScreenFrame frame, CaptureKeyAction? action)
+    /// <param name="dpi">The monitor's: the picture keeps it, so the editor knows its points.</param>
+    private void Deliver(ScreenFrame frame, uint dpi, CaptureKeyAction? action)
     {
         var store = _store!;
         var cards = _cards!;
-        var bitmap = FrameImages.ToBitmap(frame);
+        var bitmap = FrameImages.ToBitmap(frame, dpi);
         var png = FrameImages.Png(bitmap);
         string path;
         try
@@ -170,6 +173,9 @@ internal sealed class CaptureFeature : IFeature
                 break;
             case CaptureKeyAction.Pin:
                 PinWindow.Pin(item, cards);
+                break;
+            case CaptureKeyAction.Edit:
+                EditorWindow.Open(item, cards, _services!.Preferences);
                 break;
             default:
                 if (_services!.Preferences.Get<bool>(Pref.CaptureAutoCopy) && !FrameImages.Copy(bitmap, png)) Toast.Show(Strings.CopyFailed);
