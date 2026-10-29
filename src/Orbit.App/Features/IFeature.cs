@@ -40,6 +40,9 @@ internal sealed class AppServices(Preferences preferences, ActionRunner actions,
     /// <summary>Every clipboard change, read off the UI thread and raised on it.</summary>
     public Clipboard.ClipboardWatcher Clipboard { get; } = new();
 
+    /// <summary>Clean URL; null until that feature starts. The history asks it first about every copy.</summary>
+    public CleanUrlFeature? CleanUrl { get; set; }
+
     /// <summary>The clipboard history; null until that feature starts.</summary>
     public ClipboardFeature? ClipboardHistory { get; set; }
 

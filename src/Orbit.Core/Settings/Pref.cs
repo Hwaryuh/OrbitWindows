@@ -41,6 +41,14 @@ public static class Pref
     public const string SpellWebConsent = "spell.web.consent";
     public const string SpellCombine = "spell.combine";
     public const string SpellCloseAfterReplace = "spell.closeAfterReplace";
+    /// <summary>Clean URL (from Vorssaint's behavior): every copied tracking link cleaned at once.</summary>
+    public const string CleanUrlAuto = "cleanUrl.auto";
+    /// <summary>Names the user added; removed everywhere.</summary>
+    public const string CleanUrlAdded = "cleanUrl.added";
+    /// <summary>Built-in names the user switched off ("utm_*" for the prefix).</summary>
+    public const string CleanUrlDisabled = "cleanUrl.disabled";
+    /// <summary>What the last automatic clean removed, for the settings page.</summary>
+    public const string CleanUrlLastRemoved = "cleanUrl.lastRemoved";
     public const string RingMouse = "ring.mouse";
     public const string RingMouseButton = "ring.mouseButton";
     public const string RingSlots = "ring.slots";
@@ -76,6 +84,10 @@ public static class Pref
         [SpellWebConsent] = false,
         [SpellCombine] = false,
         [SpellCloseAfterReplace] = true,
+        [CleanUrlAuto] = false,
+        [CleanUrlAdded] = Array.Empty<string>(),
+        [CleanUrlDisabled] = Array.Empty<string>(),
+        [CleanUrlLastRemoved] = Array.Empty<string>(),
         [RingMouse] = true,
         [RingMouseButton] = "middle",
         [RingHover] = true,

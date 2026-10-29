@@ -29,6 +29,7 @@ internal static class ActionText
         [OrbitAction.ColorPicker] = new("Pick Color from Screen", "화면에서 색 추출", "Pick Color", "색 추출"),
         [OrbitAction.Clipboard] = new("Clipboard History", "클립보드 기록", "Clipboard", "클립보드"),
         [OrbitAction.Snippets] = new("Search Snippets", "스니펫 찾기", "Snippets", "스니펫"),
+        [OrbitAction.CleanUrl] = new("Clean Link on Clipboard", "클립보드 링크 정리", "Clean Link", "링크 정리"),
         [OrbitAction.Launcher] = new("Open Launcher", "런처 열기", "Launcher", "런처"),
         [OrbitAction.Apps] = new("Apps", "앱", "Apps", "앱"),
         [OrbitAction.Displays] = new("Display Brightness", "디스플레이 밝기", "Brightness", "밝기"),

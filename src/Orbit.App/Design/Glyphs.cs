@@ -48,6 +48,7 @@ internal static class Glyphs
         [OrbitAction.ColorPicker] = "\uE790",
         [OrbitAction.Clipboard] = "\uF0E3",
         [OrbitAction.Snippets] = "\uE8E4",
+        [OrbitAction.CleanUrl] = "\uE71B",
         [OrbitAction.Launcher] = Search,
         [OrbitAction.Apps] = "\uF0E2",
         [OrbitAction.Displays] = "\uE706",

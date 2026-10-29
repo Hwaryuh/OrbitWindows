@@ -118,3 +118,14 @@ AddClipboardFormatListener
 RemoveClipboardFormatListener
 GetClipboardSequenceNumber
 GetClipboardOwner
+
+// Clean URL: checking the sequence and writing under one open clipboard
+OpenClipboard
+CloseClipboard
+EmptyClipboard
+SetClipboardData
+RegisterClipboardFormat
+GlobalAlloc
+GlobalLock
+GlobalUnlock
+GlobalFree

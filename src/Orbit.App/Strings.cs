@@ -258,6 +258,21 @@ internal static class Strings
     public static string ClipChoose => T("고르기", "Choose");
     public static string ClipRemove => T("빼기", "Remove");
     public static string ClipPrograms => T("프로그램", "Programs");
+    // Clean URL
+    public static string CleanUrlRemoved(int count) => T($"추적 정보 {count}개를 지웠습니다.", count == 1 ? "Removed 1 tracker." : $"Removed {count} trackers.");
+    public static string CleanUrlNothing => T("지울 추적 정보가 없습니다.", "There are no trackers to remove.");
+    public static string CleanUrlNoLink => T("클립보드에 링크가 없습니다.", "There is no link on the clipboard.");
+    public static string CleanUrlTitle => T("링크 정리", "Clean links");
+    public static string CleanUrlAuto => T("복사한 링크 자동 정리", "Clean copied links automatically");
+    public static string CleanUrlAutoDetail => T("링크 하나만 복사하면 추적 정보를 바로 지웁니다. 클립보드 기록을 멈춰도 동작합니다.", "When you copy a single link, its trackers go at once. Works while clipboard recording is paused.");
+    public static string CleanUrlLast => T("마지막으로 지운 이름", "Last removed");
+    public static string CleanUrlNone => T("아직 없습니다", "Nothing yet");
+    public static string CleanUrlBuiltIn => T("기본으로 지우는 이름", "Removed by default");
+    public static string CleanUrlBuiltInDetail => T("누르면 끄거나 켭니다. 꺼진 이름은 지우지 않습니다.", "Click to switch one off or on. Names that are off stay in links.");
+    public static string CleanUrlAdded => T("직접 추가한 이름", "Your names");
+    public static string CleanUrlAddHint => T("이름 입력", "Parameter name");
+    public static string CleanUrlAdd => T("추가", "Add");
+    public static string CleanUrlFooter => T("사이트별 이름(si, t 등)은 그 사이트의 링크에서만 지웁니다. 링크 하나만 있을 때만 정리합니다.", "Site names (si, t and others) are removed only from links to that site. Only a clipboard that is one link is cleaned.");
     public static string ColorCopied(string hex) => T($"{hex} 색을 복사했습니다.", $"{hex} copied to the clipboard.");
 
     public static string MenuSettings => T("설정", "Settings");

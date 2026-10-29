@@ -87,10 +87,13 @@ internal sealed class ClipboardFeature : IFeature
 
     private void OnCopied(ClipboardCopy copy)
     {
-        if (copy.Own || copy.Private || Paused) return;
+        if (copy.Own || copy.Private) return;
         var services = _services!;
         var process = copy.OwnerProcess ?? services.Foreground.ForegroundProcess;
         if (ClipboardRules.IsIgnored(process, services.Preferences.Get<string[]>(Pref.IgnoredApps))) return;
+        // A tracking link is cleaned first (when that is on), so the history keeps the clean one.
+        if (services.CleanUrl is { } cleaner) copy = cleaner.AutoClean(copy);
+        if (Paused) return;
         var history = _history!;
         ClipItem? item;
         try

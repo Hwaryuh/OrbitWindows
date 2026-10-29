@@ -24,6 +24,7 @@ internal sealed class ClipboardPage : StackPanel
     private readonly PageParts _parts = new(Palette.Light);
     private readonly StackPanel _recording = new();
     private readonly StackPanel _ignored = new();
+    private readonly StackPanel _cleanUrl = new();
 
     public ClipboardPage(AppServices services)
     {
@@ -42,6 +43,8 @@ internal sealed class ClipboardPage : StackPanel
                     _services.ClipboardHistory?.History.Trim();
                 })),
             _parts.Row(Strings.ClipClear, Strings.ClipClearDetail, _parts.PillButton(Strings.ClipClearButton, prominent: false, Clear))));
+        FillCleanUrl();
+        Children.Add(_parts.Group(Strings.CleanUrlTitle, Strings.CleanUrlFooter, _cleanUrl));
         FillIgnored();
         Children.Add(_parts.Group(Strings.ClipNeverRecord, Strings.ClipNeverRecordFooter, _ignored));
     }
@@ -123,6 +126,79 @@ internal sealed class ClipboardPage : StackPanel
         if (MessageBox.Show(Window.GetWindow(this)!, Strings.ClipClearConfirm, Strings.ClipClear, MessageBoxButton.OKCancel, MessageBoxImage.Warning) != MessageBoxResult.OK) return;
         _services.ClipboardHistory?.History.Clear();
         FillRecording();
+    }
+
+    /// <summary>Clean URL: the automatic switch, what it last removed, the built-in names and the user's own.</summary>
+    private void FillCleanUrl()
+    {
+        _cleanUrl.Children.Clear();
+        void Separator() => _cleanUrl.Children.Add(new Border { Height = 1, Background = _palette.Hairline, Margin = new Thickness(0, 12, 0, 12) });
+        _cleanUrl.Children.Add(_parts.Row(Strings.CleanUrlAuto, Strings.CleanUrlAutoDetail,
+            _parts.Toggle(_preferences.Get<bool>(Pref.CleanUrlAuto), on => _preferences.Set(Pref.CleanUrlAuto, on))));
+        Separator();
+        var last = _preferences.Get<string[]>(Pref.CleanUrlLastRemoved);
+        _cleanUrl.Children.Add(_parts.Row(Strings.CleanUrlLast, last.Length == 0 ? Strings.CleanUrlNone : string.Join(", ", last), new Border()));
+        Separator();
+
+        var disabled = _preferences.Get<string[]>(Pref.CleanUrlDisabled).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var names = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
+        var all = new[] { "utm_*" }.Concat(UrlCleaner.BuiltInNames).Concat(UrlCleaner.BuiltInHostRules.Select(r => r.Name)).Distinct(StringComparer.OrdinalIgnoreCase);
+        foreach (var name in all)
+        {
+            var site = UrlCleaner.BuiltInHostRules.FirstOrDefault(r => r.Name == name);
+            var chip = _parts.PillButton(site is null ? name : $"{name} ({string.Join(", ", site.Hosts)})", prominent: !disabled.Contains(name), () =>
+            {
+                var off = _preferences.Get<string[]>(Pref.CleanUrlDisabled).ToList();
+                if (!off.Remove(name)) off.Add(name);
+                _preferences.Set(Pref.CleanUrlDisabled, off.ToArray());
+                FillCleanUrl();
+            });
+            chip.Margin = new Thickness(0, 0, 6, 6);
+            names.Children.Add(chip);
+        }
+        var builtIn = new StackPanel();
+        builtIn.Children.Add(new TextBlock { Text = Strings.CleanUrlBuiltIn, FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = _palette.Ink });
+        builtIn.Children.Add(new TextBlock { Text = Strings.CleanUrlBuiltInDetail, FontSize = 11, Foreground = _palette.InkSecondary, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) });
+        builtIn.Children.Add(names);
+        _cleanUrl.Children.Add(builtIn);
+        Separator();
+
+        var added = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
+        foreach (var name in _preferences.Get<string[]>(Pref.CleanUrlAdded))
+        {
+            var chip = _parts.PillButton($"{name}  ×", prominent: true, () =>
+            {
+                _preferences.Set(Pref.CleanUrlAdded, _preferences.Get<string[]>(Pref.CleanUrlAdded).Where(n => n != name).ToArray());
+                FillCleanUrl();
+            });
+            chip.ToolTip = Strings.ClipRemove;
+            chip.Margin = new Thickness(0, 0, 6, 6);
+            added.Children.Add(chip);
+        }
+        // Transparent, so the hint behind it shows while it is empty.
+        var field = new TextBox { Width = 180, FontSize = 13, Padding = new Thickness(6, 3, 6, 3), VerticalContentAlignment = VerticalAlignment.Center, Background = System.Windows.Media.Brushes.Transparent };
+        void Add()
+        {
+            var name = field.Text.Trim();
+            if (name.Length == 0) return;
+            var current = _preferences.Get<string[]>(Pref.CleanUrlAdded);
+            if (!current.Contains(name, StringComparer.OrdinalIgnoreCase)) _preferences.Set(Pref.CleanUrlAdded, current.Append(name).ToArray());
+            FillCleanUrl();
+        }
+        field.KeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Enter) Add();
+        };
+        var addRow = new StackPanel { Orientation = Orientation.Horizontal };
+        addRow.Children.Add(_palette.WithHint(field, Strings.CleanUrlAddHint, 8));
+        var add = _parts.PillButton(Strings.CleanUrlAdd, prominent: false, Add);
+        add.Margin = new Thickness(8, 0, 0, 0);
+        addRow.Children.Add(add);
+        var mine = new StackPanel();
+        mine.Children.Add(new TextBlock { Text = Strings.CleanUrlAdded, FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = _palette.Ink });
+        mine.Children.Add(added);
+        mine.Children.Add(addRow);
+        _cleanUrl.Children.Add(mine);
     }
 
     private void FillIgnored()

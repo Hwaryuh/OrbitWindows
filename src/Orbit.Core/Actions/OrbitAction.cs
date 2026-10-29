@@ -15,7 +15,7 @@ public enum OrbitAction
 {
     CaptureArea, CaptureWindow, CaptureScreen, CaptureText, CaptureRepeat, CaptureScrolling, CaptureTimed,
     RecordArea, RecordWindow, RecordScreen, StopRecording, RecentCaptures, PinLastCapture, ColorPicker,
-    Clipboard, Snippets,
+    Clipboard, Snippets, CleanUrl,
     Launcher, Apps, Displays, KeepAwake, Settings, Shelf, Translate, SpellCheck, CheckUpdates,
     MediaPlayPause, MediaNext, MediaPrevious,
     LockScreen, SleepDisplay, DarkMode, DesktopIcons, HiddenFiles, EmptyTrash, EjectAll, CleanKeyboard,
@@ -39,7 +39,7 @@ public static class OrbitActions
             or OrbitAction.CaptureRepeat or OrbitAction.CaptureScrolling or OrbitAction.CaptureTimed or OrbitAction.RecordArea
             or OrbitAction.RecordWindow or OrbitAction.RecordScreen or OrbitAction.StopRecording or OrbitAction.RecentCaptures
             or OrbitAction.PinLastCapture or OrbitAction.ColorPicker => ActionGroup.Capture,
-        OrbitAction.Clipboard or OrbitAction.Snippets => ActionGroup.Clipboard,
+        OrbitAction.Clipboard or OrbitAction.Snippets or OrbitAction.CleanUrl => ActionGroup.Clipboard,
         OrbitAction.MediaPlayPause or OrbitAction.MediaNext or OrbitAction.MediaPrevious => ActionGroup.Media,
         OrbitAction.LockScreen or OrbitAction.SleepDisplay or OrbitAction.DarkMode or OrbitAction.DesktopIcons
             or OrbitAction.HiddenFiles or OrbitAction.EmptyTrash or OrbitAction.EjectAll or OrbitAction.CleanKeyboard => ActionGroup.System,
@@ -63,6 +63,7 @@ public static class OrbitActions
             OrbitAction.Shelf => "shelf drop files stash 선반 파일",
             OrbitAction.Translate => "translate deepl papago google 번역 번역기",
             OrbitAction.SpellCheck => "spell spelling check grammar proofread typo spacing 맞춤법 검사 띄어쓰기 문법 교정 오타 맞춤법 검사기",
+            OrbitAction.CleanUrl => "clean url link tracking utm fbclid remove trackers privacy 링크 정리 추적 제거 주소",
             OrbitAction.Snippets => "snippet snippets text expander expansion abbreviation keyword template 스니펫 상용구 자동 완성 텍스트 확장",
             OrbitAction.LockScreen => "lock 화면 잠금",
             OrbitAction.DarkMode => "dark light mode theme 다크모드 라이트모드",
