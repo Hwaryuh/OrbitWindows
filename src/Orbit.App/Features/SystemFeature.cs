@@ -31,6 +31,7 @@ internal sealed class SystemFeature : IFeature
         actions.Register(OrbitAction.HiddenFiles, () => Toast.Show(SystemActions.ToggleHiddenFiles() ? Strings.SysHiddenShown : Strings.SysHiddenHidden));
         actions.Register(OrbitAction.EmptyTrash, EmptyRecycleBin);
         actions.Register(OrbitAction.EjectAll, () => _ = EjectAllAsync());
+        actions.Register(OrbitAction.PortManager, () => Settings.SettingsWindow.ShowOrActivate(services, "ports"));
     }
 
     private static void EmptyRecycleBin()

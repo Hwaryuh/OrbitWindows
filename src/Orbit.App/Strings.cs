@@ -429,6 +429,43 @@ internal static class Strings
     public static string SysActions => T("빠른 동작", "Quick actions");
     public static string SysThreads(int n) => T($"스레드 {n}개", $"{n} threads");
     public static string SysNotAvailable => T("알 수 없음", "Unavailable");
+    // Ports
+    public static string PagePorts => T("포트", "Ports");
+    public static string PortsSubtitle => T("프로그램이 연결을 기다리는 포트입니다. 개발 서버처럼 포트를 붙잡고 있는 프로그램을 찾아 닫을 수 있습니다.", "Ports programs listen on. Find the program holding a port, such as a dev server, and close it.");
+    public static string PortsSearch => T("포트, 프로그램, PID로 찾기", "Find by port, program or PID");
+    public static string PortsRefresh => T("새로 고침", "Refresh");
+    public static string PortsShowUdp => T("UDP 포트도 보기", "Show UDP ports");
+    public static string PortsCount(int tcp, int udp) => T($"TCP 수신 대기 {tcp}개 · UDP {udp}개", $"{tcp} TCP listening · {udp} UDP");
+    public static string PortsLoading => T("포트를 읽고 있습니다…", "Reading ports…");
+    public static string PortsEmpty => T("연결을 기다리는 포트가 없습니다.", "No listening ports.");
+    public static string PortsNoMatch => T("찾는 포트가 없습니다.", "No ports match.");
+    public static string PortsPartial => T("포트 목록 일부를 읽지 못했습니다. 새로 고침하세요.", "Some ports could not be read. Refresh to try again.");
+    public static string PortsAllInterfaces => T("모든 인터페이스", "All interfaces");
+    public static string PortsAllInterfacesHelp => T("모든 네트워크 인터페이스에서 연결을 받습니다. 방화벽이 막지 않으면 같은 네트워크의 다른 기기가 연결할 수 있습니다.", "Listening on every network interface, so other devices on the network may connect unless a firewall stops them.");
+    public static string PortsUnknown => T("알 수 없는 프로그램", "Unknown program");
+    public static string PortsClose => T("닫기", "Close");
+    public static string PortsForce => T("강제 종료", "Force quit");
+    public static string PortsCloseConfirm(string name, int port, int pid) => T(
+        $"{name}의 창을 모두 닫을까요?\n포트 {port}을(를) 쓰는 프로그램(PID {pid})입니다. 저장하지 않은 내용이 있으면 프로그램이 물어봅니다.",
+        $"Close every window of {name}?\nIt is the program using port {port} (PID {pid}). It asks about unsaved work itself.");
+    public static string PortsForceConfirm(string name, int port, int pid) => T(
+        $"{name}을(를) 강제로 종료할까요?\n포트 {port}을(를) 쓰는 프로그램(PID {pid})입니다. 저장하지 않은 내용은 사라지고, 이 프로그램이 쓰는 다른 포트도 모두 닫힙니다.",
+        $"Force {name} to quit?\nIt is the program using port {port} (PID {pid}). Unsaved work is lost, and every other port it uses closes too.");
+    public static string PortsClosed(string name) => T($"{name}을(를) 종료했습니다.", $"{name} quit.");
+    public static string PortsStillRunning => T("닫으라고 요청했지만 아직 실행 중입니다. 저장할지 묻는 창이 떠 있을 수 있습니다.", "Asked to close, but it is still running. It may be asking about unsaved work.");
+    public static string PortsNoWindow => T("닫을 창이 없습니다. 끝내려면 강제 종료하세요.", "It has no window to close. Use Force quit to end it.");
+    public static string PortsGone => T("이미 종료된 프로그램입니다.", "That program has already quit.");
+    public static string PortsChanged => T("목록을 읽은 뒤 프로그램이 바뀌었습니다. 새로 고침하세요.", "The program changed since the list was read. Refresh and try again.");
+    public static string PortsDenied => T("권한이 없어 종료할 수 없습니다.", "Orbit isn't allowed to end it.");
+    public static string PortsFailed => T("종료하지 못했습니다.", "It could not be ended.");
+    public static string PortsBlockSystem => T("Windows 구성 요소라 종료할 수 없습니다.", "Part of Windows; it can't be ended here.");
+    public static string PortsBlockSelf => T("Orbit입니다.", "This is Orbit.");
+    public static string PortsBlockDenied => T("관리자 권한으로 실행 중이거나 다른 사용자의 프로그램이라 종료할 수 없습니다.", "Running as administrator or as another user, so it can't be ended here.");
+    public static string PortsBlockUnverified => T("새로 고침한 뒤 종료할 수 있습니다.", "Refresh to be able to end it.");
+    public static string PortsCopyPort => T("포트 복사", "Copy port");
+    public static string PortsCopyAddress => T("주소:포트 복사", "Copy address:port");
+    public static string PortsOpenBrowser => T("브라우저에서 열기", "Open in browser");
+    public static string PortsCopied => T("복사했습니다.", "Copied.");
     public static string ColorCopied(string hex) => T($"{hex} 색을 복사했습니다.", $"{hex} copied to the clipboard.");
 
     public static string MenuSettings => T("설정", "Settings");

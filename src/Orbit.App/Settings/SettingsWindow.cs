@@ -29,7 +29,7 @@ internal sealed class SettingsWindow : Window
         ("general", Strings.PageGeneral), ("ring", Strings.PageRing), ("launcher", Strings.PageLauncher),
         ("capture", Strings.PageCapture), ("clipboard", Strings.PageClipboard), ("translate", Strings.PageTranslate),
         ("snippets", Strings.PageSnippets), ("keepAwake", Strings.PageKeepAwake), ("sound", Strings.PageSound),
-        ("system", Strings.PageSystem), ("displays", Strings.PageDisplays), ("about", Strings.PageAbout),
+        ("system", Strings.PageSystem), ("ports", Strings.PagePorts), ("displays", Strings.PageDisplays), ("about", Strings.PageAbout),
     ];
 
     private SettingsWindow(Features.AppServices services)
@@ -91,6 +91,7 @@ internal sealed class SettingsWindow : Window
         "keepAwake" => () => new KeepAwakePage(_services),
         "sound" => () => new SoundPage(),
         "system" => () => new SystemPage(_services),
+        "ports" => () => new PortsPage(),
         "about" => About,
         _ => () => NotReady(title),
     };

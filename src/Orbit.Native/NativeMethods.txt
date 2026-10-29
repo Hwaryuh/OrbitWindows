@@ -169,3 +169,7 @@ SHQueryRecycleBin
 SHQUERYRBINFO
 IsWindowVisible
 SendMessage
+
+// Port manager
+TerminateProcess
+WaitForSingleObject

@@ -19,6 +19,8 @@ public enum OrbitAction
     Launcher, Apps, Displays, KeepAwake, Settings, Shelf, Translate, SpellCheck, CheckUpdates,
     MediaPlayPause, MediaNext, MediaPrevious,
     LockScreen, SleepDisplay, DarkMode, DesktopIcons, HiddenFiles, EmptyTrash, EjectAll, CleanKeyboard,
+    // Not in Orbit (after Vorssaint's Port Manager).
+    PortManager,
 }
 
 public enum ActionGroup { Capture, Clipboard, Orbit, System, Media }
@@ -42,7 +44,8 @@ public static class OrbitActions
         OrbitAction.Clipboard or OrbitAction.Snippets or OrbitAction.CleanUrl => ActionGroup.Clipboard,
         OrbitAction.MediaPlayPause or OrbitAction.MediaNext or OrbitAction.MediaPrevious => ActionGroup.Media,
         OrbitAction.LockScreen or OrbitAction.SleepDisplay or OrbitAction.DarkMode or OrbitAction.DesktopIcons
-            or OrbitAction.HiddenFiles or OrbitAction.EmptyTrash or OrbitAction.EjectAll or OrbitAction.CleanKeyboard => ActionGroup.System,
+            or OrbitAction.HiddenFiles or OrbitAction.EmptyTrash or OrbitAction.EjectAll or OrbitAction.CleanKeyboard
+            or OrbitAction.PortManager => ActionGroup.System,
         _ => ActionGroup.Orbit,
     };
 
@@ -71,6 +74,7 @@ public static class OrbitActions
             OrbitAction.HiddenFiles => "hidden files explorer show hide 숨김 파일 탐색기",
             OrbitAction.MediaPlayPause or OrbitAction.MediaNext or OrbitAction.MediaPrevious =>
                 "music song play pause next previous skip spotify now playing 음악 노래 재생 일시정지 다음 이전",
+            OrbitAction.PortManager => "port ports listening tcp udp localhost dev server kill process netstat 포트 수신 대기 개발 서버 프로세스 종료",
             OrbitAction.CleanKeyboard => "clean keyboard wipe disable keys lock keyboard 키보드 청소 닦기 키 잠그기",
             OrbitAction.CheckUpdates => "update updates upgrade new version release download 업데이트 새 버전 최신 버전 릴리즈",
             _ => "",
