@@ -19,6 +19,7 @@ internal sealed class Palette
         InkSecondary = Solid(dark ? 0x9C9CA3 : 0x6B6B70);
         Hairline = Solid(dark ? 0xFFFFFF : 0x000000, dark ? 0.11 : 0.09);
         Accent = Solid(dark ? 0xFF7338 : 0xF55C1A);
+        Selection = Fade(Ink, 0.08);
     }
 
     public bool Dark { get; }
@@ -33,6 +34,15 @@ internal sealed class Palette
     public SolidColorBrush Hairline { get; }
     /// <summary>Orbit orange.</summary>
     public SolidColorBrush Accent { get; }
+    /// <summary>A selected row's background.</summary>
+    public SolidColorBrush Selection { get; }
+
+    /// <summary>A borderless text field on this palette, as the launcher's search fields.</summary>
+    public System.Windows.Controls.TextBox PlainField(double fontSize) => new()
+    {
+        FontSize = fontSize, BorderThickness = new System.Windows.Thickness(0), Background = System.Windows.Media.Brushes.Transparent,
+        Foreground = Ink, CaretBrush = Ink, VerticalContentAlignment = System.Windows.VerticalAlignment.Center,
+    };
 
     public static Palette Current() => new(!AppsUseLightTheme());
 

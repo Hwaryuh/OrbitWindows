@@ -89,7 +89,7 @@ GetWindowText
 IsIconic
 ShowWindow
 DwmGetWindowAttribute
-DWMWA_CLOAKED
+DWMWINDOWATTRIBUTE
 OpenProcess
 QueryFullProcessImageName
 CloseHandle

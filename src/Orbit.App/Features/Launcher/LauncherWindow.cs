@@ -4,7 +4,6 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
 using System.Windows.Media.Imaging;
-using System.Windows.Threading;
 using Orbit.App.Design;
 using Orbit.App.Overlays;
 using Orbit.Core;
@@ -16,7 +15,7 @@ namespace Orbit.App.Features.Launcher;
 /// <summary>
 /// The command palette (Orbit: LauncherPanel.swift, LauncherView.swift): a search field, results
 /// in sections, a footer naming the primary action, and Ctrl+K for every action of the selected
-/// result. Above the middle of the monitor under the pointer; gone when it loses the keyboard.
+/// result (<see cref="ActionPanel"/>). Above the middle of the monitor under the pointer; gone when it loses the keyboard.
 /// Keys: ↑↓, Enter, Ctrl+Enter (second action), Ctrl+K, Esc (actions, then the query, then the
 /// window), Ctrl+, (settings).
 /// </summary>
@@ -34,19 +33,12 @@ internal sealed class LauncherWindow : OverlayWindow
     private readonly ScrollViewer _scroll;
     private readonly FrameworkElement _empty;
     private readonly TextBlock _primaryHint;
-    private readonly Border _actionPanel;
-    private readonly StackPanel _actionRows = new();
-    private readonly TextBox _actionQuery;
+    private readonly ActionPanel _actionPanel;
     /// <summary>Icons by app or path, loading or loaded; a row built while one loads waits for the same task.</summary>
     private readonly Dictionary<string, Task<ImageSource?>> _icons = [];
     private IReadOnlyList<OpenWindow> _windows = [];
     private IReadOnlyList<LauncherItem> _items = [];
-    private List<LauncherAction> _actions = [];
-    /// <summary>The result the action panel was opened for; its actions only.</summary>
-    private LauncherItem? _actionTarget;
     private int _selection;
-    private int _actionSelection;
-    private bool _actionsOpen;
     private (int X, int Y) _openedAt;
 
     public LauncherWindow(LauncherModel model, AppIndex apps, Palette palette) : base(activating: true, transparent: true, clickThrough: false)
@@ -56,11 +48,8 @@ internal sealed class LauncherWindow : OverlayWindow
         _palette = palette;
         FontFamily = new FontFamily("Segoe UI Variable Text, Segoe UI, Malgun Gothic");
 
-        _query = new TextBox
-        {
-            FontSize = 18, BorderThickness = new Thickness(0), Background = Brushes.Transparent, Foreground = palette.Ink,
-            CaretBrush = palette.Ink, VerticalContentAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 0, 0),
-        };
+        _query = palette.PlainField(18);
+        _query.Margin = new Thickness(12, 0, 0, 0);
         var placeholder = new TextBlock
         {
             Text = Strings.LauncherPlaceholder, FontSize = 18, Foreground = palette.InkSecondary, IsHitTestVisible = false,
@@ -92,31 +81,15 @@ internal sealed class LauncherWindow : OverlayWindow
         footer.Children.Add(brand);
         var hints = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 16, 0) };
         hints.Children.Add(_primaryHint);
-        hints.Children.Add(KeyCap("↵", palette));
+        hints.Children.Add(KeyCap.Make("↵", palette));
         hints.Children.Add(new Border { Width = 1, Height = 14, Background = palette.Hairline, Margin = new Thickness(12, 0, 12, 0) });
         hints.Children.Add(new TextBlock { Text = Strings.LauncherActions, FontSize = 12, Foreground = palette.InkSecondary, VerticalAlignment = VerticalAlignment.Center });
-        hints.Children.Add(KeyCap("Ctrl", palette));
-        hints.Children.Add(KeyCap("K", palette));
+        hints.Children.Add(KeyCap.Make("Ctrl", palette));
+        hints.Children.Add(KeyCap.Make("K", palette));
         footer.Children.Add(hints);
 
-        _actionQuery = new TextBox
-        {
-            FontSize = 13, BorderThickness = new Thickness(0), Background = Brushes.Transparent, Foreground = palette.Ink,
-            CaretBrush = palette.Ink, Height = 36, VerticalContentAlignment = VerticalAlignment.Center, Padding = new Thickness(10, 0, 10, 0),
-        };
-        _actionQuery.TextChanged += (_, _) => RebuildActions();
-        var actionLayout = new DockPanel();
-        var actionSearch = new Border { BorderBrush = palette.Hairline, BorderThickness = new Thickness(0, 1, 0, 0), Child = _actionQuery };
-        DockPanel.SetDock(actionSearch, Dock.Bottom);
-        actionLayout.Children.Add(actionSearch);
-        actionLayout.Children.Add(new Border { Padding = new Thickness(6), Child = _actionRows });
-        _actionPanel = new Border
-        {
-            Width = 290, Background = palette.Canvas, BorderBrush = palette.Hairline, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(12),
-            HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 10, FooterHeight + 6),
-            Effect = new DropShadowEffect { BlurRadius = 30, ShadowDepth = 8, Direction = 270, Opacity = 0.22 }, Visibility = Visibility.Collapsed,
-            Child = actionLayout,
-        };
+        _actionPanel = new ActionPanel(palette, FooterHeight + 6);
+        _actionPanel.Chosen += Run;
 
         var body = new DockPanel();
         var top = new Border { BorderBrush = Palette.Fade(palette.Hairline, 0.6), BorderThickness = new Thickness(0, 0, 0, 1), Child = search };
@@ -181,7 +154,7 @@ internal sealed class LauncherWindow : OverlayWindow
     private void Rebuild()
     {
         // The list changes under an open action panel: its result may be gone.
-        if (_actionsOpen) CloseActions();
+        if (_actionPanel.IsOpen) CloseActions();
         _items = _model.Build(_query.Text, _windows);
         _selection = 0;
         _rows.Children.Clear();
@@ -233,7 +206,7 @@ internal sealed class LauncherWindow : OverlayWindow
         {
             // The launcher may open under a resting pointer: only a real move picks a row.
             var at = Monitors.Cursor();
-            if (at == _openedAt || _selection == index || _actionsOpen) return;
+            if (at == _openedAt || _selection == index || _actionPanel.IsOpen) return;
             _selection = index;
             ShowSelection();
         };
@@ -298,7 +271,7 @@ internal sealed class LauncherWindow : OverlayWindow
         {
             if (child is not Grid { Tag: Border bar } cell) continue;
             bool selected = index++ == _selection;
-            ((Border)cell.Children[0]).Background = selected ? Palette.Fade(_palette.Ink, 0.08) : Brushes.Transparent;
+            ((Border)cell.Children[0]).Background = selected ? _palette.Selection : Brushes.Transparent;
             bar.Visibility = selected ? Visibility.Visible : Visibility.Collapsed;
             if (selected) cell.BringIntoView();
         }
@@ -315,15 +288,15 @@ internal sealed class LauncherWindow : OverlayWindow
         {
             case Key.Down: Move(1); break;
             case Key.Up: Move(-1); break;
-            case Key.Enter when ctrl && !_actionsOpen: RunSecondary(); break;
-            case Key.Enter: if (_actionsOpen) RunAction(); else RunPrimary(); break;
-            case Key.K when ctrl: if (_actionsOpen) CloseActions(); else OpenActions(); break;
+            case Key.Enter when ctrl && !_actionPanel.IsOpen: RunSecondary(); break;
+            case Key.Enter: if (_actionPanel.IsOpen) _actionPanel.RunSelected(); else RunPrimary(); break;
+            case Key.K when ctrl: if (_actionPanel.IsOpen) CloseActions(); else OpenActions(); break;
             case Key.OemComma when ctrl:
                 Dismiss();
                 _model.OpenSettings();
                 break;
             case Key.Escape:
-                if (_actionsOpen) CloseActions();
+                if (_actionPanel.IsOpen) CloseActions();
                 else if (_query.Text.Length > 0) _query.Text = "";
                 else Dismiss();
                 break;
@@ -334,12 +307,7 @@ internal sealed class LauncherWindow : OverlayWindow
 
     private void Move(int delta)
     {
-        if (_actionsOpen)
-        {
-            if (_actions.Count == 0) return;
-            _actionSelection = (_actionSelection + delta + _actions.Count) % _actions.Count;
-            ShowActionSelection();
-        }
+        if (_actionPanel.IsOpen) _actionPanel.Move(delta);
         else if (_items.Count > 0)
         {
             _selection = Math.Clamp(_selection + delta, 0, _items.Count - 1);
@@ -357,11 +325,6 @@ internal sealed class LauncherWindow : OverlayWindow
         if (Selected is { } item && item.Actions.Count > 1) Run(item, item.Actions[1]);
     }
 
-    private void RunAction()
-    {
-        if (_actionTarget is { } item && _actionSelection < _actions.Count) Run(item, _actions[_actionSelection]);
-    }
-
     private void Run(LauncherItem item, LauncherAction action)
     {
         _model.Bump(item);
@@ -377,56 +340,13 @@ internal sealed class LauncherWindow : OverlayWindow
 
     private void OpenActions()
     {
-        if (Selected is null) return;
-        _actionTarget = Selected;
-        _actionsOpen = true;
-        _actionQuery.Text = "";
-        RebuildActions();
-        _actionPanel.Visibility = Visibility.Visible;
-        _actionQuery.Focus();
+        if (Selected is { } item) _actionPanel.Open(item);
     }
 
     private void CloseActions()
     {
-        _actionsOpen = false;
-        _actionTarget = null;
-        _actionPanel.Visibility = Visibility.Collapsed;
+        _actionPanel.Close();
         _query.Focus();
-    }
-
-    private void RebuildActions()
-    {
-        var all = _actionTarget?.Actions ?? [];
-        var q = _actionQuery.Text.Trim();
-        _actions = q.Length == 0 ? [.. all] : all.Where(a => a.Title.Contains(q, StringComparison.CurrentCultureIgnoreCase)).ToList();
-        _actionSelection = 0;
-        _actionRows.Children.Clear();
-        for (int i = 0; i < _actions.Count; i++)
-        {
-            var action = _actions[i];
-            int index = i;
-            var row = new DockPanel { Height = 32, Margin = new Thickness(6, 0, 6, 0) };
-            var glyph = new TextBlock { Text = action.Glyph, FontFamily = Glyphs.Font, FontSize = 13, Foreground = _palette.InkSecondary, Width = 22, VerticalAlignment = VerticalAlignment.Center };
-            DockPanel.SetDock(glyph, Dock.Left);
-            row.Children.Add(glyph);
-            if (i == 0)
-            {
-                var key = KeyCap("↵", _palette);
-                DockPanel.SetDock(key, Dock.Right);
-                row.Children.Add(key);
-            }
-            row.Children.Add(new TextBlock { Text = action.Title, FontSize = 13, Foreground = _palette.Ink, VerticalAlignment = VerticalAlignment.Center });
-            var cell = new Border { CornerRadius = new CornerRadius(6), Background = Brushes.Transparent, Child = row, Cursor = Cursors.Hand };
-            cell.MouseLeftButtonUp += (_, _) => { _actionSelection = index; RunAction(); };
-            _actionRows.Children.Add(cell);
-        }
-        ShowActionSelection();
-    }
-
-    private void ShowActionSelection()
-    {
-        for (int i = 0; i < _actionRows.Children.Count; i++)
-            ((Border)_actionRows.Children[i]).Background = i == _actionSelection ? Palette.Fade(_palette.Ink, 0.08) : Brushes.Transparent;
     }
 
     private static FrameworkElement EmptyState(Palette palette)
@@ -437,11 +357,4 @@ internal sealed class LauncherWindow : OverlayWindow
         panel.Children.Add(new TextBlock { Text = Strings.LauncherEmptyHint, FontSize = 12, Foreground = palette.InkSecondary, HorizontalAlignment = HorizontalAlignment.Center });
         return panel;
     }
-
-    private static FrameworkElement KeyCap(string label, Palette palette) => new Border
-    {
-        MinWidth = 20, Height = 20, Padding = new Thickness(5, 0, 5, 0), Margin = new Thickness(4, 0, 0, 0), CornerRadius = new CornerRadius(5),
-        Background = palette.Raised, VerticalAlignment = VerticalAlignment.Center,
-        Child = new TextBlock { Text = label, FontSize = 11, Foreground = palette.InkSecondary, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center },
-    };
 }
