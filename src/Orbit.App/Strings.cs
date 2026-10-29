@@ -399,6 +399,36 @@ internal static class Strings
     public static string SoundNoApps => T("지금 소리를 내는 프로그램이 없습니다.", "No program has sound open right now.");
     public static string SoundNoOutput => T("출력 장치가 없습니다.", "There is no output device.");
     public static string SoundFooter => T("Windows가 프로그램마다 소리 크기를 기억합니다. 100%보다 크게 할 수는 없습니다.", "Windows remembers each program's level. It can't go above 100%.");
+    // System
+    public static string SysDarkOn => T("다크 모드로 바꿨습니다.", "Dark mode on.");
+    public static string SysDarkOff => T("라이트 모드로 바꿨습니다.", "Light mode on.");
+    public static string SysIconsShown => T("바탕 화면 아이콘을 보입니다.", "Desktop icons shown.");
+    public static string SysIconsHidden => T("바탕 화면 아이콘을 숨겼습니다.", "Desktop icons hidden.");
+    public static string SysNoDesktop => T("바탕 화면을 찾지 못했습니다.", "The desktop could not be found.");
+    public static string SysHiddenShown => T("숨김 파일을 보입니다.", "Hidden files shown.");
+    public static string SysHiddenHidden => T("숨김 파일을 숨겼습니다.", "Hidden files hidden.");
+    public static string SysRecycleConfirm => T("휴지통을 비울까요? 지운 항목은 되살릴 수 없습니다.", "Empty the Recycle Bin? Items in it are deleted for good.");
+    public static string SysRecycleAlreadyEmpty => T("휴지통이 이미 비어 있습니다.", "The Recycle Bin is already empty.");
+    public static string SysRecycleEmptied => T("휴지통을 비웠습니다.", "Recycle Bin emptied.");
+    public static string SysRecycleFailed => T("휴지통을 비우지 못했습니다.", "The Recycle Bin could not be emptied.");
+    public static string SysNothingToEject => T("꺼낼 드라이브가 없습니다.", "Nothing to eject.");
+    public static string SysEjected(int n) => T($"드라이브 {n}개를 꺼냈습니다.", n == 1 ? "Ejected 1 drive." : $"Ejected {n} drives.");
+    public static string SysInUse(int n) => T($"드라이브 {n}개는 사용 중이라 꺼내지 못했습니다.", n == 1 ? "1 drive is in use." : $"{n} drives are in use.");
+    public static string SysLockFailed => T("화면을 잠그지 못했습니다.", "The screen could not be locked.");
+    public static string SysSubtitle => T("CPU, 메모리, GPU, 디스크, 네트워크와 많이 쓰는 프로그램.", "Processor, memory, GPU, disk, network and the busiest programs.");
+    public static string SysMemory => T("메모리", "Memory");
+    public static string SysDisk => T("디스크", "Disk");
+    public static string SysDiskFree(string free) => T($"{free} 남음", $"{free} free");
+    public static string SysNetwork => T("네트워크", "Network");
+    public static string SysBattery => T("배터리", "Battery");
+    public static string SysCharging => T("전원 연결됨", "Plugged in");
+    public static string SysNoBattery => T("배터리 없음", "No battery");
+    public static string SysUptime => T("켜진 시간", "Uptime");
+    public static string SysUptimeValue(TimeSpan t) => t.TotalDays >= 1 ? T($"{(int)t.TotalDays}일 {t.Hours}시간", $"{(int)t.TotalDays}d {t.Hours}h") : T($"{t.Hours}시간 {t.Minutes}분", $"{t.Hours}h {t.Minutes}m");
+    public static string SysTopPrograms => T("많이 쓰는 프로그램", "Busiest programs");
+    public static string SysActions => T("빠른 동작", "Quick actions");
+    public static string SysThreads(int n) => T($"스레드 {n}개", $"{n} threads");
+    public static string SysNotAvailable => T("알 수 없음", "Unavailable");
     public static string ColorCopied(string hex) => T($"{hex} 색을 복사했습니다.", $"{hex} copied to the clipboard.");
 
     public static string MenuSettings => T("설정", "Settings");

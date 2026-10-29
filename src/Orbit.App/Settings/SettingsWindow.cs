@@ -90,6 +90,7 @@ internal sealed class SettingsWindow : Window
         "snippets" => () => new SnippetsPage(_services),
         "keepAwake" => () => new KeepAwakePage(_services),
         "sound" => () => new SoundPage(),
+        "system" => () => new SystemPage(_services),
         "about" => About,
         _ => () => NotReady(title),
     };
