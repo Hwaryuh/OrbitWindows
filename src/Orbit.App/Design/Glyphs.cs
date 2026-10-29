@@ -70,6 +70,7 @@ internal static class Glyphs
         [OrbitAction.EjectAll] = "\uE88E",
         [OrbitAction.CleanKeyboard] = Keyboard,
         [OrbitAction.PortManager] = "\uE968",
+        [OrbitAction.Scratchpad] = "\uE70B",
         [OrbitAction.BrightnessUp] = "\uE706",
         [OrbitAction.BrightnessDown] = "\uEC8A",
     };

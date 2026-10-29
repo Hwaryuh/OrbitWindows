@@ -65,6 +65,10 @@ public static class Pref
     public const string DisplaysHud = "displays.osd";
     /// <summary>The user's brightness presets, as JSON.</summary>
     public const string DisplaysPresets = "displays.presets";
+    /// <summary>The scratchpad stays on top and open when another app is clicked.</summary>
+    public const string ScratchpadPinned = "scratchpad.pinned";
+    /// <summary>Tabs unedited for this many days close when the pad opens; 0 keeps them.</summary>
+    public const string ScratchpadClearDays = "scratchpad.clearDays";
     public const string RingMouse = "ring.mouse";
     public const string RingMouseButton = "ring.mouseButton";
     public const string RingSlots = "ring.slots";
@@ -114,6 +118,8 @@ public static class Pref
         [DisplaysTarget] = "pointer",
         [DisplaysHud] = true,
         [DisplaysPresets] = "",
+        [ScratchpadPinned] = false,
+        [ScratchpadClearDays] = 0,
         [RingMouse] = true,
         [RingMouseButton] = "middle",
         [RingHover] = true,

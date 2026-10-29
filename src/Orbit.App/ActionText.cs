@@ -51,6 +51,7 @@ internal static class ActionText
         [OrbitAction.EjectAll] = new("Eject All Drives", "모든 드라이브 꺼내기", "Eject All", "모두 꺼내기"),
         [OrbitAction.BrightnessUp] = new("Brightness Up", "밝기 올리기", "Brighter", "밝게"),
         [OrbitAction.BrightnessDown] = new("Brightness Down", "밝기 내리기", "Dimmer", "어둡게"),
+        [OrbitAction.Scratchpad] = new("Scratchpad", "메모장", "Scratchpad", "메모장"),
         [OrbitAction.PortManager] = new("Port Manager", "포트 관리", "Ports", "포트"),
         [OrbitAction.CleanKeyboard] = new("Clean Keyboard", "키보드 청소", "Clean Keys", "키보드 청소"),
     };

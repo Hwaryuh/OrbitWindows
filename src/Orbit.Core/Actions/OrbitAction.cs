@@ -23,6 +23,8 @@ public enum OrbitAction
     PortManager,
     // Brightness keys can't be taken over on Windows: actions instead.
     BrightnessUp, BrightnessDown,
+    // Not in Orbit (after Vorssaint's Scratchpad).
+    Scratchpad,
 }
 
 public enum ActionGroup { Capture, Clipboard, Orbit, System, Media }
@@ -77,6 +79,7 @@ public static class OrbitActions
             OrbitAction.MediaPlayPause or OrbitAction.MediaNext or OrbitAction.MediaPrevious =>
                 "music song play pause next previous skip spotify now playing 음악 노래 재생 일시정지 다음 이전",
             OrbitAction.BrightnessUp or OrbitAction.BrightnessDown => "brightness monitor display screen ddc brighter dimmer 밝기 모니터 화면 밝게 어둡게",
+            OrbitAction.Scratchpad => "scratchpad scratch pad notes memo notepad jot quick note text 메모 메모장 스크래치패드 노트 빠른 메모",
             OrbitAction.PortManager => "port ports listening tcp udp localhost dev server kill process netstat 포트 수신 대기 개발 서버 프로세스 종료",
             OrbitAction.CleanKeyboard => "clean keyboard wipe disable keys lock keyboard 키보드 청소 닦기 키 잠그기",
             OrbitAction.CheckUpdates => "update updates upgrade new version release download 업데이트 새 버전 최신 버전 릴리즈",

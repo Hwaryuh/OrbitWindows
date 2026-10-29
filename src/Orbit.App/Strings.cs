@@ -429,6 +429,27 @@ internal static class Strings
     public static string SysActions => T("빠른 동작", "Quick actions");
     public static string SysThreads(int n) => T($"스레드 {n}개", $"{n} threads");
     public static string SysNotAvailable => T("알 수 없음", "Unavailable");
+    // Scratchpad
+    public static string ScratchpadTitle => T("메모장", "Scratchpad");
+    public static string ScratchpadTabName(int n) => T($"메모 {n}", $"Note {n}");
+    public static string ScratchpadNewTab => T("새 메모 (Ctrl+T)", "New note (Ctrl+T)");
+    public static string ScratchpadCloseTab => T("메모 닫기 (Ctrl+W)", "Close note (Ctrl+W)");
+    public static string ScratchpadPin => T("항상 위에 고정", "Keep on top");
+    public static string ScratchpadMore => T("더 보기", "More");
+    public static string ScratchpadHide => T("숨기기 (Esc)", "Hide (Esc)");
+    public static string ScratchpadCopyAll => T("이 메모 모두 복사", "Copy this note");
+    public static string ScratchpadCopied => T("메모를 복사했습니다.", "Note copied.");
+    public static string ScratchpadReopen => T("닫은 메모 다시 열기", "Reopen closed note");
+    public static string ScratchpadClosed => T("메모를 닫았습니다.", "Note closed.");
+    public static string ScratchpadClosedHint => T("Ctrl+Shift+T로 다시 열 수 있습니다.", "Ctrl+Shift+T brings it back.");
+    public static string ScratchpadClearAfter => T("오래된 메모 닫기", "Close old notes");
+    public static string ScratchpadClearNever => T("안 함", "Never");
+    public static string ScratchpadClearDays(int days) => T($"{days}일 동안 고치지 않은 메모", days == 1 ? "Unedited for a day" : $"Unedited for {days} days");
+    public static string ScratchpadClearHint => T("메모장을 열 때 확인하고, 닫은 메모 목록에 남깁니다.", "Checked when the pad opens; they stay in the closed list.");
+    public static string ScratchpadNotFound => T("찾지 못했습니다.", "Not found.");
+    public static string ScratchpadSaveFailed => T("메모를 저장하지 못했습니다. 다음에 고칠 때 다시 저장합니다.", "The note couldn't be saved. Orbit tries again on the next edit.");
+    public static string ScratchpadLostAtQuit => T("메모를 저장하지 못해 모든 메모를 클립보드에 복사했습니다. 다른 곳에 붙여 넣으세요.", "The notes couldn't be saved, so all of them were copied to the clipboard. Paste them somewhere safe.");
+    public static string ScratchpadNotSaving => T("메모 파일을 읽지 못해 저장하지 않습니다. Orbit을 다시 시작하세요.", "The notes file couldn't be read, so nothing is saved. Restart Orbit.");
     // Displays
     public static string DisplaysSubtitle => T("모든 화면의 밝기, 대비, 음량입니다. 외장 모니터는 DDC/CI로 직접 조절합니다.", "Brightness, contrast and volume for every screen. External monitors are set directly over DDC/CI.");
     public static string DisplaysAskAgain => T("다시 확인", "Ask again");
