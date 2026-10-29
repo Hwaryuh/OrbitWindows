@@ -51,9 +51,19 @@ internal static class ActionText
         [OrbitAction.CleanKeyboard] = new("Clean Keyboard", "키보드 청소", "Clean Keys", "키보드 청소"),
     };
 
-    public static string Title(this OrbitAction action) => Strings.Korean ? All[action].Korean : All[action].English;
+    public static string Title(this OrbitAction action) => Strings.T(All[action].Korean, All[action].English);
 
-    public static string ShortTitle(this OrbitAction action) => Strings.Korean ? All[action].ShortKorean : All[action].ShortEnglish;
+    public static string ShortTitle(this OrbitAction action) => Strings.T(All[action].ShortKorean, All[action].ShortEnglish);
+
+    /// <summary>The group's name, as Orbit shows it under a choice in the ring's hub and beside a command.</summary>
+    public static string GroupTitle(this OrbitAction action) => action.Group() switch
+    {
+        ActionGroup.Capture => Strings.T("캡처", "Capture"),
+        ActionGroup.Clipboard => Strings.T("클립보드", "Clipboard"),
+        ActionGroup.System => Strings.T("시스템", "System"),
+        ActionGroup.Media => Strings.T("미디어", "Media"),
+        _ => "Orbit",
+    };
 
     /// <summary>Every action has its names; checked at startup so a new action can't ship without them.</summary>
     public static IEnumerable<OrbitAction> Missing() => OrbitActions.All.Where(a => !All.ContainsKey(a));

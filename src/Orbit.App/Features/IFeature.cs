@@ -20,7 +20,7 @@ internal interface IFeature : IDisposable
 }
 
 /// <summary>What the app gives every feature.</summary>
-internal sealed class AppServices(Preferences preferences, ActionRunner actions, HotkeyMatcher hotkeys,
+internal sealed class AppServices(Preferences preferences, ActionRunner actions, HookThread hooks,
     ForegroundTracker foreground, Action<string, string> notify)
 {
     private int _nextHotkey = 1;
@@ -28,6 +28,8 @@ internal sealed class AppServices(Preferences preferences, ActionRunner actions,
     public Preferences Preferences { get; } = preferences;
     public ActionRunner Actions { get; } = actions;
     public ForegroundTracker Foreground { get; } = foreground;
+    /// <summary>The hooks: the ring trigger's settings, and click and Esc reports while an overlay is open.</summary>
+    public HookThread Hooks { get; } = hooks;
 
     /// <summary>Windows.Graphics.Capture, once it is ready; null before that or where it isn't available.</summary>
     public WgcCapture? Capture { get; set; }
@@ -39,7 +41,7 @@ internal sealed class AppServices(Preferences preferences, ActionRunner actions,
     public int AddHotkey(Hotkey hotkey)
     {
         int id = _nextHotkey++;
-        hotkeys.Register(id, hotkey);
+        Hooks.Hotkeys.Register(id, hotkey);
         return id;
     }
 }

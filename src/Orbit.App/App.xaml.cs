@@ -53,7 +53,7 @@ public partial class App : Application
         _tray = CreateTray();
 
         _hooks = new HookThread();
-        _services = new AppServices(_preferences, _actions, _hooks.Hotkeys, _foreground, Notify);
+        _services = new AppServices(_preferences, _actions, _hooks, _foreground, Notify);
         _features.AddRange([new SettingsFeature(), new RingFeature(), new LauncherFeature(), _captureSpike]);
         foreach (var feature in _features) feature.Start(_services);
         _hooks.Notice += e => Dispatcher.BeginInvoke(() => OnHook(e));

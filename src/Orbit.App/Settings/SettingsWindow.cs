@@ -20,6 +20,16 @@ public sealed class SettingsWindow : Window
 
     private readonly Preferences _preferences;
     private readonly ContentControl _page = new() { Margin = new Thickness(28, 24, 28, 24) };
+    private readonly ListBox _pages;
+
+    /// <summary>The pages, by id and title: the launcher finds them by name.</summary>
+    public static IReadOnlyList<(string Id, string Title)> PageTitles { get; } =
+    [
+        ("general", Strings.PageGeneral), ("ring", Strings.PageRing), ("launcher", Strings.PageLauncher),
+        ("capture", Strings.PageCapture), ("clipboard", Strings.PageClipboard), ("translate", Strings.PageTranslate),
+        ("snippets", Strings.PageSnippets), ("keepAwake", Strings.PageKeepAwake), ("sound", Strings.PageSound),
+        ("system", Strings.PageSystem), ("displays", Strings.PageDisplays), ("about", Strings.PageAbout),
+    ];
 
     private SettingsWindow(Preferences preferences)
     {
@@ -33,15 +43,15 @@ public sealed class SettingsWindow : Window
         Background = Brushes.White;
         FontFamily = new FontFamily("Segoe UI Variable Text, Segoe UI, Malgun Gothic");
 
-        var pages = new ListBox
+        var pages = _pages = new ListBox
         {
             BorderThickness = new Thickness(0),
             Background = new SolidColorBrush(Color.FromRgb(247, 247, 247)),
             Padding = new Thickness(8, 12, 8, 12),
             Width = 190,
         };
-        foreach (var (title, build) in Pages())
-            pages.Items.Add(new ListBoxItem { Content = title, Tag = build, Padding = new Thickness(10, 7, 10, 7), FontSize = 14 });
+        foreach (var (id, title) in PageTitles)
+            pages.Items.Add(new ListBoxItem { Content = title, Tag = Build(id, title), Padding = new Thickness(10, 7, 10, 7), FontSize = 14 });
         pages.SelectionChanged += (_, _) =>
         {
             if (pages.SelectedItem is ListBoxItem { Tag: Func<UIElement> build }) _page.Content = build();
@@ -56,25 +66,23 @@ public sealed class SettingsWindow : Window
         Closed += (_, _) => _open = null;
     }
 
-    public static void ShowOrActivate(Preferences preferences)
+    /// <param name="page">A page id from <see cref="PageTitles"/>; null keeps the one shown.</param>
+    public static void ShowOrActivate(Preferences preferences, string? page = null)
     {
         _open ??= new SettingsWindow(preferences);
+        int index = PageTitles.ToList().FindIndex(p => p.Id == page);
+        if (index >= 0) _open._pages.SelectedIndex = index;
         _open.Show();
         if (_open.WindowState == WindowState.Minimized) _open.WindowState = WindowState.Normal;
         _open.Activate();
     }
 
-    private IEnumerable<(string Title, Func<UIElement> Build)> Pages()
+    private Func<UIElement> Build(string id, string title) => id switch
     {
-        yield return (Strings.PageGeneral, General);
-        foreach (var title in new[]
-                 {
-                     Strings.PageRing, Strings.PageLauncher, Strings.PageCapture, Strings.PageClipboard, Strings.PageTranslate,
-                     Strings.PageSnippets, Strings.PageKeepAwake, Strings.PageSound, Strings.PageSystem, Strings.PageDisplays,
-                 })
-            yield return (title, () => NotReady(title));
-        yield return (Strings.PageAbout, About);
-    }
+        "general" => General,
+        "about" => About,
+        _ => () => NotReady(title),
+    };
 
     private UIElement General()
     {

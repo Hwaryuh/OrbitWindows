@@ -8,7 +8,8 @@ internal static class Strings
     /// <summary>Windows' display language is Korean.</summary>
     public static readonly bool Korean = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ko";
 
-    private static string T(string korean, string english) => Korean ? korean : english;
+    /// <summary>The Korean or the English text, by Windows' display language.</summary>
+    public static string T(string korean, string english) => Korean ? korean : english;
 
     public static string AppName => "Orbit";
     public static string MenuCaptureTest => T("캡처 테스트", "Capture Test");
@@ -27,6 +28,34 @@ internal static class Strings
     public static string MenuSettings => T("설정", "Settings");
     public static string ActionNotReady(string title) => T($"{title} 기능은 아직 준비 중입니다.", $"{title} is not ready yet.");
     public static string StartupChangeFailed => T("로그인할 때 실행 설정을 바꾸지 못했습니다.", "The sign-in setting could not be changed.");
+
+    // Launcher
+    public static string LauncherPlaceholder => T("앱, 명령, 설정 검색…", "Search apps, commands, settings…");
+    public static string LauncherEmpty => T("결과가 없습니다", "No results");
+    public static string LauncherEmptyHint => T("앱 이름, ‘캡처’ 같은 명령, 12*8 같은 계산을 입력하세요.", "Try an app name, a command like “capture”, or math like 12*8.");
+    public static string LauncherActions => T("작업", "Actions");
+    public static string LauncherSearchActions => T("작업 검색…", "Search actions…");
+    public static string SectionCalculator => T("계산기", "Calculator");
+    public static string SectionSuggestions => T("추천", "Suggestions");
+    public static string SectionRecentApps => T("최근 앱", "Recent Apps");
+    public static string SectionCommands => T("명령", "Commands");
+    public static string SectionApps => T("앱", "Applications");
+    public static string SectionWindows => T("열린 창", "Open Windows");
+    public static string SectionWindowsSettings => T("Windows 설정", "Windows Settings");
+    public static string SectionWeb => T("웹", "Web");
+    public static string AccessoryApp => T("앱", "Application");
+    public static string AccessoryWindow => T("창", "Window");
+    public static string AccessoryMinimized => T("최소화됨", "Minimized");
+    public static string ActionOpen => T("열기", "Open");
+    public static string ActionRunCommand => T("명령 실행", "Run Command");
+    public static string ActionSwitchToWindow => T("창으로 전환", "Switch to Window");
+    public static string ActionCloseWindow => T("창 닫기", "Close Window");
+    public static string ActionCopyAnswer => T("답 복사", "Copy Answer");
+    public static string ActionSearch => T("검색", "Search");
+    public static string SearchGoogleFor(string query) => T($"Google에서 “{query}” 검색", $"Search Google for “{query}”");
+    public static string Copied => T("복사했습니다.", "Copied.");
+    public static string CopyFailed => T("클립보드에 복사하지 못했습니다. 다시 시도하세요.", "Could not copy to the clipboard. Please try again.");
+    public static string OpenFailed => T("열지 못했습니다.", "Could not open it.");
 
     // Settings window
     public static string SettingsTitle => T("Orbit 설정", "Orbit Settings");

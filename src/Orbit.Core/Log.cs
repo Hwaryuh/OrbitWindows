@@ -11,6 +11,13 @@ public static class Log
 
     public static string Folder => _folder ??= AppPaths.LocalFolder("logs");
 
+    /// <summary>Tests write their log lines elsewhere, never into the user's log.</summary>
+    internal static void UseFolder(string folder)
+    {
+        Directory.CreateDirectory(folder);
+        _folder = folder;
+    }
+
     public static void Info(string message) => Write("INFO", message);
     public static void Warn(string message) => Write("WARN", message);
     public static void Error(string message, Exception? error = null) =>

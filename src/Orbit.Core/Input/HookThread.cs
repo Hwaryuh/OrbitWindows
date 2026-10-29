@@ -5,9 +5,9 @@ using Windows.Win32.UI.WindowsAndMessaging;
 
 namespace Orbit.Core.Input;
 
-public enum HookNotice { RingOpen, RingRelease, HooksReinstalled, HotkeyDown, HotkeyUp }
+public enum HookNotice { RingOpen, RingRelease, HooksReinstalled, HotkeyDown, HotkeyUp, Click, Escape }
 
-/// <summary>What the hooks report. X and Y: the ring's press position in physical pixels. Hotkey: the matched id.</summary>
+/// <summary>What the hooks report. X and Y: the ring's press or a click, in physical pixels. Hotkey: the matched id.</summary>
 public readonly record struct HookEvent(HookNotice Notice, int X = 0, int Y = 0, int Hotkey = 0);
 
 /// <summary>
@@ -26,6 +26,9 @@ public sealed class HookThread : IDisposable
     private const uint WmNotify = PInvoke.WM_APP + 2;
     private const uint WmHotkeyDown = PInvoke.WM_APP + 3;
     private const uint WmHotkeyUp = PInvoke.WM_APP + 4;
+    private const uint WmClick = PInvoke.WM_APP + 5;
+    private const uint WmEscape = PInvoke.WM_APP + 6;
+    private const uint VkEscape = 0x1B;
     private const uint WatchdogMs = 2000;
 
     private readonly HOOKPROC _mouseProc;
@@ -42,7 +45,12 @@ public sealed class HookThread : IDisposable
     private System.Drawing.Point _lastCursor;
     private uint _lastReinstall;
     private uint _backoffUntil;
+    private int _silentMoves;
     private uint _lastReinstallLog;
+    private volatile bool _reportClicks;
+    private volatile bool _captureEscape;
+    private bool _escapeOwned;
+    private bool _escapePassed;
 
     public HookThread()
     {
@@ -59,6 +67,19 @@ public sealed class HookThread : IDisposable
 
     /// <summary>Raised on the hook thread.</summary>
     public event Action<HookEvent>? Notice;
+
+    /// <summary>
+    /// While set (an overlay like the ring is open), every left and right press anywhere is reported
+    /// as <see cref="HookNotice.Click"/>. The press still goes to its window: the overlay decides
+    /// whether it was outside.
+    /// </summary>
+    public bool ReportClicks { set => _reportClicks = value; }
+
+    /// <summary>
+    /// While set, an Esc pressed from now on is Orbit's: reported as <see cref="HookNotice.Escape"/>
+    /// and kept from the app, its repeats and up too, even if this is turned off in between.
+    /// </summary>
+    public bool CaptureEscape { set => _captureEscape = value; }
 
     public void Start()
     {
@@ -129,6 +150,12 @@ public sealed class HookThread : IDisposable
             case WmHotkeyUp:
                 Raise(new HookEvent(HookNotice.HotkeyUp, Hotkey: (int)msg.wParam.Value));
                 break;
+            case WmClick:
+                Raise(new HookEvent(HookNotice.Click, (int)(nint)msg.wParam.Value, (int)msg.lParam.Value));
+                break;
+            case WmEscape:
+                Raise(new HookEvent(HookNotice.Escape));
+                break;
             default:
                 PInvoke.TranslateMessage(in msg);
                 PInvoke.DispatchMessage(in msg);
@@ -157,6 +184,8 @@ public sealed class HookThread : IDisposable
             if (info->dwExtraInfo != OrbitMarker)
             {
                 var (button, down) = Decode((uint)wParam.Value, info->mouseData);
+                if (down && _reportClicks && button is MouseButton.Left or MouseButton.Right)
+                    PInvoke.PostThreadMessage(_threadId, WmClick, (nuint)(nint)info->pt.X, info->pt.Y);
                 if (button != MouseButton.None)
                 {
                     var action = down ? RingTrigger.Down(button, info->pt.X, info->pt.Y) : RingTrigger.Up(button);
@@ -181,6 +210,31 @@ public sealed class HookThread : IDisposable
             {
                 uint message = (uint)wParam.Value;
                 bool down = message is PInvoke.WM_KEYDOWN or PInvoke.WM_SYSKEYDOWN;
+                // Esc is Orbit's only from a press that starts while captured: one the app already
+                // got keeps its repeats and its up.
+                if (info->vkCode == VkEscape)
+                {
+                    if (down)
+                    {
+                        if (_escapeOwned) return (LRESULT)1;
+                        if (_captureEscape && !_escapePassed)
+                        {
+                            _escapeOwned = true;
+                            PInvoke.PostThreadMessage(_threadId, WmEscape, default, default);
+                            return (LRESULT)1;
+                        }
+                        _escapePassed = true;
+                    }
+                    else
+                    {
+                        _escapePassed = false;
+                        if (_escapeOwned)
+                        {
+                            _escapeOwned = false;
+                            return (LRESULT)1;
+                        }
+                    }
+                }
                 var decision = down ? Hotkeys.KeyDown(info->vkCode, AsyncKeyState.Instance) : Hotkeys.KeyUp(info->vkCode);
                 // Now, not posted: input that arrives meanwhile (Alt's up) reaches this thread's hook
                 // before its posted messages, and the mask must reach the app before that up.
@@ -309,7 +363,9 @@ public sealed class HookThread : IDisposable
         bool unseenInput = PInvoke.GetLastInputInfo(ref last)
             && now - last.dwTime < 5000
             && (int)(last.dwTime - Math.Max(_lastMouseTick, _lastKeyboardTick)) > 1000;
-        bool mouseLost = pointerMoved && mouseSilent;
+        // Twice in a row: an app that moves the pointer itself (SetCursorPos) makes one such check now and then.
+        _silentMoves = pointerMoved && mouseSilent ? _silentMoves + 1 : 0;
+        bool mouseLost = _silentMoves >= 2;
         if (!unseenInput && !mouseLost) return;
         if (_backoffUntil != 0 && (int)(now - _backoffUntil) < 0) return;
 
@@ -317,16 +373,17 @@ public sealed class HookThread : IDisposable
         _backoffUntil = (int)(now - _lastReinstall) < 10_000 ? now + 30_000 : 0;
         _lastReinstall = now;
 
+        _silentMoves = 0;
         Uninstall();
         Install();
+        // A held shortcut is left to Recover above: it lets go once the modifiers are up, so a
+        // reinstall that wasn't needed doesn't end a ring someone is holding.
         RingTrigger.Reset();
         if ((int)(now - _lastReinstallLog) > 60_000)
         {
             _lastReinstallLog = now;
             Log.Warn($"Hooks reinstalled (unseen input {unseenInput}, pointer moved without mouse events {mouseLost})");
         }
-        int held = Hotkeys.Reset();
-        if (held != 0) Raise(new HookEvent(HookNotice.HotkeyUp, Hotkey: held));
         Raise(new HookEvent(HookNotice.HooksReinstalled));
     }
 }

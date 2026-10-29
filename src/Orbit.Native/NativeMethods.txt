@@ -65,3 +65,36 @@ GetWindowThreadProcessId
 IsWindow
 GetAncestor
 MapVirtualKey
+
+// Launcher: apps (shell:AppsFolder) and their icons
+SHGetKnownFolderItem
+FOLDERID_AppsFolder
+SHCreateItemFromParsingName
+IShellItem
+IEnumShellItems
+IShellItemImageFactory
+BHID_EnumItems
+SIGDN
+SIIGBF
+CoInitializeEx
+GetObject
+DIBSECTION
+
+// Launcher: open windows
+EnumWindows
+IsWindowVisible
+GetWindow
+GetWindowTextLength
+GetWindowText
+IsIconic
+ShowWindow
+DwmGetWindowAttribute
+DWMWA_CLOAKED
+OpenProcess
+QueryFullProcessImageName
+CloseHandle
+PostMessage
+BringWindowToTop
+AttachThreadInput
+BITMAP
+GetClassName
