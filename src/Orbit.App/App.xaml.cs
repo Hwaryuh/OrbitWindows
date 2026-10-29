@@ -1,11 +1,6 @@
 ﻿using System.Diagnostics;
-using System.IO;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using H.NotifyIcon;
 using Orbit.App.Overlays;
 using Orbit.App.Spikes;
 using Orbit.Core;
@@ -19,7 +14,7 @@ public partial class App : Application
 {
     private Mutex? _instance;
     private HookThread? _hooks;
-    private TaskbarIcon? _tray;
+    private Tray? _tray;
     private WgcCapture? _wgc;
     private CaptureSpike? _captureSpike;
     private TestRingWindow? _ring;
@@ -41,7 +36,10 @@ public partial class App : Application
 
         _tray = CreateTray();
         _hooks = new HookThread();
-        _hooks.Notice += (notice, x, y) => Dispatcher.BeginInvoke(() => OnHookNotice(notice, x, y));
+        // Defaults from docs/plan/04-shortcuts.md. 0x20 is Space.
+        _hooks.Hotkeys.Register(HotkeyRing, new Hotkey(Modifiers.Ctrl | Modifiers.Alt, 0x20));
+        _hooks.Hotkeys.Register(HotkeyLauncher, new Hotkey(Modifiers.Alt, 0x20));
+        _hooks.Notice += e => Dispatcher.BeginInvoke(() => OnHookNotice(e));
         _hooks.Start();
 
         if (WgcCapture.IsSupported)
@@ -78,19 +76,25 @@ public partial class App : Application
         base.OnExit(e);
     }
 
-    private void OnHookNotice(HookNotice notice, int x, int y)
+    private const int HotkeyRing = 1;
+    private const int HotkeyLauncher = 2;
+
+    private void OnHookNotice(HookEvent e)
     {
-        switch (notice)
+        switch (e.Notice)
         {
             case HookNotice.RingOpen:
-                _ring?.Release();
-                _ring = new TestRingWindow();
-                _ring.Open(x, y);
+                OpenRing(e.X, e.Y);
+                break;
+            case HookNotice.HotkeyDown when e.Hotkey == HotkeyRing:
+                var (x, y) = Monitors.Cursor();
+                OpenRing(x, y);
+                break;
+            case HookNotice.HotkeyDown when e.Hotkey == HotkeyLauncher:
+                Log.Info("Launcher shortcut pressed (no launcher yet)");
                 break;
             case HookNotice.RingRelease:
-                _ring?.Release();
-                _ring = null;
-                break;
+            case HookNotice.HotkeyUp when e.Hotkey == HotkeyRing:
             case HookNotice.HooksReinstalled:
                 _ring?.Release();
                 _ring = null;
@@ -98,64 +102,23 @@ public partial class App : Application
         }
     }
 
-    private TaskbarIcon CreateTray()
+    private void OpenRing(int x, int y)
     {
-        var menu = new ContextMenu();
-        menu.Items.Add(Item(Strings.MenuCaptureTest, () => _ = _captureSpike?.RunAsync()));
-        menu.Items.Add(Item(Strings.MenuMonitorReport, () => { LogMonitors(); Notify(Strings.AppName, Strings.MonitorReportSaved); }));
-        menu.Items.Add(Item(Strings.MenuOpenLogs, () => Process.Start(new ProcessStartInfo(Log.Folder) { UseShellExecute = true })));
-        menu.Items.Add(new Separator());
-        menu.Items.Add(Item(Strings.MenuQuit, Shutdown));
-
-        var tray = new TaskbarIcon
-        {
-            ToolTipText = Strings.AppName,
-            Icon = TrayIcon(),
-            ContextMenu = menu,
-            MenuActivation = H.NotifyIcon.Core.PopupActivationMode.RightClick,
-        };
-        tray.ForceCreate(enablesEfficiencyMode: false);
-        return tray;
+        _ring?.Release();
+        _ring = new TestRingWindow();
+        _ring.Open(x, y);
     }
 
-    private static MenuItem Item(string header, Action action)
-    {
-        var item = new MenuItem { Header = header };
-        item.Click += (_, _) => action();
-        return item;
-    }
+    private Tray CreateTray() => new(
+    [
+        (Strings.MenuCaptureTest, () => _ = _captureSpike?.RunAsync()),
+        (Strings.MenuMonitorReport, () => { LogMonitors(); Notify(Strings.AppName, Strings.MonitorReportSaved); }),
+        (Strings.MenuOpenLogs, () => Process.Start(new ProcessStartInfo(Log.Folder) { UseShellExecute = true })),
+        null,
+        (Strings.MenuQuit, Shutdown),
+    ]);
 
-    /// <summary>A plain ring on black until Orbit's icon is drawn: a PNG wrapped in a one-image .ico.</summary>
-    private static System.Drawing.Icon TrayIcon()
-    {
-        var visual = new DrawingVisual();
-        using (var context = visual.RenderOpen())
-        {
-            context.DrawEllipse(Brushes.Black, null, new Point(16, 16), 15, 15);
-            context.DrawEllipse(null, new Pen(Brushes.White, 3), new Point(16, 16), 9, 9);
-        }
-        var bitmap = new RenderTargetBitmap(32, 32, 96, 96, PixelFormats.Pbgra32);
-        bitmap.Render(visual);
-
-        var encoder = new PngBitmapEncoder();
-        encoder.Frames.Add(BitmapFrame.Create(bitmap));
-        using var png = new MemoryStream();
-        encoder.Save(png);
-
-        using var ico = new MemoryStream();
-        using (var writer = new BinaryWriter(ico, System.Text.Encoding.UTF8, leaveOpen: true))
-        {
-            writer.Write((short)0); writer.Write((short)1); writer.Write((short)1);  // ICONDIR: icon, 1 image
-            writer.Write((byte)32); writer.Write((byte)32); writer.Write((byte)0); writer.Write((byte)0);
-            writer.Write((short)1); writer.Write((short)32);                         // planes, bits per pixel
-            writer.Write((int)png.Length); writer.Write(6 + 16);                     // size, offset
-            writer.Write(png.ToArray());
-        }
-        ico.Position = 0;
-        return new System.Drawing.Icon(ico);
-    }
-
-    private void Notify(string title, string message) => _tray?.ShowNotification(title, message);
+    private void Notify(string title, string message) => _tray?.Notify(title, message);
 
     private static void LogMonitors()
     {

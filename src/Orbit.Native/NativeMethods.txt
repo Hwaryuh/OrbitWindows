@@ -52,3 +52,4 @@ GetLastInputInfo
 GetTickCount
 PeekMessage
 MONITORINFOF_PRIMARY
+GetAsyncKeyState

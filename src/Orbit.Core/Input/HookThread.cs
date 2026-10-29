@@ -5,7 +5,10 @@ using Windows.Win32.UI.WindowsAndMessaging;
 
 namespace Orbit.Core.Input;
 
-public enum HookNotice { RingOpen, RingRelease, HooksReinstalled }
+public enum HookNotice { RingOpen, RingRelease, HooksReinstalled, HotkeyDown, HotkeyUp }
+
+/// <summary>What the hooks report. X and Y: the ring's press position in physical pixels. Hotkey: the matched id.</summary>
+public readonly record struct HookEvent(HookNotice Notice, int X = 0, int Y = 0, int Hotkey = 0);
 
 /// <summary>
 /// The low-level keyboard and mouse hooks, on a thread of their own with its own message loop, so
@@ -21,6 +24,8 @@ public sealed class HookThread : IDisposable
 
     private const uint WmReplay = PInvoke.WM_APP + 1;
     private const uint WmNotify = PInvoke.WM_APP + 2;
+    private const uint WmHotkeyDown = PInvoke.WM_APP + 3;
+    private const uint WmHotkeyUp = PInvoke.WM_APP + 4;
     private const uint WatchdogMs = 2000;
 
     private readonly HOOKPROC _mouseProc;
@@ -49,8 +54,11 @@ public sealed class HookThread : IDisposable
     /// <summary>The ring's mouse trigger. Touched only on the hook thread, except its settings.</summary>
     public MouseHoldTrigger RingTrigger { get; } = new();
 
-    /// <summary>Raised on the hook thread with the press position in physical pixels.</summary>
-    public event Action<HookNotice, int, int>? Notice;
+    /// <summary>Shortcuts the keyboard hook takes. Register before <see cref="Start"/>.</summary>
+    public HotkeyMatcher Hotkeys { get; } = new();
+
+    /// <summary>Raised on the hook thread.</summary>
+    public event Action<HookEvent>? Notice;
 
     public void Start()
     {
@@ -104,7 +112,7 @@ public sealed class HookThread : IDisposable
             case PInvoke.WM_TIMER when msg.wParam.Value == _holdTimer:
                 StopHoldTimer();
                 if ((RingTrigger.TimerElapsed() & TriggerAction.Open) != 0)
-                    Raise(HookNotice.RingOpen, RingTrigger.PressX, RingTrigger.PressY);
+                    Raise(new HookEvent(HookNotice.RingOpen, RingTrigger.PressX, RingTrigger.PressY));
                 break;
             case PInvoke.WM_TIMER when msg.wParam.Value == _watchdogTimer:
                 CheckHooks();
@@ -113,7 +121,13 @@ public sealed class HookThread : IDisposable
                 ReplayClick((MouseButton)(int)msg.wParam.Value);
                 break;
             case WmNotify:
-                Raise((HookNotice)(int)msg.wParam.Value, 0, 0);
+                Raise(new HookEvent((HookNotice)(int)msg.wParam.Value));
+                break;
+            case WmHotkeyDown:
+                Raise(new HookEvent(HookNotice.HotkeyDown, Hotkey: (int)msg.wParam.Value));
+                break;
+            case WmHotkeyUp:
+                Raise(new HookEvent(HookNotice.HotkeyUp, Hotkey: (int)msg.wParam.Value));
                 break;
             default:
                 PInvoke.TranslateMessage(in msg);
@@ -122,15 +136,15 @@ public sealed class HookThread : IDisposable
         }
     }
 
-    private void Raise(HookNotice notice, int x, int y)
+    private void Raise(HookEvent e)
     {
         try
         {
-            Notice?.Invoke(notice, x, y);
+            Notice?.Invoke(e);
         }
-        catch (Exception e)
+        catch (Exception error)
         {
-            Log.Error($"Hook notice {notice} failed", e);
+            Log.Error($"Hook notice {e.Notice} failed", error);
         }
     }
 
@@ -157,11 +171,54 @@ public sealed class HookThread : IDisposable
         return PInvoke.CallNextHookEx(HHOOK.Null, code, wParam, lParam);
     }
 
-    private LRESULT KeyboardProc(int code, WPARAM wParam, LPARAM lParam)
+    private unsafe LRESULT KeyboardProc(int code, WPARAM wParam, LPARAM lParam)
     {
-        if (code >= 0) _lastKeyboardTick = PInvoke.GetTickCount();
-        // The hotkey matcher comes here (docs/plan/04-shortcuts.md). Until then every key passes.
+        if (code >= 0)
+        {
+            _lastKeyboardTick = PInvoke.GetTickCount();
+            var info = (KBDLLHOOKSTRUCT*)lParam.Value;
+            if (info->dwExtraInfo != OrbitMarker)
+            {
+                uint message = (uint)wParam.Value;
+                bool down = message is PInvoke.WM_KEYDOWN or PInvoke.WM_SYSKEYDOWN;
+                var decision = down ? Hotkeys.KeyDown(info->vkCode, AsyncKeyState.Instance) : Hotkeys.KeyUp(info->vkCode);
+                // Now, not posted: input that arrives meanwhile (Alt's up) reaches this thread's hook
+                // before its posted messages, and the mask must reach the app before that up.
+                if (decision.SendMenuMask) SendMenuMask();
+                if (decision.Pressed != 0) PInvoke.PostThreadMessage(_threadId, WmHotkeyDown, (nuint)decision.Pressed, default);
+                if (decision.Released != 0) PInvoke.PostThreadMessage(_threadId, WmHotkeyUp, (nuint)decision.Released, default);
+                if (decision.Swallow) return (LRESULT)1;
+            }
+        }
         return PInvoke.CallNextHookEx(HHOOK.Null, code, wParam, lParam);
+    }
+
+    /// <summary>The key state as of the event before the current one (the hook runs before Windows records it).</summary>
+    private sealed class AsyncKeyState : IKeyState
+    {
+        public static readonly AsyncKeyState Instance = new();
+        public bool IsDown(uint vk) => (PInvoke.GetAsyncKeyState((int)vk) & 0x8000) != 0;
+    }
+
+    /// <summary>
+    /// An unassigned key down and up, marked as Orbit's, while Alt is still held. Sent from the
+    /// hook procedure: SendInput only queues the events, which then come back through this hook
+    /// (and pass, marked) after the event being handled.
+    /// </summary>
+    private static unsafe void SendMenuMask()
+    {
+        Span<INPUT> inputs = stackalloc INPUT[2];
+        for (int i = 0; i < 2; i++)
+        {
+            inputs[i].type = INPUT_TYPE.INPUT_KEYBOARD;
+            inputs[i].Anonymous.ki = new KEYBDINPUT
+            {
+                wVk = (VIRTUAL_KEY)HotkeyMatcher.VkMenuMask,
+                dwFlags = i == 0 ? 0 : KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP,
+                dwExtraInfo = OrbitMarker,
+            };
+        }
+        PInvoke.SendInput(inputs, sizeof(INPUT));
     }
 
     /// <summary>Inside the hook procedure: only timers and posted messages, nothing that blocks.</summary>
@@ -247,6 +304,9 @@ public sealed class HookThread : IDisposable
     /// </summary>
     private unsafe void CheckHooks()
     {
+        int released = Hotkeys.Recover(AsyncKeyState.Instance);
+        if (released != 0) Raise(new HookEvent(HookNotice.HotkeyUp, Hotkey: released));
+
         uint now = PInvoke.GetTickCount();
         PInvoke.GetCursorPos(out var cursor);
         bool pointerMoved = cursor.X != _lastCursor.X || cursor.Y != _lastCursor.Y;
@@ -273,6 +333,8 @@ public sealed class HookThread : IDisposable
             _lastReinstallLog = now;
             Log.Warn($"Hooks reinstalled (unseen input {unseenInput}, pointer moved without mouse events {mouseLost})");
         }
-        Raise(HookNotice.HooksReinstalled, 0, 0);
+        int held = Hotkeys.Reset();
+        if (held != 0) Raise(new HookEvent(HookNotice.HotkeyUp, Hotkey: held));
+        Raise(new HookEvent(HookNotice.HooksReinstalled));
     }
 }
