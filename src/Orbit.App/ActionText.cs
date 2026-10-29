@@ -49,6 +49,8 @@ internal static class ActionText
         [OrbitAction.HiddenFiles] = new("Show/Hide Hidden Files", "숨김 파일 보기/숨기기", "Hidden Files", "숨김 파일"),
         [OrbitAction.EmptyTrash] = new("Empty Recycle Bin", "휴지통 비우기", "Recycle Bin", "휴지통"),
         [OrbitAction.EjectAll] = new("Eject All Drives", "모든 드라이브 꺼내기", "Eject All", "모두 꺼내기"),
+        [OrbitAction.BrightnessUp] = new("Brightness Up", "밝기 올리기", "Brighter", "밝게"),
+        [OrbitAction.BrightnessDown] = new("Brightness Down", "밝기 내리기", "Dimmer", "어둡게"),
         [OrbitAction.PortManager] = new("Port Manager", "포트 관리", "Ports", "포트"),
         [OrbitAction.CleanKeyboard] = new("Clean Keyboard", "키보드 청소", "Clean Keys", "키보드 청소"),
     };

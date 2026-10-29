@@ -70,6 +70,8 @@ internal static class Glyphs
         [OrbitAction.EjectAll] = "\uE88E",
         [OrbitAction.CleanKeyboard] = Keyboard,
         [OrbitAction.PortManager] = "\uE968",
+        [OrbitAction.BrightnessUp] = "\uE706",
+        [OrbitAction.BrightnessDown] = "\uEC8A",
     };
 
     public static string Of(OrbitAction action) => ForAction.GetValueOrDefault(action, "\uE946");

@@ -59,6 +59,12 @@ public static class Pref
     public const string SnippetsTrigger = "snippets.trigger";
     public const string SnippetsExcludedApps = "snippets.excludedApps";
     public const string SnippetsInTerminals = "snippets.inTerminals";
+    /// <summary>The screen the brightness actions change: "pointer", "main" or "all" (Orbit: displays.keyTarget).</summary>
+    public const string DisplaysTarget = "displays.keyTarget";
+    /// <summary>Orbit's brightness bar after a change (Orbit: displays.osd).</summary>
+    public const string DisplaysHud = "displays.osd";
+    /// <summary>The user's brightness presets, as JSON.</summary>
+    public const string DisplaysPresets = "displays.presets";
     public const string RingMouse = "ring.mouse";
     public const string RingMouseButton = "ring.mouseButton";
     public const string RingSlots = "ring.slots";
@@ -105,6 +111,9 @@ public static class Pref
         // Password managers, as Orbit's list by bundle ID.
         [SnippetsExcludedApps] = new[] { "1password.exe", "bitwarden.exe", "keepass.exe", "keepassxc.exe", "dashlane.exe", "enpass.exe", "lastpass.exe" },
         [SnippetsInTerminals] = true,
+        [DisplaysTarget] = "pointer",
+        [DisplaysHud] = true,
+        [DisplaysPresets] = "",
         [RingMouse] = true,
         [RingMouseButton] = "middle",
         [RingHover] = true,

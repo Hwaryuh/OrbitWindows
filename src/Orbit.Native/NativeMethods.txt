@@ -173,3 +173,10 @@ SendMessage
 // Port manager
 TerminateProcess
 WaitForSingleObject
+
+// Displays
+GetDisplayConfigBufferSizes
+QueryDisplayConfig
+DisplayConfigGetDeviceInfo
+DISPLAYCONFIG_SOURCE_DEVICE_NAME
+DISPLAYCONFIG_TARGET_DEVICE_NAME

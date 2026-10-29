@@ -46,6 +46,9 @@ internal sealed class AppServices(Preferences preferences, ActionRunner actions,
     /// <summary>Keep Awake; null until that feature starts.</summary>
     public KeepAwakeFeature? KeepAwake { get; set; }
 
+    /// <summary>Every screen's brightness; null until that feature starts.</summary>
+    public Orbit.Core.Displays.DisplayManager? Displays { get; set; }
+
     /// <summary>Snippets; null until that feature starts.</summary>
     public SnippetFeature? Snippets { get; set; }
 

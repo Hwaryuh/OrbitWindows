@@ -92,6 +92,7 @@ internal sealed class SettingsWindow : Window
         "sound" => () => new SoundPage(),
         "system" => () => new SystemPage(_services),
         "ports" => () => new PortsPage(),
+        "displays" => () => new DisplaysPage(_services),
         "about" => About,
         _ => () => NotReady(title),
     };
