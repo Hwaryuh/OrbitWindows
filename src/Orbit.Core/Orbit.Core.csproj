@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Everything without UI: settings, monitors, hooks, capture, the logic of each feature. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Orbit.Native\Orbit.Native.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Orbit.Tests" />
+  </ItemGroup>
+
+</Project>

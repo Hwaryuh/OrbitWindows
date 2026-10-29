@@ -9,3 +9,10 @@ docs/
 
 # Serena tool state
 .serena/
+
+# .NET build output
+bin/
+obj/
+.vs/
+*.user
+TestResults/

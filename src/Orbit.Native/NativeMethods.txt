@@ -1,0 +1,54 @@
+// Monitors and DPI
+EnumDisplayMonitors
+GetMonitorInfo
+MONITORINFOEXW
+MonitorFromPoint
+GetDpiForMonitor
+GetCursorPos
+
+// Low-level hooks
+SetWindowsHookEx
+UnhookWindowsHookEx
+CallNextHookEx
+GetMessage
+TranslateMessage
+DispatchMessage
+PostThreadMessage
+GetCurrentThreadId
+SetTimer
+KillTimer
+MSLLHOOKSTRUCT
+KBDLLHOOKSTRUCT
+WM_*
+SendInput
+GetModuleHandle
+
+// Windows
+SetWindowPos
+GetWindowLong
+SetWindowLong
+SetForegroundWindow
+WINDOW_EX_STYLE
+
+// Screen copy (BitBlt fallback and reference)
+GetDC
+ReleaseDC
+CreateCompatibleDC
+CreateCompatibleBitmap
+SelectObject
+DeleteObject
+DeleteDC
+BitBlt
+GetDIBits
+
+// Direct3D 11 for Windows.Graphics.Capture
+D3D11CreateDevice
+CreateDirect3D11DeviceFromDXGIDevice
+IDXGIDevice
+D3D11_SDK_VERSION
+
+// Hook watchdog
+GetLastInputInfo
+GetTickCount
+PeekMessage
+MONITORINFOF_PRIMARY
