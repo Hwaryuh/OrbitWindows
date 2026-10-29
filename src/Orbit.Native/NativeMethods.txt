@@ -112,3 +112,9 @@ SHFileOperation
 
 // Capture editor: a dark title bar
 DwmSetWindowAttribute
+
+// Clipboard history: the listener, the owner of a copy, sequence numbers
+AddClipboardFormatListener
+RemoveClipboardFormatListener
+GetClipboardSequenceNumber
+GetClipboardOwner

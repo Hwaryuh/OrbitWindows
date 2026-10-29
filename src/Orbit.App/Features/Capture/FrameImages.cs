@@ -48,35 +48,6 @@ internal static class FrameImages
         var data = new DataObject();
         data.SetImage(bitmap);
         data.SetData("PNG", new MemoryStream(png));
-        return Clipboards.TrySet(() => Clipboard.SetDataObject(data, copy: true));
-    }
-}
-
-/// <summary>Writing the clipboard, which another app may hold for a moment.</summary>
-internal static class Clipboards
-{
-    /// <summary>Text onto the clipboard, then a toast: <paramref name="message"/>, or that copying failed.</summary>
-    public static bool CopyText(string text, string message, string? detail = null)
-    {
-        bool copied = TrySet(() => Clipboard.SetText(text));
-        Overlays.Toast.Show(copied ? message : Strings.CopyFailed, copied ? detail : null);
-        return copied;
-    }
-
-    public static bool TrySet(Action set)
-    {
-        for (int attempt = 0; attempt < 5; attempt++)
-        {
-            try
-            {
-                set();
-                return true;
-            }
-            catch (System.Runtime.InteropServices.COMException)
-            {
-                Thread.Sleep(30);
-            }
-        }
-        return false;
+        return Clipboards.Set(data);
     }
 }

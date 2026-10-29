@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Windows.Win32;
 using Windows.Win32.System.Threading;
 
@@ -23,5 +24,19 @@ public static class Processes
         {
             PInvoke.CloseHandle(handle);
         }
+    }
+
+    /// <summary>A program's name as File Explorer shows it: its file description, else its file name.</summary>
+    public static string DisplayName(string path)
+    {
+        try
+        {
+            var info = FileVersionInfo.GetVersionInfo(path);
+            if (!string.IsNullOrWhiteSpace(info.FileDescription)) return info.FileDescription;
+        }
+        catch (FileNotFoundException)
+        {
+        }
+        return Path.GetFileNameWithoutExtension(path);
     }
 }

@@ -34,19 +34,19 @@ internal sealed class CapturePage : StackPanel
         Children.Add(Header());
         Children.Add(ActionCards());
         Children.Add(Recent());
-        Children.Add(Group(Strings.CaptureAfter, null,
-            Row(Strings.CaptureCopyToClipboard, null, BoolToggle(Pref.CaptureAutoCopy)),
-            Row(Strings.CapturePlaySound, null, BoolToggle(Pref.CaptureSound)),
-            Row(Strings.CaptureKeepPreview, Strings.CaptureKeepPreviewDetail, SecondsChips()),
-            Row(Strings.CapturePreviewPosition, Strings.CapturePreviewPositionDetail, CornerPicker())));
-        Children.Add(Group(Strings.CaptureSaving, null, SaveFolderRow()));
-        Children.Add(Group(Strings.CaptureWhileSelecting, null,
-            Row(Strings.CaptureShowKeyHints, Strings.CaptureShowKeyHintsDetail, BoolToggle(Pref.CaptureKeyHints)),
+        Children.Add(_parts.Group(Strings.CaptureAfter, null,
+            _parts.Row(Strings.CaptureCopyToClipboard, null, BoolToggle(Pref.CaptureAutoCopy)),
+            _parts.Row(Strings.CapturePlaySound, null, BoolToggle(Pref.CaptureSound)),
+            _parts.Row(Strings.CaptureKeepPreview, Strings.CaptureKeepPreviewDetail, SecondsChips()),
+            _parts.Row(Strings.CapturePreviewPosition, Strings.CapturePreviewPositionDetail, CornerPicker())));
+        Children.Add(_parts.Group(Strings.CaptureSaving, null, SaveFolderRow()));
+        Children.Add(_parts.Group(Strings.CaptureWhileSelecting, null,
+            _parts.Row(Strings.CaptureShowKeyHints, Strings.CaptureShowKeyHintsDetail, BoolToggle(Pref.CaptureKeyHints)),
             Tip("Space", Strings.TipSpaceSwitch), Tip("Enter", Strings.TipEnterScreen), Tip(Strings.KeyClick, Strings.TipClickWindow),
             Tip("Tab", Strings.TipTabRatio), Tip("R", Strings.TipRLast), Tip("Ctrl C", Strings.TipCopyColor)));
-        Children.Add(Group(Strings.CaptureWhileDragging, null,
+        Children.Add(_parts.Group(Strings.CaptureWhileDragging, null,
             Tip("Shift", Strings.TipShiftRatio), Tip("Alt", Strings.TipAltCenter), Tip("Space", Strings.TipSpaceMove), Tip("←↑↓→", Strings.TipArrows)));
-        Children.Add(Group(Strings.CaptureBeforeRelease, Strings.CaptureBeforeReleaseFooter,
+        Children.Add(_parts.Group(Strings.CaptureBeforeRelease, Strings.CaptureBeforeReleaseFooter,
             Tip("C", Strings.TipCopyOnly), Tip("S", Strings.TipSave), Tip("E", Strings.TipEdit), Tip("P", Strings.TipPin), Tip("T", Strings.TipText)));
     }
 
@@ -143,61 +143,11 @@ internal sealed class CapturePage : StackPanel
 
     // MARK: Rows
 
-    private UIElement Group(string title, string? footer, params UIElement[] rows)
-    {
-        var section = new StackPanel { Margin = new Thickness(0, 0, 0, 28) };
-        section.Children.Add(_parts.SectionTitle(title, bottom: 10));
-        var body = new StackPanel();
-        for (int i = 0; i < rows.Length; i++)
-        {
-            if (i > 0) body.Children.Add(new Border { Height = 1, Background = _palette.Hairline, Margin = new Thickness(0, 12, 0, 12) });
-            body.Children.Add(rows[i]);
-        }
-        section.Children.Add(_parts.Card(body));
-        if (footer is not null) section.Children.Add(_parts.Caption(footer));
-        return section;
-    }
-
-    private UIElement Row(string title, string? detail, FrameworkElement control)
-    {
-        var row = new DockPanel();
-        control.VerticalAlignment = VerticalAlignment.Center;
-        DockPanel.SetDock(control, Dock.Right);
-        row.Children.Add(control);
-        var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 16, 0) };
-        text.Children.Add(new TextBlock { Text = title, FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = _palette.Ink, TextWrapping = TextWrapping.Wrap });
-        if (detail is not null) text.Children.Add(new TextBlock { Text = detail, FontSize = 11, Foreground = _palette.InkSecondary, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) });
-        row.Children.Add(text);
-        return row;
-    }
-
-    private UIElement Tip(string keys, string text) => Row(text, null, KeyCap.Row(keys.Split(' '), _palette));
+    private UIElement Tip(string keys, string text) => _parts.Row(text, null, KeyCap.Row(keys.Split(' '), _palette));
 
     private CheckBox BoolToggle(string key) => _parts.Toggle(_preferences.Get<bool>(key), on => _preferences.Set(key, on));
 
-    /// <summary>One pill per choice; the chosen one filled.</summary>
-    private FrameworkElement Chips<T>(IReadOnlyList<(T Value, string Title)> options, Func<T> current, Action<T> set)
-    {
-        var row = new StackPanel { Orientation = Orientation.Horizontal };
-        void Fill()
-        {
-            row.Children.Clear();
-            foreach (var (value, title) in options)
-            {
-                var pill = _parts.PillButton(title, prominent: EqualityComparer<T>.Default.Equals(value, current()), () =>
-                {
-                    set(value);
-                    Fill();
-                });
-                pill.Margin = new Thickness(row.Children.Count == 0 ? 0 : 6, 0, 0, 0);
-                row.Children.Add(pill);
-            }
-        }
-        Fill();
-        return row;
-    }
-
-    private FrameworkElement SecondsChips() => Chips<double>(
+    private FrameworkElement SecondsChips() => _parts.Chips<double>(
         [(5.0, Strings.WholeSeconds(5)), (8.0, Strings.WholeSeconds(8)), (15.0, Strings.WholeSeconds(15)), (0.0, Strings.CaptureUntilClosed)],
         () => _preferences.Get<double>(Pref.CaptureThumbnailSeconds), v => _preferences.Set(Pref.CaptureThumbnailSeconds, v));
 

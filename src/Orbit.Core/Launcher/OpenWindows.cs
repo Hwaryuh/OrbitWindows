@@ -90,19 +90,6 @@ public static class OpenWindows
     }
 
     /// <summary>The program's name (its file description) and path; a process Orbit may not open gets neither.</summary>
-    private static (string Name, string? Path) AppOf(uint process)
-    {
-        if (Processes.ImagePath(process) is not { } path) return ("", null);
-        string name;
-        try
-        {
-            var info = FileVersionInfo.GetVersionInfo(path);
-            name = !string.IsNullOrWhiteSpace(info.FileDescription) ? info.FileDescription : System.IO.Path.GetFileNameWithoutExtension(path);
-        }
-        catch (FileNotFoundException)
-        {
-            name = System.IO.Path.GetFileNameWithoutExtension(path);
-        }
-        return (name, path);
-    }
+    private static (string Name, string? Path) AppOf(uint process) =>
+        Processes.ImagePath(process) is { } path ? (Processes.DisplayName(path), path) : ("", null);
 }

@@ -105,10 +105,7 @@ public sealed class Preferences : IDisposable
             }
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-                var temp = _path + ".tmp";
-                File.WriteAllText(temp, json);
-                File.Move(temp, _path, overwrite: true);
+                AtomicFile.WriteAllText(_path, json);
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {

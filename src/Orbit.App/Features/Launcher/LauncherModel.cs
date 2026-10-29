@@ -298,6 +298,6 @@ internal sealed class LauncherModel(AppServices services, AppIndex apps, Frecenc
 
     private static void Copy(string text)
     {
-        Capture.Clipboards.CopyText(text, Strings.Copied, text);
+        Clipboards.CopyText(text, Strings.Copied, text);
     }
 }

@@ -85,6 +85,7 @@ internal sealed class SettingsWindow : Window
         "general" => General,
         "ring" => () => new RingPage(_preferences),
         "capture" => () => new CapturePage(_services),
+        "clipboard" => () => new ClipboardPage(_services),
         "about" => About,
         _ => () => NotReady(title),
     };

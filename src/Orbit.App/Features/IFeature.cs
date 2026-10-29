@@ -37,6 +37,12 @@ internal sealed class AppServices(Preferences preferences, ActionRunner actions,
     /// <summary>The capture preview cards, and through them the capture library; null until capture starts.</summary>
     public Capture.QuickAccess? CaptureCards { get; set; }
 
+    /// <summary>Every clipboard change, read off the UI thread and raised on it.</summary>
+    public Clipboard.ClipboardWatcher Clipboard { get; } = new();
+
+    /// <summary>The clipboard history; null until that feature starts.</summary>
+    public ClipboardFeature? ClipboardHistory { get; set; }
+
     /// <summary>A tray notification.</summary>
     public void Notify(string title, string message) => notify(title, message);
 

@@ -198,6 +198,66 @@ internal static class Strings
     public static string TipPin => T("화면에 고정합니다", "Pin on screen");
     public static string TipText => T("글자를 인식해 복사합니다", "Recognize text and copy it");
     public static string KeyClick => T("클릭", "Click");
+    // Clipboard
+    public static string ClipSearch => T("클립보드 검색", "Search clipboard");
+    public static string ClipAll => T("전체", "All");
+    public static string ClipPinned => T("고정됨", "Pinned");
+    public static string ClipKindName(Orbit.Core.Clipboard.ClipKind kind) => kind switch
+    {
+        Orbit.Core.Clipboard.ClipKind.Text => T("텍스트", "Text"),
+        Orbit.Core.Clipboard.ClipKind.Link => T("링크", "Link"),
+        Orbit.Core.Clipboard.ClipKind.Image => T("이미지", "Image"),
+        Orbit.Core.Clipboard.ClipKind.File => T("파일", "File"),
+        _ => T("색", "Color"),
+    };
+    public static string ClipPaused => T("일시 정지됨", "Paused");
+    public static string ClipPausedHint => T("클립보드 기록이 일시 정지되었습니다. 누르면 다시 시작합니다.", "Clipboard recording is paused. Click to resume.");
+    public static string ClipHintPaste => T("붙여넣기", "Paste");
+    public static string ClipHintPlain => T("서식 없이", "Plain");
+    public static string ClipHintPin => T("고정", "Pin");
+    public static string ClipHintFilter => T("필터", "Filter");
+    public static string ClipEmpty => T("아직 아무것도 없습니다", "Nothing here yet");
+    public static string ClipEmptyDetail => T("복사한 텍스트, 링크, 이미지, 파일이 여기에 나타납니다.", "Anything you copy will appear here: text, links, images and files.");
+    public static string ClipNoMatch(string query) => T($"“{query}”와 일치하는 항목이 없습니다", $"No matches for “{query}”");
+    public static string ClipNoMatchDetail => T("다른 단어로 찾거나 ↓로 필터를 바꾸세요.", "Try a different word, or press ↓ to change the filter.");
+    public static string ClipUnknownApp => T("알 수 없는 앱", "Unknown app");
+    public static string ClipCharacters(int count, int lines) => lines > 1
+        ? T($"{count}자 · {lines}줄", $"{count} characters · {lines} lines")
+        : T($"{count}자", $"{count} characters");
+    public static string ClipFiles(int count) => T($"파일 {count}개", count == 1 ? "1 file" : $"{count} files");
+    public static string ClipPaste => T("붙여넣기", "Paste");
+    public static string ClipPastePlain => T("서식 없이 붙여넣기", "Paste as Plain Text");
+    public static string ClipPin => T("고정", "Pin");
+    public static string ClipUnpin => T("고정 해제", "Unpin");
+    public static string ClipOpenLink => T("링크 열기", "Open Link");
+    public static string ClipNothingToPaste => T("붙여넣을 창이 없습니다. 복사만 했습니다.", "There is no window to paste into. It was copied.");
+    public static string ClipNotInFront => T("붙여넣을 창을 앞으로 가져오지 못했습니다. 복사만 했습니다.", "The window could not be brought to the front. It was copied.");
+    public static string ClipBlocked => T("관리자 권한으로 실행 중인 창에는 붙여넣을 수 없습니다. 복사만 했습니다.", "Orbit cannot paste into a window running as administrator. It was copied.");
+    public static string ClipChanged => T("그 사이 다른 내용이 복사되어 붙여넣지 않았습니다.", "Something else was copied meanwhile, so nothing was pasted.");
+    public static string ClipPageSubtitle => T("복사한 모든 것을 찾아서 바로 붙여넣습니다.", "Everything you copy, searchable and one keystroke away.");
+    public static string ClipOpenHistory => T("기록 열기", "Open History");
+    public static string ClipRecording => T("기록 중", "Recording");
+    public static string ClipRecordingPaused => T("기록이 일시 정지되었습니다", "Recording is paused");
+    public static string ClipStoredHere(int count) => T($"{count}개 항목, 이 PC에만 저장됩니다.", $"{count} items, stored on this PC only.");
+    public static string ClipPause => T("일시 정지", "Pause");
+    public static string ClipPause15 => T("15분", "15 minutes");
+    public static string ClipPause60 => T("1시간", "1 hour");
+    public static string ClipPauseUntilResumed => T("다시 시작할 때까지", "Until I resume");
+    public static string ClipResume => T("다시 시작", "Resume");
+    public static string ClipPasteDirectly => T("바로 붙여넣기", "Paste directly");
+    public static string ClipPasteDirectlyDetail => T("항목을 고르면 붙여넣습니다. 끄면 복사만 합니다.", "Choosing an item pastes it. Off: it's only copied.");
+    public static string ClipKeep => T("기록 개수", "Keep history");
+    public static string ClipKeepDetail => T("고정한 항목은 항상 남습니다.", "Pinned items are always kept.");
+    public static string ClipClear => T("기록 지우기", "Clear history");
+    public static string ClipClearDetail => T("고정한 항목은 남습니다.", "Pinned items stay.");
+    public static string ClipClearButton => T("지우기…", "Clear…");
+    public static string ClipClearConfirm => T("클립보드 기록을 지울까요? 고정한 항목은 남습니다. 되돌릴 수 없습니다.", "Clear the clipboard history? Pinned items stay. This can't be undone.");
+    public static string ClipNeverRecord => T("기록하지 않을 앱", "Never record from");
+    public static string ClipNeverRecordFooter => T("비밀번호 관리자가 숨김으로 표시한 복사는 항상 건너뜁니다.", "Copies that password managers mark as private are always skipped.");
+    public static string ClipAddApp => T("앱 추가…", "Add app…");
+    public static string ClipChoose => T("고르기", "Choose");
+    public static string ClipRemove => T("빼기", "Remove");
+    public static string ClipPrograms => T("프로그램", "Programs");
     public static string ColorCopied(string hex) => T($"{hex} 색을 복사했습니다.", $"{hex} copied to the clipboard.");
 
     public static string MenuSettings => T("설정", "Settings");

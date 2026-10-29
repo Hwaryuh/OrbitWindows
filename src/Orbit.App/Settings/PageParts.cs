@@ -61,4 +61,54 @@ internal sealed class PageParts(Palette palette)
         box.Click += (_, _) => changed(box.IsChecked == true);
         return box;
     }
+
+    public UIElement Group(string? title, string? footer, params UIElement[] rows)
+    {
+        var section = new StackPanel { Margin = new Thickness(0, 0, 0, 28) };
+        if (title is not null) section.Children.Add(SectionTitle(title, bottom: 10));
+        var body = new StackPanel();
+        for (int i = 0; i < rows.Length; i++)
+        {
+            if (i > 0) body.Children.Add(new Border { Height = 1, Background = _palette.Hairline, Margin = new Thickness(0, 12, 0, 12) });
+            body.Children.Add(rows[i]);
+        }
+        section.Children.Add(Card(body));
+        if (footer is not null) section.Children.Add(Caption(footer));
+        return section;
+    }
+
+    public FrameworkElement Row(string title, string? detail, FrameworkElement control)
+    {
+        var row = new DockPanel();
+        control.VerticalAlignment = VerticalAlignment.Center;
+        DockPanel.SetDock(control, Dock.Right);
+        row.Children.Add(control);
+        var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 16, 0) };
+        text.Children.Add(new TextBlock { Text = title, FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = _palette.Ink, TextWrapping = TextWrapping.Wrap });
+        if (detail is not null) text.Children.Add(new TextBlock { Text = detail, FontSize = 11, Foreground = _palette.InkSecondary, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) });
+        row.Children.Add(text);
+        return row;
+    }
+
+    /// <summary>One pill per choice; the chosen one filled.</summary>
+    public FrameworkElement Chips<T>(IReadOnlyList<(T Value, string Title)> options, Func<T> current, Action<T> set)
+    {
+        var row = new StackPanel { Orientation = Orientation.Horizontal };
+        void Fill()
+        {
+            row.Children.Clear();
+            foreach (var (value, title) in options)
+            {
+                var pill = PillButton(title, prominent: EqualityComparer<T>.Default.Equals(value, current()), () =>
+                {
+                    set(value);
+                    Fill();
+                });
+                pill.Margin = new Thickness(row.Children.Count == 0 ? 0 : 6, 0, 0, 0);
+                row.Children.Add(pill);
+            }
+        }
+        Fill();
+        return row;
+    }
 }

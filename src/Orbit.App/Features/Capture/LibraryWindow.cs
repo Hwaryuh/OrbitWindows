@@ -384,7 +384,7 @@ internal sealed class LibraryWindow : Window
         data.SetImage(item.Image);
         data.SetData("PNG", new MemoryStream(png));
         data.SetData(DataFormats.FileDrop, new[] { entry.Path });
-        Toast.Show(Clipboards.TrySet(() => Clipboard.SetDataObject(data, copy: true)) ? Strings.CaptureCopied : Strings.CopyFailed);
+        Toast.Show(Clipboards.Set(data) ? Strings.CaptureCopied : Strings.CopyFailed);
     }
 
     private static void OpenFile(LibraryEntry entry)

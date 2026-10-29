@@ -15,6 +15,8 @@ public enum PasteResult
     TargetNotInFront,
     /// <summary>Windows dropped the keys: an elevated window, or the secure desktop.</summary>
     InputBlocked,
+    /// <summary>Something else was copied while the window came to the front: nothing was pasted.</summary>
+    ClipboardChanged,
 }
 
 /// <summary>
@@ -84,7 +86,8 @@ public static class Paster
         HotkeyMatcher.VkLMenu, HotkeyMatcher.VkRMenu, HotkeyMatcher.VkLWin, HotkeyMatcher.VkRWin,
     ];
 
-    public static async Task<PasteResult> PasteAsync(nint target)
+    /// <param name="stillOurs">Asked right before the keys go: false (the clipboard changed meanwhile) sends nothing.</param>
+    public static async Task<PasteResult> PasteAsync(nint target, Func<bool>? stillOurs = null)
     {
         var window = new HWND(target);
         if (window.IsNull || !PInvoke.IsWindow(window)) return PasteResult.TargetGone;
@@ -96,6 +99,7 @@ public static class Paster
         // The user may have switched windows during the beat: then no keys at all.
         if (!PInvoke.IsWindow(window)) return PasteResult.TargetGone;
         if (!IsInFront(window)) return PasteResult.TargetNotInFront;
+        if (stillOurs is not null && !stillOurs()) return PasteResult.ClipboardChanged;
         return SendPaste() ? PasteResult.Pasted : PasteResult.InputBlocked;
     }
 
