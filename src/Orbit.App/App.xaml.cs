@@ -1,8 +1,8 @@
 using System.Windows;
 using System.Windows.Threading;
 using Orbit.App.Features;
+using Orbit.App.Features.Capture;
 using Orbit.App.Overlays;
-using Orbit.App.Spikes;
 using Orbit.Core;
 using Orbit.Core.Actions;
 using Orbit.Core.Capture;
@@ -25,7 +25,6 @@ public partial class App : Application
     private Tray? _tray;
     private AppServices? _services;
     private readonly ActionRunner _actions = new();
-    private readonly CaptureSpike _captureSpike = new();
     private readonly List<IFeature> _features = [];
 
     protected override async void OnStartup(StartupEventArgs e)
@@ -54,7 +53,7 @@ public partial class App : Application
 
         _hooks = new HookThread();
         _services = new AppServices(_preferences, _actions, _hooks, _foreground, Notify);
-        _features.AddRange([new SettingsFeature(), new RingFeature(), new LauncherFeature(), new CaptureFeature(), _captureSpike]);
+        _features.AddRange([new SettingsFeature(), new RingFeature(), new LauncherFeature(), new CaptureFeature()]);
         foreach (var feature in _features) feature.Start(_services);
         _hooks.Notice += e => Dispatcher.BeginInvoke(() => OnHook(e));
         _hooks.Start();
@@ -64,7 +63,7 @@ public partial class App : Application
         if (e.Args.Contains("--selftest-capture"))
         {
             // Captures every monitor both ways, logs the comparison and quits, without an overlay.
-            bool passed = await _captureSpike.SelfTestAsync();
+            bool passed = await CaptureSelfTest.RunAsync(_services.Capture);
             Shutdown(passed ? 0 : 1);
         }
     }
@@ -108,7 +107,6 @@ public partial class App : Application
     [
         (Strings.MenuSettings, () => _actions.Perform(OrbitAction.Settings)),
         null,
-        (Strings.MenuCaptureTest, () => _ = _captureSpike.RunAsync()),
         (Strings.MenuMonitorReport, () => { LogMonitors(); Notify(Strings.AppName, Strings.MonitorReportSaved); }),
         (Strings.MenuOpenLogs, Shell.OpenLogFolder),
         null,

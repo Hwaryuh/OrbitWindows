@@ -12,7 +12,6 @@ internal static class Strings
     public static string T(string korean, string english) => Korean ? korean : english;
 
     public static string AppName => "Orbit";
-    public static string MenuCaptureTest => T("캡처 테스트", "Capture Test");
     public static string MenuMonitorReport => T("모니터 정보 기록", "Record Monitor Info");
     public static string MenuOpenLogs => T("로그 폴더 열기", "Open Log Folder");
     public static string MenuQuit => T("종료", "Quit");
@@ -50,8 +49,6 @@ internal static class Strings
     public static string TextCopied(int words) => T($"{words}단어를 복사했습니다.", words == 1 ? "Copied 1 word." : $"Copied {words} words.");
     public static string TextNoLanguage => T("글자 인식 언어가 없습니다. 설정 > 시간 및 언어 > 언어에서 언어 팩을 추가하세요.", "No text recognition language is installed. Add a language pack in Settings > Time & language > Language.");
     public static string ColorCopied(string hex) => T($"{hex} 색을 복사했습니다.", $"{hex} copied to the clipboard.");
-
-    public static string CaptureResultTitle => T("캡처 테스트 결과", "Capture test result");
 
     public static string MenuSettings => T("설정", "Settings");
     public static string ActionNotReady(string title) => T($"{title} 기능은 아직 준비 중입니다.", $"{title} is not ready yet.");
@@ -205,8 +202,4 @@ internal static class Strings
     public static string AboutNotice => T(
         "Orbit for Windows는 3x-haust/Orbit(MIT)을 바탕으로 만들었습니다. 한/영 자동 전환은 nyttastudio/araso(MIT, 한국어 빈도 목록 CC BY-SA 4.0)를 사용합니다.",
         "Orbit for Windows is based on 3x-haust/Orbit (MIT). Automatic Korean/English switching uses nyttastudio/araso (MIT; Korean frequency list CC BY-SA 4.0).");
-
-    public static string CaptureResult(int width, int height, double match, string source) =>
-        T($"{width}×{height} 픽셀을 {source}로 캡처했습니다. 화면과 {match:P2} 일치합니다.",
-          $"Captured {width}×{height} pixels with {source}. {match:P2} match the screen.");
 }
