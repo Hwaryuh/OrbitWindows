@@ -68,6 +68,8 @@ public sealed class CaptureStore(Preferences preferences, string folder)
     public string SaveCopy(string libraryFile)
     {
         var target = preferences.Get<string>(Pref.CaptureSaveFolder);
+        // Saving into the library itself would only make a numbered twin.
+        if (CaptureLibrary.SameFolder(target, Path.GetDirectoryName(libraryFile) ?? "")) return libraryFile;
         Directory.CreateDirectory(target);
         var dest = FreeName(target, Path.GetFileName(libraryFile));
         File.Copy(libraryFile, dest);

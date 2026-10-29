@@ -135,6 +135,68 @@ internal static class Strings
     public static string EditorFitHint => T("화면에 맞추기 (Ctrl+0)", "Fit (Ctrl+0)");
     public static string EditorColor(int index) => T($"색 {index}", $"Color {index}");
     public static string EditorPngFiles => T("PNG 그림", "PNG image");
+    // Capture library and page
+    public static string LibraryTitle => T("최근 캡처", "Recent Captures");
+    public static string LibraryEmpty => T("아직 캡처가 없습니다", "No captures yet");
+    public static string LibraryEmptyDetail => T("찍은 스크린샷이 여기에 나타납니다.", "Screenshots you take show up here.");
+    public static string LibraryHint => T("다른 앱으로 끌어서 첨부  ·  Enter 편집  ·  Space 열기", "Drag into any app to attach  ·  Enter to edit  ·  Space to open");
+    public static string LibraryOpenFolder => T("폴더 열기", "Open Folder");
+    public static string LibraryOpenFolderHint => T("캡처 폴더를 파일 탐색기에서 엽니다.", "Open the captures folder in File Explorer");
+    public static string LibraryOpen => T("열기", "Open");
+    public static string LibraryCloseHint => T("닫기 (Esc)", "Close (Esc)");
+    public static string CapturedWhen(DateTime when, DateTime now)
+    {
+        var time = when.ToString("HH:mm", CultureInfo.InvariantCulture);
+        if (when.Date == now.Date) return T($"오늘 {time}", $"Today {time}");
+        if (when.Date == now.Date.AddDays(-1)) return T($"어제 {time}", $"Yesterday {time}");
+        if (when.Year == now.Year) return T($"{when.Month}월 {when.Day}일", when.ToString("MMM d", CultureInfo.GetCultureInfo("en-US")));
+        return T($"{when.Year}. {when.Month}. {when.Day}.", when.ToString("MMM d, yyyy", CultureInfo.GetCultureInfo("en-US")));
+    }
+    public static string CapturePageSubtitle => T("스크린샷, 편집, 화면 고정, 글자 인식.", "Screenshots, annotation, pinning and text recognition.");
+    public static string CaptureRecent => T("최근", "Recent");
+    public static string CaptureShowAll => T("모두 보기", "Show All");
+    public static string CaptureAfter => T("캡처한 뒤", "After capture");
+    public static string CaptureCopyToClipboard => T("클립보드에 복사", "Copy to clipboard");
+    public static string CapturePlaySound => T("소리 내기", "Play sound");
+    public static string CaptureKeepPreview => T("미리보기 표시 시간", "Keep preview on screen");
+    public static string CaptureKeepPreviewDetail => T("마우스를 올려 두면 계속 보입니다.", "Hovering keeps it open.");
+    public static string WholeSeconds(int seconds) => T($"{seconds}초", $"{seconds} s");
+    public static string CaptureUntilClosed => T("닫을 때까지", "Until closed");
+    public static string CapturePreviewPosition => T("미리보기 위치", "Preview position");
+    public static string CapturePreviewPositionDetail => T("모서리를 고르세요. 미리보기를 화면 가장자리 쪽으로 밀면 닫힙니다.", "Pick a corner. Swipe a preview toward the screen edge to dismiss it.");
+    public static string CapturePreviewTry => T("미리 보기", "Preview");
+    public static string CaptureCornerName(string corner) => corner switch
+    {
+        "topLeft" => T("왼쪽 위", "Top left"),
+        "topRight" => T("오른쪽 위", "Top right"),
+        "bottomLeft" => T("왼쪽 아래", "Bottom left"),
+        _ => T("오른쪽 아래", "Bottom right"),
+    };
+    public static string CaptureSaving => T("저장", "Saving");
+    public static string CaptureSaveTo => T("저장 위치", "Save to");
+    public static string CaptureChange => T("바꾸기…", "Change…");
+    public static string CaptureWhileSelecting => T("고르는 동안", "While selecting");
+    public static string CaptureShowKeyHints => T("단축키 안내 표시", "Show key hints");
+    public static string CaptureShowKeyHintsDetail => T("화면 아래에 단축키 띠를 보여 줍니다. 몇 초 뒤 사라지고 키를 누르면 다시 나타납니다.", "A strip of shortcuts at the bottom of the screen. It fades after a few seconds and comes back when you press a key.");
+    public static string CaptureWhileDragging => T("끄는 동안", "While you drag");
+    public static string CaptureBeforeRelease => T("손을 떼기 전에", "Then, before you let go");
+    public static string CaptureBeforeReleaseFooter => T("같은 키를 다시 누르면 평소대로 처리합니다.", "Press the same key again for the usual steps after capture.");
+    public static string TipSpaceSwitch => T("영역 선택과 창 선택을 바꿉니다", "Switch between area and window");
+    public static string TipEnterScreen => T("모니터 전체를 캡처합니다", "Capture the whole display");
+    public static string TipClickWindow => T("포인터 아래 창을 캡처합니다", "Capture the window under the pointer");
+    public static string TipTabRatio => T("비율을 바꿉니다: 자유, 1:1, 4:3, 3:2, 16:9, 9:16 (Shift+Tab 거꾸로)", "Cycle the aspect ratio: free, 1:1, 4:3, 3:2, 16:9, 9:16 (Shift+Tab goes back)");
+    public static string TipRLast => T("마지막으로 캡처한 영역을 다시 불러옵니다. Enter로 캡처합니다", "Bring back the last captured area, then Enter to capture it");
+    public static string TipCopyColor => T("돋보기 아래 색을 16진수 코드로 복사합니다", "Copy the color under the magnifier as a hex code");
+    public static string TipShiftRatio => T("누르고 있으면 비율을 고정합니다 (비율을 고르지 않았으면 정사각형)", "Hold to lock the aspect ratio (a square unless a ratio is picked)");
+    public static string TipAltCenter => T("누르고 있으면 시작한 곳을 가운데로 키웁니다", "Hold to grow the area from where you started");
+    public static string TipSpaceMove => T("누르고 있으면 영역 전체를 옮깁니다", "Hold to move the whole area");
+    public static string TipArrows => T("모서리를 1픽셀씩, Shift와 함께 10픽셀씩 옮깁니다", "Nudge the corner by 1 px, with Shift by 10 px");
+    public static string TipCopyOnly => T("복사만 합니다", "Copy only");
+    public static string TipSave => T("파일로 저장합니다", "Save to file");
+    public static string TipEdit => T("편집기에서 엽니다", "Open in Editor");
+    public static string TipPin => T("화면에 고정합니다", "Pin on screen");
+    public static string TipText => T("글자를 인식해 복사합니다", "Recognize text and copy it");
+    public static string KeyClick => T("클릭", "Click");
     public static string ColorCopied(string hex) => T($"{hex} 색을 복사했습니다.", $"{hex} copied to the clipboard.");
 
     public static string MenuSettings => T("설정", "Settings");

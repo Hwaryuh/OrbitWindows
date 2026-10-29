@@ -41,6 +41,8 @@ internal sealed class CaptureFeature : IFeature
         _cards = new QuickAccess(services.Preferences, new CaptureActions(_store));
         _cards.Pin = item => PinWindow.Pin(item, _cards);
         _cards.Edit = item => EditorWindow.Open(item, _cards, services.Preferences);
+        services.CaptureCards = _cards;
+        services.Actions.Register(OrbitAction.RecentCaptures, () => LibraryWindow.ShowOrActivate(_cards, services.Preferences));
         Register(OrbitAction.CaptureArea, Mode.Area, 0x34);
         Register(OrbitAction.CaptureWindow, Mode.Window, 0x35);
         Register(OrbitAction.CaptureScreen, Mode.Screen, 0x33);

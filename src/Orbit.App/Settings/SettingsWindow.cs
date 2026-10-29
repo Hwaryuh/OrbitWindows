@@ -10,7 +10,7 @@ namespace Orbit.App.Settings;
 /// Each feature fills its page as it is built; until then a page says it isn't ready. Black and
 /// white, as Orbit. One window: asking again brings it to the front.
 /// </summary>
-public sealed class SettingsWindow : Window
+internal sealed class SettingsWindow : Window
 {
     private static SettingsWindow? _open;
 
@@ -18,6 +18,7 @@ public sealed class SettingsWindow : Window
     private static readonly Brush Muted = new SolidColorBrush(Color.FromRgb(110, 110, 110));
     private static readonly Brush Line = new SolidColorBrush(Color.FromRgb(230, 230, 230));
 
+    private readonly Features.AppServices _services;
     private readonly Preferences _preferences;
     private readonly ContentControl _page = new() { Margin = new Thickness(28, 24, 28, 24) };
     private readonly ListBox _pages;
@@ -31,9 +32,10 @@ public sealed class SettingsWindow : Window
         ("system", Strings.PageSystem), ("displays", Strings.PageDisplays), ("about", Strings.PageAbout),
     ];
 
-    private SettingsWindow(Preferences preferences)
+    private SettingsWindow(Features.AppServices services)
     {
-        _preferences = preferences;
+        _services = services;
+        _preferences = services.Preferences;
         Title = Strings.SettingsTitle;
         // Wide enough for the ring page's ring beside its action list.
         Width = 960;
@@ -68,9 +70,9 @@ public sealed class SettingsWindow : Window
     }
 
     /// <param name="page">A page id from <see cref="PageTitles"/>; null keeps the one shown.</param>
-    public static void ShowOrActivate(Preferences preferences, string? page = null)
+    public static void ShowOrActivate(Features.AppServices services, string? page = null)
     {
-        _open ??= new SettingsWindow(preferences);
+        _open ??= new SettingsWindow(services);
         int index = PageTitles.ToList().FindIndex(p => p.Id == page);
         if (index >= 0) _open._pages.SelectedIndex = index;
         _open.Show();
@@ -82,6 +84,7 @@ public sealed class SettingsWindow : Window
     {
         "general" => General,
         "ring" => () => new RingPage(_preferences),
+        "capture" => () => new CapturePage(_services),
         "about" => About,
         _ => () => NotReady(title),
     };

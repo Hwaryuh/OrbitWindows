@@ -138,39 +138,19 @@ internal sealed class EditorWindow : Window
     {
         var window = new EditorWindow(item, cards, preferences);
         OpenEditors.Add(window);
-        var (x, y) = Monitors.Cursor();
-        var monitor = Monitors.FromPoint(x, y);
-        if (monitor is null)
-        {
-            window.Show();
-            return;
-        }
-        var rect = Placement(window._model.Width, window._model.Height, monitor);
-        var handle = new WindowInteropHelper(window).EnsureHandle();
-        SetBounds(handle, rect);
-        window.Show();
-        // Moving onto a monitor of another scale resized it; put it where it belongs.
-        SetBounds(handle, rect);
+        if (WindowPlacement.PointerMonitor() is { } monitor) WindowPlacement.ShowAt(window, Placement(window._model.Width, window._model.Height, monitor));
+        else window.Show();
         window.Activate();
     }
 
     /// <summary>Orbit's size: the picture at up to 85 % of the work area, plus room for the toolbar, at least 820 × 480.</summary>
     private static PixelRect Placement(double pictureWidth, double pictureHeight, MonitorInfo monitor)
     {
-        double scale = monitor.Scale;
-        double workW = monitor.WorkArea.Width / scale, workH = monitor.WorkArea.Height / scale;
+        double workW = monitor.WorkArea.Width / monitor.Scale, workH = monitor.WorkArea.Height / monitor.Scale;
         const double chromeW = 80, chromeH = 140;
         double fit = Math.Min(1, Math.Min((workW * 0.85 - chromeW) / pictureWidth, (workH * 0.85 - chromeH) / pictureHeight));
-        double w = Math.Min(workW, Math.Max(820, pictureWidth * fit + chromeW));
-        double h = Math.Min(workH, Math.Max(480, pictureHeight * fit + chromeH));
-        int pw = (int)Math.Round(w * scale), ph = (int)Math.Round(h * scale);
-        var work = monitor.WorkArea;
-        return new PixelRect(work.X + (work.Width - pw) / 2, work.Y + (work.Height - ph) / 2, pw, ph);
+        return WindowPlacement.Centered(monitor, Math.Max(820, pictureWidth * fit + chromeW), Math.Max(480, pictureHeight * fit + chromeH));
     }
-
-    private static void SetBounds(nint handle, PixelRect rect) =>
-        PInvoke.SetWindowPos(new(handle), default, rect.X, rect.Y, rect.Width, rect.Height,
-            Windows.Win32.UI.WindowsAndMessaging.SET_WINDOW_POS_FLAGS.SWP_NOZORDER | Windows.Win32.UI.WindowsAndMessaging.SET_WINDOW_POS_FLAGS.SWP_NOACTIVATE);
 
     private unsafe void DarkTitleBar()
     {

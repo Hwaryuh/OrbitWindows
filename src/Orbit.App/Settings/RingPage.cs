@@ -32,6 +32,7 @@ internal sealed class RingPage : StackPanel
     private readonly Preferences _preferences;
     private readonly RingPresets _presets;
     private readonly Palette _palette = Palette.Light;
+    private readonly PageParts _parts = new(Palette.Light);
     private readonly TextBlock _count = new() { FontSize = 13, FontWeight = FontWeights.Bold, HorizontalAlignment = HorizontalAlignment.Center };
     private readonly Button _fewer;
     private readonly Button _more;
@@ -87,7 +88,7 @@ internal sealed class RingPage : StackPanel
     {
         var titles = new StackPanel();
         titles.Children.Add(new TextBlock { Text = Strings.PageRing, FontSize = 22, FontWeight = FontWeights.SemiBold, Foreground = _palette.Ink });
-        titles.Children.Add(Caption(Strings.RingSubtitle));
+        titles.Children.Add(_parts.Caption(Strings.RingSubtitle));
 
         var label = new StackPanel { Width = 38, VerticalAlignment = VerticalAlignment.Center };
         _count.Foreground = _palette.Ink;
@@ -127,7 +128,7 @@ internal sealed class RingPage : StackPanel
         library.Children.Add(libraryHeader);
         library.Children.Add(search);
         library.Children.Add(list);
-        var libraryCard = Card(library, padding: 0);
+        var libraryCard = _parts.Card(library, padding: 0);
         libraryCard.Height = EditorSize;
 
         var row = new Grid { Margin = new Thickness(0, 0, 0, 28) };
@@ -144,7 +145,7 @@ internal sealed class RingPage : StackPanel
     {
         var section = new StackPanel { Margin = new Thickness(0, 0, 0, 28) };
         var heading = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(4, 0, 0, 10) };
-        heading.Children.Add(SectionTitle(Strings.RingPresets));
+        heading.Children.Add(_parts.SectionTitle(Strings.RingPresets));
         _undoBar.Children.Add(new TextBlock { Text = Strings.RingPresetApplied, FontSize = 11, Foreground = _palette.InkSecondary, VerticalAlignment = VerticalAlignment.Center });
         var undo = LinkButton(Strings.RingUndo, Undo);
         undo.Margin = new Thickness(8, 0, 0, 0);
@@ -154,10 +155,10 @@ internal sealed class RingPage : StackPanel
         section.Children.Add(_presetCards);
 
         _naming.Children.Add(_palette.WithHint(_name, Strings.RingPresetNamePlaceholder, 9));
-        var save = PillButton(Strings.Save, prominent: true, CommitName);
+        var save = _parts.PillButton(Strings.Save, prominent: true, CommitName);
         save.Margin = new Thickness(8, 0, 0, 0);
         _naming.Children.Add(save);
-        var cancel = PillButton(Strings.Cancel, prominent: false, () => _naming.Visibility = Visibility.Collapsed);
+        var cancel = _parts.PillButton(Strings.Cancel, prominent: false, () => _naming.Visibility = Visibility.Collapsed);
         cancel.Margin = new Thickness(6, 0, 0, 0);
         _naming.Children.Add(cancel);
         section.Children.Add(_naming);
@@ -167,19 +168,19 @@ internal sealed class RingPage : StackPanel
     private UIElement TriggerSection()
     {
         var section = new StackPanel { Margin = new Thickness(0, 0, 0, 28) };
-        section.Children.Add(SectionTitle(Strings.RingOpenTitle, bottom: 10));
+        section.Children.Add(_parts.SectionTitle(Strings.RingOpenTitle, bottom: 10));
 
         var keys = KeyCap.Row(Features.RingFeature.Shortcut.Labels(), _palette);
         keys.HorizontalAlignment = HorizontalAlignment.Left;
         keys.Margin = new Thickness(0, 12, 0, 0);
         var keyboard = new StackPanel();
-        keyboard.Children.Add(CardTitle(Glyphs.Keyboard, Strings.RingKeyboard, Strings.RingKeyboardDetail));
+        keyboard.Children.Add(_parts.CardTitle(Glyphs.Keyboard, Strings.RingKeyboard, Strings.RingKeyboardDetail));
         keyboard.Children.Add(keys);
-        keyboard.Children.Add(Caption(Strings.RingKeyboardFixed));
+        keyboard.Children.Add(_parts.Caption(Strings.RingKeyboardFixed));
 
         var mouseOn = _preferences.Get<bool>(Pref.RingMouse);
         var buttons = new WrapPanel { Margin = new Thickness(0, 12, 0, 0) };
-        var hint = Caption(mouseOn ? Strings.RingSideButtonsHint : Strings.RingMouseOffHint);
+        var hint = _parts.Caption(mouseOn ? Strings.RingSideButtonsHint : Strings.RingMouseOffHint);
         void FillButtons()
         {
             buttons.Children.Clear();
@@ -187,7 +188,7 @@ internal sealed class RingPage : StackPanel
             bool on = _preferences.Get<bool>(Pref.RingMouse);
             foreach (var (value, title) in new[] { ("middle", Strings.RingMiddleButton), ("x1", Strings.RingBackButton), ("x2", Strings.RingForwardButton) })
             {
-                var pill = PillButton(title, prominent: current == value, () =>
+                var pill = _parts.PillButton(title, prominent: current == value, () =>
                 {
                     _preferences.Set(Pref.RingMouseButton, value);
                     FillButtons();
@@ -199,7 +200,7 @@ internal sealed class RingPage : StackPanel
             buttons.Opacity = on ? 1 : 0.4;
             hint.Text = on ? Strings.RingSideButtonsHint : Strings.RingMouseOffHint;
         }
-        var toggle = Toggle(mouseOn, on =>
+        var toggle = _parts.Toggle(mouseOn, on =>
         {
             _preferences.Set(Pref.RingMouse, on);
             FillButtons();
@@ -208,16 +209,16 @@ internal sealed class RingPage : StackPanel
         var mouseTitle = new DockPanel();
         DockPanel.SetDock(toggle, Dock.Right);
         mouseTitle.Children.Add(toggle);
-        mouseTitle.Children.Add(CardTitle("", Strings.RingMouse, Strings.RingMouseDetail));
+        mouseTitle.Children.Add(_parts.CardTitle("", Strings.RingMouse, Strings.RingMouseDetail));
         mouse.Children.Add(mouseTitle);
         mouse.Children.Add(buttons);
         mouse.Children.Add(hint);
         FillButtons();
 
         var cards = new UniformGrid { Columns = 2 };
-        var left = Card(keyboard);
+        var left = _parts.Card(keyboard);
         left.Margin = new Thickness(0, 0, 6, 0);
-        var right = Card(mouse);
+        var right = _parts.Card(mouse);
         right.Margin = new Thickness(6, 0, 0, 0);
         cards.Children.Add(left);
         cards.Children.Add(right);
@@ -228,7 +229,7 @@ internal sealed class RingPage : StackPanel
     private UIElement BehaviorSection()
     {
         var section = new StackPanel { Margin = new Thickness(0, 0, 0, 12) };
-        section.Children.Add(SectionTitle(Strings.RingChoosing, bottom: 10));
+        section.Children.Add(_parts.SectionTitle(Strings.RingChoosing, bottom: 10));
 
         double dwell = Math.Clamp(_preferences.Get<double>(Pref.RingDwell), 0.25, 1.0);
         var value = new TextBlock { Text = Strings.Seconds(dwell), FontSize = 12, Foreground = _palette.InkSecondary, Width = 52, VerticalAlignment = VerticalAlignment.Center };
@@ -249,7 +250,7 @@ internal sealed class RingPage : StackPanel
 
         bool hover = _preferences.Get<bool>(Pref.RingHover);
         timeRow.Visibility = hover ? Visibility.Visible : Visibility.Collapsed;
-        var toggle = Toggle(hover, on =>
+        var toggle = _parts.Toggle(hover, on =>
         {
             _preferences.Set(Pref.RingHover, on);
             timeRow.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
@@ -265,8 +266,8 @@ internal sealed class RingPage : StackPanel
         var body = new StackPanel();
         body.Children.Add(restRow);
         body.Children.Add(timeRow);
-        section.Children.Add(Card(body));
-        section.Children.Add(Caption(Strings.RingRestFooter));
+        section.Children.Add(_parts.Card(body));
+        section.Children.Add(_parts.Caption(Strings.RingRestFooter));
         return section;
     }
 
@@ -632,38 +633,6 @@ internal sealed class RingPage : StackPanel
 
     // MARK: Pieces
 
-    private Border Card(UIElement child, double padding = 16) => new()
-    {
-        Background = _palette.Surface, BorderBrush = _palette.Hairline, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(14),
-        Padding = new Thickness(padding), Child = child,
-    };
-
-    private UIElement CardTitle(string glyph, string title, string detail)
-    {
-        var icon = new Border
-        {
-            Width = 34, Height = 34, CornerRadius = new CornerRadius(9), Background = _palette.Ink, VerticalAlignment = VerticalAlignment.Top,
-            Child = new TextBlock { Text = glyph, FontFamily = Glyphs.Font, FontSize = 15, Foreground = _palette.Canvas, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center },
-        };
-        var text = new StackPanel { Margin = new Thickness(10, 0, 0, 0) };
-        text.Children.Add(new TextBlock { Text = title, FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = _palette.Ink });
-        text.Children.Add(new TextBlock { Text = detail, FontSize = 11, Foreground = _palette.InkSecondary, TextWrapping = TextWrapping.Wrap });
-        var row = new DockPanel();
-        DockPanel.SetDock(icon, Dock.Left);
-        row.Children.Add(icon);
-        row.Children.Add(text);
-        return row;
-    }
-
-    private TextBlock SectionTitle(string text, double bottom = 0) => new()
-    {
-        Text = text.ToUpperInvariant(), FontSize = 11, FontWeight = FontWeights.SemiBold, Foreground = _palette.InkSecondary,
-        VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 0, bottom),
-    };
-
-    private TextBlock Caption(string text) =>
-        new() { Text = text, FontSize = 11.5, Foreground = _palette.InkSecondary, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) };
-
     private Button StepButton(string label, string help, Action click)
     {
         var button = new Button
@@ -671,18 +640,6 @@ internal sealed class RingPage : StackPanel
             Content = label, Width = 28, Height = 28, FontSize = 14, FontWeight = FontWeights.Bold, ToolTip = help,
             Foreground = _palette.Ink, Background = _palette.Surface, BorderThickness = new Thickness(0), Cursor = Cursors.Hand,
             Template = Controls.RoundTemplate(14),
-        };
-        button.Click += (_, _) => click();
-        return button;
-    }
-
-    private Button PillButton(string label, bool prominent, Action click)
-    {
-        var button = new Button
-        {
-            Content = label, Height = 28, Padding = new Thickness(12, 0, 12, 0), FontSize = 12, FontWeight = FontWeights.SemiBold,
-            Foreground = prominent ? _palette.Canvas : _palette.Ink, Background = prominent ? _palette.Ink : _palette.Raised,
-            BorderThickness = new Thickness(0), Cursor = Cursors.Hand, Template = Controls.RoundTemplate(14),
         };
         button.Click += (_, _) => click();
         return button;
@@ -697,12 +654,5 @@ internal sealed class RingPage : StackPanel
         };
         button.Click += (_, _) => click();
         return button;
-    }
-
-    private CheckBox Toggle(bool on, Action<bool> changed)
-    {
-        var box = new CheckBox { IsChecked = on, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(12, 2, 0, 0), Cursor = Cursors.Hand };
-        box.Click += (_, _) => changed(box.IsChecked == true);
-        return box;
     }
 }

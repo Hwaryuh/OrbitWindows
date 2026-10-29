@@ -7,5 +7,5 @@ namespace Orbit.App.Features;
 internal sealed class SettingsFeature : IFeature
 {
     public void Start(AppServices services) =>
-        services.Actions.Register(OrbitAction.Settings, () => SettingsWindow.ShowOrActivate(services.Preferences));
+        services.Actions.Register(OrbitAction.Settings, () => SettingsWindow.ShowOrActivate(services));
 }

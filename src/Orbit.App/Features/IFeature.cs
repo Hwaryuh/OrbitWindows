@@ -34,6 +34,9 @@ internal sealed class AppServices(Preferences preferences, ActionRunner actions,
     /// <summary>Windows.Graphics.Capture, once it is ready; null before that or where it isn't available.</summary>
     public WgcCapture? Capture { get; set; }
 
+    /// <summary>The capture preview cards, and through them the capture library; null until capture starts.</summary>
+    public Capture.QuickAccess? CaptureCards { get; set; }
+
     /// <summary>A tray notification.</summary>
     public void Notify(string title, string message) => notify(title, message);
 

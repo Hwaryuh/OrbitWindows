@@ -99,6 +99,17 @@ public sealed class CaptureStoreTests : IDisposable
     }
 
     [Fact]
+    public void SavingIntoTheLibraryItselfMakesNoCopy()
+    {
+        var library = Path.Combine(_folder, "Captures");
+        _prefs.Set(Pref.CaptureSaveFolder, library + "\\");
+        var store = new CaptureStore(_prefs, library);
+        var file = store.Write([1], new DateTime(2026, 10, 30, 1, 2, 3));
+        Assert.Equal(file, store.SaveCopy(file));
+        Assert.Single(Directory.GetFiles(library));
+    }
+
+    [Fact]
     public void ForgetTakesAFileOffTheRecentList()
     {
         var store = new CaptureStore(_prefs, Path.Combine(_folder, "Captures"));
@@ -133,5 +144,53 @@ public sealed class CaptureStoreTests : IDisposable
         var half = TextRecognition.Halve(frame);
         Assert.Equal((1, 1), (half.Width, half.Height));
         Assert.Equal([60, 60, 60, 60], half.Pixels);
+    }
+}
+
+public sealed class CaptureLibraryTests : IDisposable
+{
+    private readonly string _root = Path.Combine(Path.GetTempPath(), "orbit-library-" + Guid.NewGuid().ToString("N"));
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
+    }
+
+    private string File(string folder, string name, DateTime created)
+    {
+        var dir = Path.Combine(_root, folder);
+        Directory.CreateDirectory(dir);
+        var path = Path.Combine(dir, name);
+        System.IO.File.WriteAllBytes(path, [1]);
+        System.IO.File.SetCreationTime(path, created);
+        return path;
+    }
+
+    [Fact]
+    public void ListsTheLibraryAndOrbitFilesFromTheSaveFolderNewestFirst()
+    {
+        var a = File("lib", "Orbit 1.png", new DateTime(2026, 10, 1));
+        var b = File("lib", "Other.jpg", new DateTime(2026, 10, 3));
+        File("lib", "notes.txt", new DateTime(2026, 10, 4));
+        var c = File("save", "Orbit 2.png", new DateTime(2026, 10, 2));
+        File("save", "Holiday.png", new DateTime(2026, 10, 5));
+        // A saved copy of a library file is the same picture: listed once, from the library.
+        File("save", "Orbit 1.png", new DateTime(2026, 10, 6));
+        var list = CaptureLibrary.List(Path.Combine(_root, "lib"), Path.Combine(_root, "save"));
+        Assert.Equal([b, c, a], list.Select(e => e.Path));
+    }
+
+    [Fact]
+    public void TheSameFolderTwiceAndMissingFoldersAreFine()
+    {
+        File("lib", "Orbit 1.png", new DateTime(2026, 10, 1));
+        File("lib", "Orbit 2.png", new DateTime(2026, 10, 2));
+        var lib = Path.Combine(_root, "lib");
+        Assert.Equal(2, CaptureLibrary.List(lib, lib.ToUpperInvariant() + Path.DirectorySeparatorChar).Count);
+        Assert.Equal(2, CaptureLibrary.List(lib, Path.Combine(_root, "missing")).Count);
+        Assert.Empty(CaptureLibrary.List(Path.Combine(_root, "missing"), null));
+        Assert.Single(CaptureLibrary.List(lib, null, limit: 1));
+        Assert.True(CaptureLibrary.SameFolder(lib, lib + "\\"));
+        Assert.False(CaptureLibrary.SameFolder(lib, Path.Combine(_root, "save")));
     }
 }

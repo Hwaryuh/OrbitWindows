@@ -152,6 +152,8 @@ public sealed class CardStack<T> where T : class
 
     public bool IsKept(T item) => _kept.Contains(item);
 
+    public bool IsHovered(T item) => _hovered.Contains(item);
+
     /// <summary>The card is in use (a drag, its menu, copying its text); holds nest.</summary>
     public void Hold(T item) => _held[item] = _held.GetValueOrDefault(item) + 1;
 

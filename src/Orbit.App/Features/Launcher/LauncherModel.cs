@@ -118,7 +118,7 @@ internal sealed class LauncherModel(AppServices services, AppIndex apps, Frecenc
         return result;
     }
 
-    public void OpenSettings() => SettingsWindow.ShowOrActivate(services.Preferences);
+    public void OpenSettings() => SettingsWindow.ShowOrActivate(services);
 
     /// <summary>Remembers the choice: not windows (they come and go), answers, or files (paths stay out of the settings).</summary>
     public void Bump(LauncherItem item)
@@ -267,7 +267,7 @@ internal sealed class LauncherModel(AppServices services, AppIndex apps, Frecenc
 
     private LauncherItem Page(string id, string title) =>
         new($"page.{id}", title, "Orbit", IconKind.Mark, "", "Orbit", "Orbit",
-            [new LauncherAction(Strings.ActionOpen, Glyphs.Settings, () => SettingsWindow.ShowOrActivate(services.Preferences, id))]);
+            [new LauncherAction(Strings.ActionOpen, Glyphs.Settings, () => SettingsWindow.ShowOrActivate(services, id))]);
 
     private static LauncherItem Pane(SettingsPane pane) =>
         new($"pane.{pane.Uri}", Strings.T(pane.Korean, pane.English), Strings.Korean ? pane.English : null,

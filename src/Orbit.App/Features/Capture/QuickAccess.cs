@@ -93,6 +93,32 @@ internal sealed class QuickAccess(Preferences preferences, CaptureActions action
         else if (_stack.Items.Contains(item)) Schedule(item);
     }
 
+    /// <summary>"Preview" in settings: a real card at the chosen corner for a couple of seconds.</summary>
+    public void ShowSample()
+    {
+        var item = Actions.Store.Recent.Select(CaptureItem.Load).FirstOrDefault(i => i is not null) ?? new CaptureItem("", SampleImage());
+        Add(item, keep: true);
+        Later.Run(TimeSpan.FromSeconds(2), () =>
+        {
+            if (!_stack.IsHovered(item)) Dismiss(item);
+        });
+    }
+
+    /// <summary>A plain picture for the sample when there is no capture yet.</summary>
+    private static System.Windows.Media.Imaging.BitmapSource SampleImage()
+    {
+        var visual = new DrawingVisual();
+        using (var dc = visual.RenderOpen())
+        {
+            dc.DrawRectangle(new LinearGradientBrush(Color.FromRgb(40, 40, 44), Color.FromRgb(90, 90, 96), 45), null, new Rect(0, 0, 480, 270));
+            dc.DrawEllipse(null, new Pen(Brushes.White, 10), new Point(240, 135), 40, 40);
+        }
+        var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap(480, 270, 96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(visual);
+        bitmap.Freeze();
+        return bitmap;
+    }
+
     // MARK: Card actions
 
     /// <summary>A click on a card: the editor; closing it brings the card back, kept.</summary>

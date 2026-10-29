@@ -84,12 +84,14 @@ internal sealed class CaptureActions(CaptureStore store)
     }
 
     /// <summary>Into the Recycle Bin and off the recent list. False when it is still there (cancelled or failed).</summary>
-    public bool Trash(CaptureItem item)
+    public bool Trash(CaptureItem item) => Trash(item.Path);
+
+    public bool Trash(string path)
     {
-        switch (RecycleBin.Send(item.Path))
+        switch (RecycleBin.Send(path))
         {
             case RecycleBin.Outcome.Moved or RecycleBin.Outcome.Missing:
-                Store.Forget(item.Path);
+                Store.Forget(path);
                 Toast.Show(Strings.MovedToRecycleBin, Strings.MovedToRecycleBinDetail);
                 return true;
             case RecycleBin.Outcome.Cancelled:
