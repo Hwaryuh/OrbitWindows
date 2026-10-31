@@ -470,6 +470,7 @@ internal static class Strings
     public static string ScratchpadClearDays(int days) => T($"{days}일 동안 고치지 않은 메모", days == 1 ? "Unedited for a day" : $"Unedited for {days} days");
     public static string ScratchpadClearHint => T("메모장을 열 때 확인하고, 닫은 메모 목록에 남깁니다.", "Checked when the pad opens; they stay in the closed list.");
     public static string ScratchpadNotFound => T("찾지 못했습니다.", "Not found.");
+    public static string ScratchpadMatches(int count) => T($"{count}개 찾음", count == 1 ? "1 match" : $"{count} matches");
     public static string ScratchpadSaveFailed => T("메모를 저장하지 못했습니다. 다음에 고칠 때 다시 저장합니다.", "The note couldn't be saved. Orbit tries again on the next edit.");
     public static string ScratchpadLostAtQuit => T("메모를 저장하지 못해 모든 메모를 클립보드에 복사했습니다. 다른 곳에 붙여 넣으세요.", "The notes couldn't be saved, so all of them were copied to the clipboard. Paste them somewhere safe.");
     public static string ScratchpadNotSaving => T("메모 파일을 읽지 못해 저장하지 않습니다. Orbit을 다시 시작하세요.", "The notes file couldn't be read, so nothing is saved. Restart Orbit.");

@@ -373,7 +373,7 @@ internal sealed class CaptureCard : Grid
         MouseMove += Moved;
         MouseLeftButtonUp += Released;
         LostMouseCapture += (_, _) => CancelPress();
-        ContextMenu = Menu();
+        ContextMenu = Menu().CloseOnOutsidePress();
 
         // In from the side edge.
         Opacity = 0;

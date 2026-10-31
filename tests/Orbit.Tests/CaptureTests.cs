@@ -230,3 +230,62 @@ public class BarcodeAndSoundTests
         Assert.Same(wave, ShutterSound.Wave());
     }
 }
+
+public class TextRecognitionPrepareTests
+{
+    private static ScreenFrame Solid(int width, int height, byte value)
+    {
+        var pixels = new byte[width * height * 4];
+        Array.Fill(pixels, value);
+        return new ScreenFrame(pixels, width, height, width * 4, new PixelRect(0, 0, width, height), "test");
+    }
+
+    [Theory]
+    [InlineData(300, 20)]
+    [InlineData(300, 150)]
+    public void SmallSelectionsAreDoubledAndPadded(int width, int height)
+    {
+        var ready = TextRecognition.Prepare(Solid(width, height, 200), 10000);
+        Assert.Equal(width * 2 + 16, ready.Width);
+        Assert.Equal(height * 2 + 16, ready.Height);
+        Assert.All(ready.Pixels, p => Assert.Equal(200, p));
+    }
+
+    [Fact]
+    public void LargePicturesPassUnchanged()
+    {
+        var frame = Solid(800, 400, 10);
+        Assert.Same(frame, TextRecognition.Prepare(frame, 10000));
+    }
+
+    [Fact]
+    public void TooWideToDoubleStaysAsItIs()
+    {
+        var frame = Solid(600, 20, 0);
+        Assert.Same(frame, TextRecognition.Prepare(frame, 1000));
+    }
+
+    [Fact]
+    public void EnlargingBlendsBetweenPixels()
+    {
+        // Black then white: the middle of the 4x row runs from black to white without a jump.
+        var frame = new ScreenFrame([0, 0, 0, 255, 255, 255, 255, 255], 2, 1, 8, new PixelRect(0, 0, 2, 1), "test");
+        var big = TextRecognition.Enlarge(frame, 4);
+        var reds = Enumerable.Range(0, 8).Select(x => (int)big.Pixels[x * 4]).ToList();
+        Assert.Equal(0, reds[0]);
+        Assert.Equal(255, reds[7]);
+        Assert.True(reds.Zip(reds.Skip(1)).All(p => p.Second >= p.First));
+        Assert.Contains(reds, r => r is > 0 and < 255);
+    }
+
+    [Fact]
+    public void TheMarginTakesTheEdgeColor()
+    {
+        // A white picture with a black dot in the middle: the margin is white.
+        var frame = Solid(5, 5, 255);
+        Array.Fill(frame.Pixels, (byte)0, (2 * 5 + 2) * 4, 4);
+        var padded = TextRecognition.Pad(frame, 3);
+        Assert.Equal(255, padded.Pixels[0]);
+        Assert.Equal(0, padded.Pixels[(5 * padded.Stride) + 5 * 4]);
+    }
+}

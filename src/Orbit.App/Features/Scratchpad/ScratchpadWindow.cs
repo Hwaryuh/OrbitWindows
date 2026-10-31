@@ -85,7 +85,7 @@ internal sealed class ScratchpadWindow : Window
         };
 
         _find = new TextBox { Width = 200, FontSize = 13, Padding = new Thickness(6, 2, 6, 2), VerticalContentAlignment = VerticalAlignment.Center };
-        _find.TextChanged += (_, _) => _findStatus!.Text = "";
+        _find.TextChanged += (_, _) => FindAsTyped();
         _findStatus = new TextBlock { FontSize = 12, Foreground = Muted, Margin = new Thickness(10, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
         var findRow = new StackPanel { Orientation = Orientation.Horizontal };
         findRow.Children.Add(new TextBlock { Text = "", FontFamily = Glyphs.Font, FontSize = 13, Foreground = Muted, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
@@ -305,6 +305,12 @@ internal sealed class ScratchpadWindow : Window
         }
         foreach (var (key, box) in _editors) box.Visibility = key == id ? Visibility.Visible : Visibility.Collapsed;
         FillTabs();
+        // An open find bar searches the tab now in front, from its own caret.
+        if (_findBar.Visibility == Visibility.Visible)
+        {
+            _findAnchor = editor.SelectionStart;
+            FindAsTyped();
+        }
         FocusEditor();
     }
 
@@ -376,9 +382,43 @@ internal sealed class ScratchpadWindow : Window
     private void OpenFind()
     {
         _findBar.Visibility = Visibility.Visible;
-        if (_editors.TryGetValue(_document.Selected, out var editor) && editor.SelectionLength > 0 && !editor.SelectedText.Contains('\n')) _find.Text = editor.SelectedText;
+        if (_editors.TryGetValue(_document.Selected, out var editor))
+        {
+            _findAnchor = editor.SelectionStart;
+            if (editor.SelectionLength > 0 && !editor.SelectedText.Contains('\n')) _find.Text = editor.SelectedText;
+        }
         _find.Focus();
         _find.SelectAll();
+    }
+
+    /// <summary>Where find-as-you-type looks from: the caret when the find bar opened, then the match Enter or F3 moved to.</summary>
+    private int _findAnchor;
+
+    /// <summary>Each typed letter selects the first match from the anchor, with the count beside the box.</summary>
+    private void FindAsTyped()
+    {
+        if (_findStatus is null || !_editors.TryGetValue(_document.Selected, out var editor)) return;
+        var query = _find.Text;
+        if (query.Length == 0)
+        {
+            _findStatus.Text = "";
+            editor.Select(Math.Min(_findAnchor, editor.Text.Length), 0);
+            return;
+        }
+        ShowMatch(editor, ScratchpadSearch.From(editor.Text, query, _findAnchor), query);
+    }
+
+    /// <summary>Selects and scrolls to the match at <paramref name="at"/> with the count beside the box, or says there is none.</summary>
+    private void ShowMatch(TextBox editor, int at, string query)
+    {
+        if (at < 0)
+        {
+            _findStatus.Text = Strings.ScratchpadNotFound;
+            return;
+        }
+        _findStatus.Text = Strings.ScratchpadMatches(ScratchpadSearch.Count(editor.Text, query));
+        editor.Select(at, query.Length);
+        editor.ScrollToLine(editor.GetLineIndexFromCharacterIndex(at));
     }
 
     /// <summary>The next or previous match from the selection, around the end; the editor keeps showing it selected.</summary>
@@ -391,14 +431,8 @@ internal sealed class ScratchpadWindow : Window
             return;
         }
         int at = ScratchpadSearch.Next(editor.Text, _find.Text, editor.SelectionStart, editor.SelectionLength, forward);
-        if (at < 0)
-        {
-            _findStatus.Text = Strings.ScratchpadNotFound;
-            return;
-        }
-        _findStatus.Text = "";
-        editor.Select(at, _find.Text.Length);
-        editor.ScrollToLine(editor.GetLineIndexFromCharacterIndex(at));
+        if (at >= 0) _findAnchor = at;
+        ShowMatch(editor, at, _find.Text);
     }
 
     private void Changed()

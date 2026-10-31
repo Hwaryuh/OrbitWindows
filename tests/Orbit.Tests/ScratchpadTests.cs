@@ -161,3 +161,28 @@ public class ScratchpadTests : IDisposable
         Assert.Equal("{}", File.ReadAllText(path));
     }
 }
+
+public class ScratchpadFindAsTypedTests
+{
+    [Theory]
+    [InlineData(0, "ab", 0)]
+    [InlineData(1, "ab", 4)]   // the next from the anchor
+    [InlineData(9, "ab", 0)]   // around the end
+    [InlineData(4, "abc", 4)]  // a longer query keeps the match in place
+    [InlineData(0, "zz", -1)]
+    [InlineData(0, "", -1)]
+    public void FirstMatchFromTheAnchor(int anchor, string query, int expected) =>
+        Assert.Equal(expected, ScratchpadSearch.From("ab  ABc ab", query, anchor));
+
+    [Fact]
+    public void AnchorPastTheEndIsClamped() => Assert.Equal(0, ScratchpadSearch.From("ab", "a", 99));
+
+    [Theory]
+    [InlineData("ab  ABc ab", "ab", 3)]
+    [InlineData("aaaa", "aa", 2)]
+    [InlineData("abc", "abc", 1)]
+    [InlineData("abc", "x", 0)]
+    [InlineData("abc", "", 0)]
+    public void CountsWithoutOverlaps(string text, string query, int expected) =>
+        Assert.Equal(expected, ScratchpadSearch.Count(text, query));
+}

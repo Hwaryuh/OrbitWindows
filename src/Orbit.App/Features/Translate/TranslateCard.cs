@@ -22,7 +22,9 @@ namespace Orbit.App.Features.Translate;
 /// </summary>
 internal sealed class TranslateCard : OverlayWindow
 {
-    private const double CardWidth = 440, Shadow = 12;
+    // Shadow: the transparent margin the drop shadow draws in. Its blur (30) and offset (8) need
+    // about 23 px below the card; a smaller margin cuts the shadow off in a hard line.
+    private const double CardWidth = 440, Shadow = 24;
 
     private readonly TranslateFeature _feature;
     private readonly AppServices _services;
@@ -297,7 +299,7 @@ internal sealed class TranslateCard : OverlayWindow
 
     private FrameworkElement Footer()
     {
-        var bar = new DockPanel { Height = 44, Background = Palette.Fade(_palette.Surface, 0.6), LastChildFill = true };
+        var bar = new DockPanel { Height = 44, LastChildFill = true };
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 14, 0), VerticalAlignment = VerticalAlignment.Center };
         buttons.Children.Add(_replace);
         buttons.Children.Add(_copy);
@@ -306,8 +308,9 @@ internal sealed class TranslateCard : OverlayWindow
         _count.Margin = new Thickness(14, 0, 0, 0);
         _count.VerticalAlignment = VerticalAlignment.Center;
         bar.Children.Add(_count);
-        var clip = new Border { Child = bar, CornerRadius = new CornerRadius(0, 0, 17, 17), ClipToBounds = true };
-        return clip;
+        // The tint is the border's own rounded background: ClipToBounds clips to a rectangle and
+        // would square off the card's bottom corners.
+        return new Border { Child = bar, Background = Palette.Fade(_palette.Surface, 0.6), CornerRadius = new CornerRadius(0, 0, 17, 17) };
     }
 
     private void OpenMenu(FrameworkElement under, IReadOnlyList<(string Title, Action Run)> items)
@@ -383,8 +386,19 @@ internal sealed class TranslateCard : OverlayWindow
         var work = monitor.WorkArea;
         double s = monitor.Scale;
         var card = (FrameworkElement)Content;
-        if (_result.Content is TextBox box) box.MaxHeight = Math.Max(80, work.Height / s - 220);
-        card.Measure(new Size(CardWidth + Shadow * 2, double.PositiveInfinity));
+        var space = new Size(CardWidth + Shadow * 2, double.PositiveInfinity);
+        if (_result.Content is TextBox box)
+        {
+            // The result gets what the work area leaves after the rest of the card (header, source,
+            // footer, shadow), measured rather than guessed, so a long result scrolls inside the
+            // card instead of pushing the footer off the screen.
+            box.MaxHeight = double.PositiveInfinity;
+            card.Measure(space);
+            double rest = card.DesiredSize.Height - box.DesiredSize.Height;
+            // At least two lines show even on a very short work area.
+            box.MaxHeight = Math.Max(FontSizePref * 3, work.Height / s - rest);
+        }
+        card.Measure(space);
         int w = (int)Math.Ceiling((CardWidth + Shadow * 2) * s), h = (int)Math.Ceiling(card.DesiredSize.Height * s);
         h = Math.Min(h, work.Height);
         var (_, py) = Monitors.Cursor();
