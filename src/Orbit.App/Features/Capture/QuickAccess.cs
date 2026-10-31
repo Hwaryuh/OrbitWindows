@@ -121,12 +121,18 @@ internal sealed class QuickAccess(Preferences preferences, CaptureActions action
 
     // MARK: Card actions
 
-    /// <summary>A click on a card: the editor; closing it brings the card back, kept.</summary>
+    /// <summary>A click on a card: the editor (closing it brings the card back, kept), or the video player for a recording.</summary>
     public void Open(CaptureItem item)
     {
         Dismiss(item);
-        if (Edit is { } edit) edit(item);
-        else if (File.Exists(item.Path)) Shell.Open(item.Path);
+        if (!item.IsVideo && Edit is { } edit) edit(item);
+        else OpenFile(item.Path);
+    }
+
+    /// <summary>The file in its own app (a recording in the video player).</summary>
+    public static void OpenFile(string path)
+    {
+        if (File.Exists(path)) Shell.Open(path);
         else Toast.Show(Strings.CaptureFileMissing);
     }
 
@@ -144,6 +150,7 @@ internal sealed class QuickAccess(Preferences preferences, CaptureActions action
 
     public void PinIt(CaptureItem item)
     {
+        if (item.IsVideo) return;
         Dismiss(item);
         Pin?.Invoke(item);
     }
@@ -155,6 +162,7 @@ internal sealed class QuickAccess(Preferences preferences, CaptureActions action
 
     public async void CopyText(CaptureItem item)
     {
+        if (item.IsVideo) return;
         Hold(item);
         try
         {
@@ -337,7 +345,8 @@ internal sealed class CaptureCard : Grid
         RenderOptions.SetBitmapScalingMode(image, small ? BitmapScalingMode.NearestNeighbor : BitmapScalingMode.HighQuality);
         content.Children.Add(image);
         TextBlock? sizeLabel = null;
-        if (small)
+        if (item.IsVideo) content.Children.Add(VideoMark(item.Length));
+        else if (small)
         {
             sizeLabel = new TextBlock
             {
@@ -501,9 +510,12 @@ internal sealed class CaptureCard : Grid
         column.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
         var top = new DockPanel { LastChildFill = false };
-        var pin = IconButton("", Strings.CardPin, () => _owner.PinIt(_item));
-        DockPanel.SetDock(pin, Dock.Left);
-        top.Children.Add(pin);
+        if (!_item.IsVideo)
+        {
+            var pin = IconButton("", Strings.CardPin, () => _owner.PinIt(_item));
+            DockPanel.SetDock(pin, Dock.Left);
+            top.Children.Add(pin);
+        }
         var close = IconButton(Glyphs.Close, Strings.CardClose, () => _owner.Dismiss(_item));
         DockPanel.SetDock(close, Dock.Right);
         top.Children.Add(close);
@@ -523,7 +535,7 @@ internal sealed class CaptureCard : Grid
 
         var hint = new TextBlock
         {
-            Text = Strings.CardHint, FontSize = 11, Foreground = HintInk, HorizontalAlignment = HorizontalAlignment.Center,
+            Text = _item.IsVideo ? Strings.CardHintVideo : Strings.CardHint, FontSize = 11, Foreground = HintInk, HorizontalAlignment = HorizontalAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis, IsHitTestVisible = false,
         };
         Grid.SetRow(hint, 2);
@@ -531,6 +543,33 @@ internal sealed class CaptureCard : Grid
         layer.Children.Add(column);
         return layer;
     }
+
+    /// <summary>A recording's mark on its picture: a play sign, and its length when known.</summary>
+    internal static FrameworkElement VideoMark(TimeSpan? length)
+    {
+        var row = new StackPanel
+        {
+            Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom,
+            Margin = new Thickness(6), IsHitTestVisible = false,
+        };
+        row.Children.Add(new TextBlock { Text = "", FontFamily = Glyphs.Font, FontSize = 10, Foreground = Brushes.White, VerticalAlignment = VerticalAlignment.Center });
+        if (length is { } l)
+            row.Children.Add(new TextBlock
+            {
+                Text = Clock(l), FontSize = 10, FontWeight = FontWeights.SemiBold, Foreground = Brushes.White,
+                Margin = new Thickness(4, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center,
+            });
+        return new Border
+        {
+            Child = row, Background = Controls.Frozen(new SolidColorBrush(Color.FromArgb(150, 0, 0, 0))), CornerRadius = new CornerRadius(4),
+            Padding = new Thickness(5, 2, 5, 2), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom,
+            Margin = new Thickness(6), IsHitTestVisible = false,
+        };
+    }
+
+    /// <summary>"0:07", "12:34", "1:02:03" (Orbit: RecordingChrome.clock).</summary>
+    internal static string Clock(TimeSpan time) =>
+        time.TotalHours >= 1 ? $"{(int)time.TotalHours}:{time.Minutes:00}:{time.Seconds:00}" : $"{(int)time.TotalMinutes}:{time.Seconds:00}";
 
     private static Button IconButton(string glyph, string help, Action click) =>
         GlassButton(new TextBlock { Text = glyph, FontFamily = Glyphs.Font, FontSize = 11, Foreground = Brushes.White }, 26, 26, 13, help, click);
@@ -558,9 +597,13 @@ internal sealed class CaptureCard : Grid
     private ContextMenu Menu()
     {
         var menu = new ContextMenu();
-        menu.Items.Add(Controls.MenuItem(Strings.CardEdit, () => _owner.Open(_item)));
-        menu.Items.Add(Controls.MenuItem(Strings.CardCopyText, () => _owner.CopyText(_item)));
-        menu.Items.Add(Controls.MenuItem(Strings.CardPin, () => _owner.PinIt(_item)));
+        if (_item.IsVideo) menu.Items.Add(Controls.MenuItem(Strings.CardOpenVideo, () => _owner.Open(_item)));
+        else
+        {
+            menu.Items.Add(Controls.MenuItem(Strings.CardEdit, () => _owner.Open(_item)));
+            menu.Items.Add(Controls.MenuItem(Strings.CardCopyText, () => _owner.CopyText(_item)));
+            menu.Items.Add(Controls.MenuItem(Strings.CardPin, () => _owner.PinIt(_item)));
+        }
         menu.Items.Add(new Separator());
         menu.Items.Add(Controls.MenuItem(Strings.ActionCopy, () => _owner.Copy(_item)));
         menu.Items.Add(Controls.MenuItem(Strings.CardSaveToFolder, () => _owner.Save(_item)));

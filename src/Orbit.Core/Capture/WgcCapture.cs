@@ -5,10 +5,6 @@ using Windows.Graphics.Capture;
 using Windows.Graphics.DirectX;
 using Windows.Graphics.DirectX.Direct3D11;
 using Windows.Graphics.Imaging;
-using Windows.Win32;
-using Windows.Win32.Graphics.Direct3D;
-using Windows.Win32.Graphics.Direct3D11;
-using Windows.Win32.Graphics.Dxgi;
 using WinRT;
 
 namespace Orbit.Core.Capture;
@@ -19,17 +15,18 @@ namespace Orbit.Core.Capture;
 /// </summary>
 public sealed class WgcCapture : IDisposable
 {
-    private static readonly Guid GraphicsCaptureItemIid = new("79C3F95B-31F7-4EC2-A464-632EF5D30760");
-
     private readonly IDirect3DDevice _device;
     private bool _borderless;
 
     public WgcCapture()
     {
-        _device = CreateDevice();
+        _device = CaptureInterop.Wrap(CaptureInterop.CreateDevice(default));
     }
 
     public static bool IsSupported => GraphicsCaptureSession.IsSupported();
+
+    /// <summary>Whether capture without the yellow border was granted (recordings use it too).</summary>
+    public bool Borderless => _borderless;
 
     /// <summary>Asks once for capture without the border. Unpackaged apps are normally allowed.</summary>
     public async Task<bool> RequestBorderlessAsync()
@@ -48,14 +45,14 @@ public sealed class WgcCapture : IDisposable
     }
 
     public Task<ScreenFrame> CaptureMonitorAsync(MonitorInfo monitor, TimeSpan timeout) =>
-        CaptureAsync(CreateItem(monitor.Handle, forWindow: false), monitor.Bounds, timeout);
+        CaptureAsync(CaptureInterop.CreateItem(monitor.Handle, forWindow: false), monitor.Bounds, timeout);
 
     /// <summary>
     /// One window on its own: its pixels without what overlaps it (Orbit: <c>captureWindow</c>).
     /// <paramref name="bounds"/> is only recorded on the frame; the frame has the window's own size.
     /// </summary>
     public Task<ScreenFrame> CaptureWindowAsync(nint window, PixelRect bounds, TimeSpan timeout) =>
-        CaptureAsync(CreateItem(window, forWindow: true), bounds, timeout);
+        CaptureAsync(CaptureInterop.CreateItem(window, forWindow: true), bounds, timeout);
 
     private async Task<ScreenFrame> CaptureAsync(GraphicsCaptureItem item, PixelRect bounds, TimeSpan timeout)
     {
@@ -124,45 +121,6 @@ public sealed class WgcCapture : IDisposable
             new ReadOnlySpan<byte>(data + offset, stride).CopyTo(pixels.AsSpan(row * stride));
         }
         return new ScreenFrame(pixels, width, height, stride, bounds with { Width = width, Height = height }, "WGC");
-    }
-
-    private static GraphicsCaptureItem CreateItem(nint handle, bool forWindow)
-    {
-        var factory = ActivationFactory.Get("Windows.Graphics.Capture.GraphicsCaptureItem");
-        var interop = factory.AsInterface<IGraphicsCaptureItemInterop>();
-        var iid = GraphicsCaptureItemIid;
-        var pointer = forWindow ? interop.CreateForWindow(handle, ref iid) : interop.CreateForMonitor(handle, ref iid);
-        return Adopt(pointer, GraphicsCaptureItem.FromAbi);
-    }
-
-    private static IDirect3DDevice CreateDevice()
-    {
-        PInvoke.D3D11CreateDevice(null, D3D_DRIVER_TYPE.D3D_DRIVER_TYPE_HARDWARE, default,
-            D3D11_CREATE_DEVICE_FLAG.D3D11_CREATE_DEVICE_BGRA_SUPPORT, ReadOnlySpan<D3D_FEATURE_LEVEL>.Empty,
-            PInvoke.D3D11_SDK_VERSION, out ID3D11Device device, out _).ThrowOnFailure();
-        var dxgi = (IDXGIDevice)device;
-        PInvoke.CreateDirect3D11DeviceFromDXGIDevice(dxgi, out var inspectable).ThrowOnFailure();
-        return Adopt(Marshal.GetIUnknownForObject(inspectable), MarshalInterface<IDirect3DDevice>.FromAbi);
-    }
-
-    /// <summary>Wraps a COM pointer we own in a projected object, which takes its own reference, then drops ours.</summary>
-    private static T Adopt<T>(nint pointer, Func<nint, T> wrap)
-    {
-        try
-        {
-            return wrap(pointer);
-        }
-        finally
-        {
-            Marshal.Release(pointer);
-        }
-    }
-
-    [ComImport, Guid("3628E81B-3CAC-4C60-B7F4-23CE0E0C3356"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface IGraphicsCaptureItemInterop
-    {
-        nint CreateForWindow(nint window, ref Guid iid);
-        nint CreateForMonitor(nint monitor, ref Guid iid);
     }
 
     [ComImport, Guid("5B0D3235-4DBA-4D44-865E-8F1D0E4FD04D"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]

@@ -248,6 +248,6 @@ public sealed class AudioMixer
     private static void Release(IEnumerable<object> objects)
     {
         foreach (var o in objects.Distinct(ReferenceEqualityComparer.Instance))
-            if (o is not null && Marshal.IsComObject(o)) Marshal.ReleaseComObject(o);
+            ComObjects.Release(o);
     }
 }

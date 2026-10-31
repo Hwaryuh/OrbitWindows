@@ -15,8 +15,8 @@ namespace Orbit.App.Settings;
 
 /// <summary>
 /// The Capture page (Orbit: FeaturePages.swift, <c>CapturePage</c>): the four captures, the recent
-/// ones, what happens after a capture, where saves go, and the keys of the selection. Orbit's
-/// timer, recording and scrolling rows are left out with those features.
+/// ones, what happens after a capture, recording, where saves go, and the keys of the selection.
+/// Orbit's timer and scrolling rows are left out with those features.
 /// </summary>
 internal sealed class CapturePage : StackPanel
 {
@@ -39,6 +39,11 @@ internal sealed class CapturePage : StackPanel
             _parts.Row(Strings.CapturePlaySound, null, BoolToggle(Pref.CaptureSound)),
             _parts.Row(Strings.CaptureKeepPreview, Strings.CaptureKeepPreviewDetail, SecondsChips()),
             _parts.Row(Strings.CapturePreviewPosition, Strings.CapturePreviewPositionDetail, CornerPicker())));
+        Children.Add(_parts.Group(Strings.RecordSection, null,
+            _parts.Row(Strings.RecordStartRow, null, RecordButtons()),
+            _parts.Row(Strings.RecordFrameRate, Strings.RecordFrameRateDetail, _parts.Chips<int>(
+                [(60, "60"), (30, "30")], () => _preferences.Get<int>(Pref.RecordFps), v => _preferences.Set(Pref.RecordFps, v))),
+            _parts.Row(Strings.RecordShowCursor, null, BoolToggle(Pref.RecordCursor))));
         Children.Add(_parts.Group(Strings.CaptureSaving, null, SaveFolderRow()));
         Children.Add(_parts.Group(Strings.CaptureWhileSelecting, null,
             _parts.Row(Strings.CaptureShowKeyHints, Strings.CaptureShowKeyHintsDetail, BoolToggle(Pref.CaptureKeyHints)),
@@ -114,7 +119,9 @@ internal sealed class CapturePage : StackPanel
     {
         var image = new Image { Stretch = Stretch.UniformToFill, Height = 64 };
         RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality);
-        try
+        bool video = CaptureLibrary.IsVideo(path);
+        if (video) image.Source = Features.Capture.VideoThumbnails.Read(path);
+        else try
         {
             using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
             var bitmap = new BitmapImage();
@@ -136,12 +143,27 @@ internal sealed class CapturePage : StackPanel
         };
         frame.MouseLeftButtonUp += (_, _) =>
         {
-            if (_services.CaptureCards is { } cards && Features.Capture.CaptureItem.Load(path) is { } item) cards.Edit?.Invoke(item);
+            if (video) Features.Capture.QuickAccess.OpenFile(path);
+            else if (_services.CaptureCards is { } cards && Features.Capture.CaptureItem.Load(path) is { } item) cards.Edit?.Invoke(item);
         };
         return frame;
     }
 
     // MARK: Rows
+
+    /// <summary>Record Area, Window and Screen as buttons (none has a default key, as in Orbit).</summary>
+    private FrameworkElement RecordButtons()
+    {
+        var row = new StackPanel { Orientation = Orientation.Horizontal };
+        foreach (var action in new[] { OrbitAction.RecordArea, OrbitAction.RecordWindow, OrbitAction.RecordScreen })
+        {
+            var run = action;
+            var button = _parts.PillButton(action.Title(), prominent: false, () => _services.Actions.Perform(run));
+            if (row.Children.Count > 0) button.Margin = new Thickness(6, 0, 0, 0);
+            row.Children.Add(button);
+        }
+        return row;
+    }
 
     private UIElement Tip(string keys, string text) => _parts.Row(text, null, KeyCap.Row(keys.Split(' '), _palette));
 

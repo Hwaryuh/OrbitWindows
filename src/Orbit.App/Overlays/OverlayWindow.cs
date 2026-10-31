@@ -59,6 +59,16 @@ public class OverlayWindow : Window
         Place(rect);
     }
 
+    /// <summary>
+    /// Keeps the window out of screenshots and recordings (Windows 10 2004 and later); the
+    /// recording controls use it so they never end up in the video.
+    /// </summary>
+    public void ExcludeFromCapture()
+    {
+        if (!PInvoke.SetWindowDisplayAffinity(Handle, WINDOW_DISPLAY_AFFINITY.WDA_EXCLUDEFROMCAPTURE))
+            Orbit.Core.Log.Warn("A window could not be kept out of the recording");
+    }
+
     protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
     {
         base.OnDpiChanged(oldDpi, newDpi);

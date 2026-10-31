@@ -47,9 +47,36 @@ public sealed class CaptureStore(Preferences preferences, string folder)
         }
         catch
         {
-            TryDelete(path);
+            AppPaths.TryDelete(path);
             throw;
         }
+        lock (_gate)
+        {
+            _recent!.Insert(0, path);
+            if (_recent.Count > RecentCount) _recent.RemoveRange(RecentCount, _recent.Count - RecentCount);
+        }
+        return path;
+    }
+
+    /// <summary>
+    /// Where a recording is written while it runs: a hidden folder inside the library, so the
+    /// library never lists a half-written file. Drafts left by an earlier run are removed first.
+    /// </summary>
+    public string RecordingDraft(DateTime when)
+    {
+        var drafts = Path.Combine(folder, ".recording");
+        var info = Directory.CreateDirectory(drafts);
+        info.Attributes |= FileAttributes.Hidden;
+        foreach (var old in info.EnumerateFiles()) AppPaths.TryDelete(old.FullName);
+        return Path.Combine(drafts, RecordingName(when));
+    }
+
+    /// <summary>Moves a finished draft into the library under a free name and lists it first; its new path.</summary>
+    public string AddRecording(string draft)
+    {
+        lock (_gate) _recent ??= Load();
+        var path = FreeName(folder, Path.GetFileName(draft));
+        File.Move(draft, path);
         lock (_gate)
         {
             _recent!.Insert(0, path);
@@ -118,7 +145,12 @@ public sealed class CaptureStore(Preferences preferences, string folder)
 
     /// <summary>"Orbit 2026-10-30 at 14.05.09.png", as Orbit names captures.</summary>
     public static string FileName(DateTime when) =>
-        "Orbit " + when.ToString("yyyy-MM-dd 'at' HH.mm.ss", CultureInfo.InvariantCulture) + ".png";
+        "Orbit " + Stamp(when) + ".png";
+
+    /// <summary>"Orbit Recording 2026-10-30 at 14.05.09.mp4".</summary>
+    public static string RecordingName(DateTime when) => "Orbit Recording " + Stamp(when) + ".mp4";
+
+    private static string Stamp(DateTime when) => when.ToString("yyyy-MM-dd 'at' HH.mm.ss", CultureInfo.InvariantCulture);
 
     /// <summary>The name, or the name with " 2", " 3", … before the extension when it is taken.</summary>
     internal static string FreeName(string folder, string name)
@@ -137,14 +169,8 @@ public sealed class CaptureStore(Preferences preferences, string folder)
     private List<string> Load()
     {
         if (!Directory.Exists(folder)) return [];
-        return new DirectoryInfo(folder).EnumerateFiles("*.png")
+        return new DirectoryInfo(folder).EnumerateFiles()
+            .Where(f => f.Extension.Equals(".png", StringComparison.OrdinalIgnoreCase) || CaptureLibrary.IsVideo(f.FullName))
             .OrderByDescending(f => f.CreationTimeUtc).Take(RecentCount).Select(f => f.FullName).ToList();
-    }
-
-    private static void TryDelete(string path)
-    {
-        try { File.Delete(path); }
-        catch (IOException) { }
-        catch (UnauthorizedAccessException) { }
     }
 }

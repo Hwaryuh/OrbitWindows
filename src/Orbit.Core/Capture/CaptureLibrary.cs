@@ -12,7 +12,10 @@ public static class CaptureLibrary
 {
     public const int Limit = 200;
 
-    private static readonly HashSet<string> Kinds = new(StringComparer.OrdinalIgnoreCase) { ".png", ".jpg", ".jpeg", ".gif", ".bmp" };
+    private static readonly HashSet<string> Kinds = new(StringComparer.OrdinalIgnoreCase) { ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".mp4" };
+
+    /// <summary>A recording rather than a picture: it opens in the video player, not the editor.</summary>
+    public static bool IsVideo(string path) => Path.GetExtension(path).Equals(".mp4", StringComparison.OrdinalIgnoreCase);
 
     public static IReadOnlyList<LibraryEntry> List(string libraryFolder, string? saveFolder, int limit = Limit)
     {

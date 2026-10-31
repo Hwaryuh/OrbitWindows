@@ -176,7 +176,7 @@ public sealed class ClipHistory
         foreach (var file in Directory.EnumerateFiles(ClipsFolder))
         {
             if (used.Contains(Path.GetFileName(file))) continue;
-            if (TryDelete(file)) removed++;
+            if (AppPaths.TryDelete(file)) removed++;
         }
         return removed;
     }
@@ -196,20 +196,7 @@ public sealed class ClipHistory
 
     private void DeleteFiles(IEnumerable<string> files)
     {
-        foreach (var file in files.ToList()) TryDelete(PathOf(file));
-    }
-
-    private static bool TryDelete(string path)
-    {
-        try
-        {
-            File.Delete(path);
-            return true;
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-        {
-            return false;
-        }
+        foreach (var file in files.ToList()) AppPaths.TryDelete(PathOf(file));
     }
 
     // MARK: Saving

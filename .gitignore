@@ -17,3 +17,6 @@ obj/
 *.user
 TestResults/
 artifacts/
+
+# local build-and-run helper
+run.bat

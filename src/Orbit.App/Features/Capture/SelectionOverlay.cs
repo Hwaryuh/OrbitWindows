@@ -28,7 +28,7 @@ internal sealed record SelectionResult(MonitorInfo Monitor, ScreenFrame Frame, P
 /// select an area, Space toggles window mode, Enter takes the whole monitor, Esc cancels. While
 /// dragging: Shift locks a square, Alt grows from the center, Space moves, arrows nudge. Before:
 /// Tab cycles ratios, R brings back the last area, Ctrl+C copies the color under the loupe. C S T P E
-/// pick what happens to the result (Orbit's V and L, recording, are not ported).
+/// pick what happens to the result (Orbit's V and L are not ported). Recording picks its area here too.
 /// </summary>
 internal sealed class SelectionSession
 {
@@ -39,11 +39,12 @@ internal sealed class SelectionSession
     // Asynchronous continuations: whoever awaits the result runs after Finish has closed every overlay.
     private readonly TaskCompletionSource<SelectionResult?> _done = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-    private SelectionSession(IReadOnlyList<OpenWindow> targets, bool windowMode, bool textMode, PixelRect? lastArea)
+    private SelectionSession(IReadOnlyList<OpenWindow> targets, bool windowMode, bool textMode, PixelRect? lastArea, bool recording)
     {
         Targets = targets;
         WindowMode = windowMode && targets.Count > 0;
         TextMode = textMode;
+        Recording = recording;
         LastArea = lastArea;
         Preset = _lastPreset;
     }
@@ -51,7 +52,9 @@ internal sealed class SelectionSession
     public IReadOnlyList<OpenWindow> Targets { get; }
     public bool WindowMode { get; private set; }
     public bool TextMode { get; }
-    public bool AllowsActions => !TextMode;
+    /// <summary>Picking what to record: the C S T P E actions are off and the hints say so.</summary>
+    public bool Recording { get; }
+    public bool AllowsActions => !TextMode && !Recording;
     public PixelRect? LastArea { get; }
     public AspectPreset Preset { get; private set; }
     public CaptureKeyAction? Action { get; private set; }
@@ -60,9 +63,9 @@ internal sealed class SelectionSession
 
     /// <param name="frames">One frozen frame per monitor, in the same order.</param>
     public static Task<SelectionResult?> RunAsync(IReadOnlyList<MonitorInfo> monitors, IReadOnlyList<ScreenFrame> frames,
-        IReadOnlyList<OpenWindow> targets, bool windowMode, bool textMode, PixelRect? lastArea, bool keyHints)
+        IReadOnlyList<OpenWindow> targets, bool windowMode, bool textMode, PixelRect? lastArea, bool keyHints, bool recording = false)
     {
-        var session = new SelectionSession(targets, windowMode, textMode, lastArea) { KeyHints = keyHints };
+        var session = new SelectionSession(targets, windowMode, textMode, lastArea, recording) { KeyHints = keyHints };
         try
         {
             for (int i = 0; i < monitors.Count; i++)
@@ -568,7 +571,9 @@ internal sealed class SelectionOverlay : OverlayWindow
         if (_mouse is not null && LoupePoint is { } p && (!Dragging || _selection is not null) && !_session.WindowMode) DrawLoupe(dc, p, full);
         if (_mouse is not null && _selection is null)
         {
-            var hint = _session.TextMode ? Strings.CaptureHintText : _session.WindowMode ? Strings.CaptureHintWindow : Strings.CaptureHintArea;
+            var hint = _session.TextMode ? Strings.CaptureHintText
+                : _session.Recording ? (_session.WindowMode ? Strings.RecordHintWindow : Strings.RecordHintArea)
+                : _session.WindowMode ? Strings.CaptureHintWindow : Strings.CaptureHintArea;
             DrawPills(dc, [new Pill(hint)], new Point(full.Width / 2, 72), large: true);
         }
     }

@@ -71,14 +71,7 @@ internal sealed class CaptureFeature : IFeature
         var store = _store!;
         try
         {
-            var monitors = Monitors.All();
-            var frames = await ScreenFreeze.AllAsync(services.Capture, monitors);
-            if (!ScreenFreeze.SameLayout(monitors, Monitors.All()))
-            {
-                Log.Warn("Capture cancelled: the monitor layout changed while capturing");
-                Toast.Show(Strings.CaptureCancelled);
-                return;
-            }
+            if (await FreezeAsync(services.Capture) is not ({ } monitors, { } frames)) return;
             var lastArea = CaptureStore.Usable(store.LastArea, monitors);
 
             if (mode == Mode.Screen)
@@ -100,9 +93,7 @@ internal sealed class CaptureFeature : IFeature
                 mode = Mode.Area;
             }
 
-            var targets = mode is Mode.Area or Mode.Window
-                ? OpenWindows.List().Where(w => !w.Minimized && w.Bounds.Width > 40 && w.Bounds.Height > 40).ToList()
-                : [];
+            var targets = mode is Mode.Area or Mode.Window ? Targets() : [];
             var result = await SelectionSession.RunAsync(monitors, frames, targets, mode == Mode.Window, mode == Mode.Text,
                 lastArea, services.Preferences.Get<bool>(Pref.CaptureKeyHints));
             if (result is null) return;
@@ -122,6 +113,24 @@ internal sealed class CaptureFeature : IFeature
             _busy = false;
         }
     }
+
+    /// <summary>
+    /// Every monitor frozen, for the selection to be drawn over (recording picks its area the same
+    /// way); null, with a message, when the monitors changed meanwhile.
+    /// </summary>
+    internal static async Task<(IReadOnlyList<MonitorInfo> Monitors, ScreenFrame[] Frames)?> FreezeAsync(WgcCapture? capture)
+    {
+        var monitors = Monitors.All();
+        var frames = await ScreenFreeze.AllAsync(capture, monitors);
+        if (ScreenFreeze.SameLayout(monitors, Monitors.All())) return (monitors, frames);
+        Log.Warn("Capture cancelled: the monitor layout changed while capturing");
+        Toast.Show(Strings.CaptureCancelled);
+        return null;
+    }
+
+    /// <summary>The windows the selection can pick: visible and not tiny.</summary>
+    internal static List<OpenWindow> Targets() =>
+        OpenWindows.List().Where(w => !w.Minimized && w.Bounds.Width > 40 && w.Bounds.Height > 40).ToList();
 
     /// <summary>The window on its own (no overlapping windows); what of it the frozen monitor shows if that fails.</summary>
     private async Task<ScreenFrame> WindowImageAsync(OpenWindow window, SelectionResult result)

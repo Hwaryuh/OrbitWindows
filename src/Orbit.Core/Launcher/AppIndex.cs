@@ -195,9 +195,17 @@ public sealed class AppIndex(ShellWorker worker)
         }
     }
 
-    private static unsafe IconPixels? Icon(string appOrPath, int size)
+    private static IconPixels? Icon(string appOrPath, int size) =>
+        ShellImage.Read(Path.IsPathRooted(appOrPath) ? appOrPath : $"shell:AppsFolder\\{appOrPath}", size, iconOnly: true);
+}
+
+/// <summary>What the shell shows for an item: an app's icon, or a file's thumbnail (a video's frame).</summary>
+public static class ShellImage
+{
+    /// <param name="parsing">A path or a shell parsing name.</param>
+    /// <param name="iconOnly">The icon; otherwise the thumbnail, or nothing when the file has none.</param>
+    public static unsafe IconPixels? Read(string parsing, int size, bool iconOnly)
     {
-        var parsing = Path.IsPathRooted(appOrPath) ? appOrPath : $"shell:AppsFolder\\{appOrPath}";
         Guid iid = typeof(IShellItemImageFactory).GUID;
         object factoryObject;
         fixed (char* text = parsing)
@@ -206,7 +214,8 @@ public sealed class AppIndex(ShellWorker worker)
         HBITMAP bitmap = default;
         try
         {
-            factory.GetImage(new SIZE(size, size), SIIGBF.SIIGBF_ICONONLY | SIIGBF.SIIGBF_BIGGERSIZEOK, &bitmap);
+            var kind = iconOnly ? SIIGBF.SIIGBF_ICONONLY : SIIGBF.SIIGBF_THUMBNAILONLY;
+            factory.GetImage(new SIZE(size, size), kind | SIIGBF.SIIGBF_BIGGERSIZEOK, &bitmap);
             return bitmap.IsNull ? null : Pixels(bitmap);
         }
         catch (COMException)

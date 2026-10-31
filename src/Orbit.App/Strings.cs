@@ -71,6 +71,29 @@ internal static class Strings
     public static string PinCloseHint => T("닫기 (Esc)", "Close (Esc)");
     public static string CaptureActionEdit => T("편집", "Edit");
 
+    // Recording
+    public static string RecordHintArea => T("드래그해서 녹화  ·  Space 창 선택  ·  Enter 전체 화면  ·  Esc 취소", "Drag to record  ·  Space for window  ·  Enter full screen  ·  Esc to cancel");
+    public static string RecordHintWindow => T("녹화할 창을 누르세요  ·  Space 영역 선택  ·  Esc 취소", "Click a window to record  ·  Space for area  ·  Esc to cancel");
+    public static string RecordStop => T("녹화 중지", "Stop Recording");
+    public static string RecordDiscard => T("녹화 버리기", "Discard Recording");
+    public static string RecordingSaved => T("녹화를 저장했습니다.", "Recording saved.");
+    public static string RecordingDiscarded => T("녹화를 버렸습니다.", "Recording discarded.");
+    public static string RecordingStartFailed => T("녹화를 시작할 수 없습니다.", "Recording could not start.");
+    public static string RecordingSaveFailed => T("녹화 파일을 저장하지 못했습니다.", "The recording could not be saved.");
+    public static string RecordingTooBig => T("영역이 너무 커서 녹화할 수 없습니다.", "That area is too big to record.");
+    public static string RecordingTooBigDetail => T("가로세로 4096 픽셀 이하로 고르세요.", "Pick an area of at most 4096 pixels a side.");
+    public static string RecordingTooSmall => T("영역이 너무 작아서 녹화할 수 없습니다.", "That area is too small to record.");
+    public static string RecordingTooShort => T("녹화가 너무 짧아서 저장하지 않았습니다.", "The recording was too short to keep.");
+    public static string RecordingWindowClosed => T("녹화하던 창이 닫혀서 녹화를 마쳤습니다.", "The window closed, so the recording ended.");
+    public static string CardOpenVideo => T("동영상 열기", "Open Video");
+    public static string CardHintVideo => T("클릭해서 재생  ·  오른쪽 클릭으로 더 보기", "Click to play  ·  right-click for more");
+    public static string VideoCopied => T("동영상을 복사했습니다.", "Video copied.");
+    public static string RecordSection => T("녹화", "Recording");
+    public static string RecordStartRow => T("녹화 시작", "Start recording");
+    public static string RecordFrameRate => T("초당 프레임", "Frames per second");
+    public static string RecordFrameRateDetail => T("60은 움직임이 부드럽고, 30은 파일이 작습니다.", "60 moves more smoothly; 30 makes smaller files.");
+    public static string RecordShowCursor => T("마우스 포인터 보이기", "Show the pointer");
+
     // Capture editor
     public static string EditorTitle => T("캡처 편집", "Annotate");
     public static string EditorToolTitle(Orbit.Core.Capture.Editor.EditorTool tool) => tool switch

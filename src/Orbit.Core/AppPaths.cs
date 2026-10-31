@@ -11,6 +11,20 @@ public static class AppPaths
     public static string RoamingFolder() =>
         Create(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Orbit"));
 
+    /// <summary>Deletes a file if it can; false when it is in use or not allowed (a missing file is fine).</summary>
+    public static bool TryDelete(string path)
+    {
+        try
+        {
+            File.Delete(path);
+            return true;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
     private static string Create(string folder)
     {
         Directory.CreateDirectory(folder);

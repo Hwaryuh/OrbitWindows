@@ -22,6 +22,10 @@ public static class Pref
     /// <summary>[x, y, width, height] in virtual-screen physical pixels, and the monitor's device name.</summary>
     public const string CaptureLastArea = "capture.lastArea";
     public const string TimedCaptureSeconds = "capture.timerSeconds";
+    /// <summary>Recording frame rate: 30 or 60 (Orbit: record.fps).</summary>
+    public const string RecordFps = "record.fps";
+    /// <summary>The pointer is in recordings (Orbit: record.cursor).</summary>
+    public const string RecordCursor = "record.cursor";
     public const string Onboarded = "app.onboarded";
     public const string LaunchAtSignIn = "app.launchAtSignIn";
     public const string AwakeDisplay = "awake.keepDisplayOn";
@@ -86,6 +90,8 @@ public static class Pref
         [CaptureKeyHints] = true,
         [CaptureEditorFloating] = true,
         [TimedCaptureSeconds] = 5,
+        [RecordFps] = 60,
+        [RecordCursor] = true,
         [LaunchAtSignIn] = true,
         [AwakeDisplay] = true,
         [AwakeBatteryFloor] = 20,

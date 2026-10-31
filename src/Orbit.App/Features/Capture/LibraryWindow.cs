@@ -163,7 +163,9 @@ internal sealed class LibraryWindow : Window
         var dim = new Border { Background = Palette.Fade(Brushes.Black, 0.28), IsHitTestVisible = false, Visibility = Visibility.Collapsed };
         picture.Children.Add(dim);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Visibility = Visibility.Collapsed };
-        actions.Children.Add(TileButton("", Strings.CardEdit, () => Edit(entry)));
+        bool video = CaptureLibrary.IsVideo(entry.Path);
+        if (video) picture.Children.Add(CaptureCard.VideoMark(null));
+        else actions.Children.Add(TileButton("", Strings.CardEdit, () => Edit(entry)));
         actions.Children.Add(TileButton(Glyphs.Copy, Strings.ActionCopy, () => Copy(entry)));
         actions.Children.Add(TileButton("", Strings.LibraryOpen, () => OpenFile(entry)));
         actions.Children.Add(TileButton(Glyphs.Folder, Strings.CardShowInExplorer, () => Reveal(entry)));
@@ -223,10 +225,11 @@ internal sealed class LibraryWindow : Window
     private ContextMenu Menu(LibraryEntry entry)
     {
         var menu = new ContextMenu();
-        menu.Items.Add(Controls.MenuItem(Strings.CardEdit, () => Edit(entry)));
+        bool video = CaptureLibrary.IsVideo(entry.Path);
+        if (!video) menu.Items.Add(Controls.MenuItem(Strings.CardEdit, () => Edit(entry)));
         menu.Items.Add(Controls.MenuItem(Strings.ActionCopy, () => Copy(entry)));
-        menu.Items.Add(Controls.MenuItem(Strings.LibraryOpen, () => OpenFile(entry)));
-        menu.Items.Add(Controls.MenuItem(Strings.CardPin, () => Pin(entry)));
+        menu.Items.Add(Controls.MenuItem(video ? Strings.CardOpenVideo : Strings.LibraryOpen, () => OpenFile(entry)));
+        if (!video) menu.Items.Add(Controls.MenuItem(Strings.CardPin, () => Pin(entry)));
         menu.Items.Add(Controls.MenuItem(Strings.CardShowInExplorer, () => Reveal(entry)));
         menu.Items.Add(new Separator());
         menu.Items.Add(Controls.MenuItem(Strings.CardMoveToRecycleBin, () => Trash(entry)));
@@ -263,7 +266,7 @@ internal sealed class LibraryWindow : Window
             target.Source = cached;
             return;
         }
-        var thumbnail = await Task.Run(() => Decode(path));
+        var thumbnail = CaptureLibrary.IsVideo(path) ? await VideoThumbnails.ReadAsync(path) : await Task.Run(() => Decode(path));
         if (thumbnail is null || _closed) return;
         // A changed file's older thumbnail goes.
         foreach (var key in Thumbnails.Keys.Where(k => k.Item1 == path).ToList()) Thumbnails.Remove(key);
@@ -360,8 +363,14 @@ internal sealed class LibraryWindow : Window
         return item;
     }
 
+    /// <summary>The editor; a recording plays instead.</summary>
     private void Edit(LibraryEntry entry)
     {
+        if (CaptureLibrary.IsVideo(entry.Path))
+        {
+            OpenFile(entry);
+            return;
+        }
         if (Load(entry) is not { } item) return;
         Close();
         EditorWindow.Open(item, _cards, _preferences);
@@ -370,6 +379,11 @@ internal sealed class LibraryWindow : Window
     /// <summary>The picture and the file, so it pastes into chats as an image and into File Explorer as a file.</summary>
     private void Copy(LibraryEntry entry)
     {
+        if (CaptureLibrary.IsVideo(entry.Path))
+        {
+            CaptureActions.CopyVideo(entry.Path);
+            return;
+        }
         if (Load(entry) is not { } item) return;
         byte[] png;
         try
@@ -387,15 +401,11 @@ internal sealed class LibraryWindow : Window
         Toast.Show(Clipboards.Set(data) ? Strings.CaptureCopied : Strings.CopyFailed);
     }
 
-    private static void OpenFile(LibraryEntry entry)
-    {
-        if (File.Exists(entry.Path)) Shell.Open(entry.Path);
-        else Toast.Show(Strings.CaptureFileMissing);
-    }
+    private static void OpenFile(LibraryEntry entry) => QuickAccess.OpenFile(entry.Path);
 
     private void Pin(LibraryEntry entry)
     {
-        if (Load(entry) is { } item) PinWindow.Pin(item, _cards);
+        if (!CaptureLibrary.IsVideo(entry.Path) && Load(entry) is { } item) PinWindow.Pin(item, _cards);
     }
 
     private static void Reveal(LibraryEntry entry)

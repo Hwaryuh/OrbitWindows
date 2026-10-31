@@ -54,7 +54,7 @@ public partial class App : Application
         _hooks = new HookThread();
         _services = new AppServices(_preferences, _actions, _hooks, _foreground, Notify);
         _services.Clipboard.Start();
-        _features.AddRange([new SettingsFeature(), new RingFeature(), new LauncherFeature(), new CaptureFeature(), new CleanUrlFeature(), new ClipboardFeature(), new TranslateFeature(), new SnippetFeature(), new KeepAwakeFeature(), new SystemFeature(), new DisplaysFeature(), new ScratchpadFeature()]);
+        _features.AddRange([new SettingsFeature(), new RingFeature(), new LauncherFeature(), new CaptureFeature(), new RecordingFeature(), new CleanUrlFeature(), new ClipboardFeature(), new TranslateFeature(), new SnippetFeature(), new KeepAwakeFeature(), new SystemFeature(), new DisplaysFeature(), new ScratchpadFeature()]);
         foreach (var feature in _features) feature.Start(_services);
         _hooks.Notice += e => Dispatcher.BeginInvoke(() => OnHook(e));
         // Shortcuts the app in front keeps, worked out here so the hook never asks which app it is.
@@ -68,6 +68,11 @@ public partial class App : Application
         {
             // Captures every monitor both ways, logs the comparison and quits, without an overlay.
             bool passed = await CaptureSelfTest.RunAsync(_services.Capture);
+            Shutdown(passed ? 0 : 1);
+        }
+        else if (e.Args.Contains("--selftest-record"))
+        {
+            bool passed = await RecordSelfTest.RunAsync(_services.Capture, e.Args.Contains("--keep"));
             Shutdown(passed ? 0 : 1);
         }
     }

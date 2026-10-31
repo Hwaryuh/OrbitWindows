@@ -25,15 +25,28 @@ internal static class Shutter
     }
 }
 
-/// <summary>A capture in the library: its file and its picture (Orbit: <c>Capture</c>). Compared by identity.</summary>
-internal sealed class CaptureItem(string path, BitmapSource image)
+/// <summary>
+/// A capture in the library: its file and its picture (Orbit: <c>Capture</c>). For a recording the
+/// picture is a frame of it and <see cref="Length"/> may be known. Compared by identity.
+/// </summary>
+internal sealed class CaptureItem(string path, BitmapSource image, TimeSpan? length = null)
 {
     public string Path { get; } = path;
     public BitmapSource Image { get; } = image;
+    public TimeSpan? Length { get; } = length;
 
-    /// <summary>The picture read from a library file; null when it can't be read.</summary>
+    /// <summary>A recording: it plays in the video player and has no editor, pin or text.</summary>
+    public bool IsVideo => CaptureLibrary.IsVideo(Path);
+
+    /// <summary>The picture read from a library file (a recording's thumbnail); null when it can't be read.</summary>
     public static CaptureItem? Load(string path)
     {
+        if (CaptureLibrary.IsVideo(path))
+        {
+            if (File.Exists(path) && VideoThumbnails.Read(path) is { } frame) return new CaptureItem(path, frame);
+            Log.Warn("A recording's thumbnail could not be read");
+            return null;
+        }
         try
         {
             using var stream = File.OpenRead(path);
@@ -60,6 +73,7 @@ internal sealed class CaptureActions(CaptureStore store)
 
     public bool Copy(CaptureItem item)
     {
+        if (item.IsVideo) return CopyVideo(item.Path);
         byte[] png;
         try
         {
@@ -71,6 +85,21 @@ internal sealed class CaptureActions(CaptureStore store)
         }
         bool copied = FrameImages.Copy(item.Image, png);
         Toast.Show(copied ? Strings.CaptureCopied : Strings.CopyFailed);
+        return copied;
+    }
+
+    /// <summary>A recording goes onto the clipboard as its file: it pastes into File Explorer and chats.</summary>
+    public static bool CopyVideo(string path)
+    {
+        if (!File.Exists(path))
+        {
+            Toast.Show(Strings.CaptureFileMissing);
+            return false;
+        }
+        var data = new System.Windows.DataObject();
+        data.SetData(System.Windows.DataFormats.FileDrop, new[] { path });
+        bool copied = Clipboards.Set(data);
+        Toast.Show(copied ? Strings.VideoCopied : Strings.CopyFailed);
         return copied;
     }
 
