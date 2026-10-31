@@ -26,7 +26,9 @@ public sealed record RecordSource(nint Handle, bool IsWindow, PixelRect Bounds, 
     public static RecordSource Window(nint window, PixelRect bounds) => new(window, true, bounds, null);
 }
 
-public sealed record RecordOptions(int Fps, bool Cursor, bool Borderless);
+/// <param name="AppSound">Other programs' sound mixed in (it can be switched on later either way).</param>
+/// <param name="Mic">The microphone mixed in.</param>
+public sealed record RecordOptions(int Fps, bool Cursor, bool Borderless, bool AppSound = false, bool Mic = false);
 
 /// <summary>A finished recording: its file, length, frame counts and its last picture.</summary>
 public sealed record RecordingResult(string Path, TimeSpan Length, int Frames, int Dropped, bool Hardware, ScreenFrame? LastFrame);
@@ -41,16 +43,22 @@ public sealed class RecordingException(RecordingException.Reason reason, string 
 }
 
 /// <summary>
-/// Screen recording (Orbit: Recorder.swift and RecordingWriter.swift, video only for now).
+/// Screen recording (Orbit: Recorder.swift and RecordingWriter.swift), with one sound track that
+/// mixes app sound and the microphone (<see cref="SoundRecorder"/>).
 /// Windows.Graphics.Capture delivers frames on a free-threaded pool; each kept frame is copied
 /// (and cut to the area) into a new texture there and the capture frame is given back at once.
-/// The copies go through a short queue to one writer thread, which owns the MP4 writer; when the
-/// encoder falls behind, new frames are dropped rather than queued. Docs: docs/plan/06-recording.md.
+/// The copies go through a short queue to one writer thread, which owns the MP4 writer and also
+/// writes the sound chunks; when the encoder falls behind, new frames are dropped rather than queued. Docs: docs/plan/06-recording.md.
 /// </summary>
 public sealed class ScreenRecorder
 {
     private const int QueueLength = 3;
     private static readonly TimeSpan FinishTimeout = TimeSpan.FromSeconds(10);
+    private const int QueueWait = 20; // ms
+    /// <summary>A still screen's frame is written again after this long (100 ns ticks)…</summary>
+    private const long RepeatAfter = TimeSpan.TicksPerSecond;
+    /// <summary>…at a time this far behind now, so a frame still being copied comes after it.</summary>
+    private const long RepeatLag = TimeSpan.TicksPerMillisecond * 100;
 
     private readonly object _gate = new();
     private readonly BlockingCollection<Pending> _queue = new(QueueLength);
@@ -70,6 +78,8 @@ public sealed class ScreenRecorder
     private GraphicsCaptureSession _session = null!;
     private SizeInt32 _poolSize;
     private Mp4Writer _writer = null!;
+    private SoundRecorder _sound = null!;
+    private long _soundWritten; // frames of sound in the file, from the first frame (writer thread)
     private Thread _thread = null!;
     private bool _stopping;
     private bool _discard;
@@ -79,6 +89,26 @@ public sealed class ScreenRecorder
 
     /// <summary>The captured window was closed (or the monitor went away): stop and keep what was recorded.</summary>
     public event Action? SourceClosed;
+
+    /// <summary>The microphone could not be opened when it was switched on (raised on the sound thread).</summary>
+    public event Action<MicState>? MicFailed;
+
+    /// <summary>Other programs' sound in the mix; can be switched while recording.</summary>
+    public bool AppSound
+    {
+        get => _sound.AppSound;
+        set => _sound.AppSound = value;
+    }
+
+    /// <summary>The microphone in the mix; can be switched while recording.</summary>
+    public bool Microphone
+    {
+        get => _sound.Microphone;
+        set => _sound.Microphone = value;
+    }
+
+    /// <summary>Whether the microphone can be switched on.</summary>
+    public MicState MicState => _sound.Mic;
 
     public string Path => _path;
     public PixelRect Bounds => _bounds;
@@ -145,6 +175,8 @@ public sealed class ScreenRecorder
         _device.GetImmediateContext(out _context);
         _winrtDevice = CaptureInterop.Wrap(_device);
         _writer = Mp4Writer.Create(_path, _device, _width, _height, options.Fps);
+        _sound = SoundRecorder.Open(options.AppSound, options.Mic);
+        _sound.MicFailed += state => MicFailed?.Invoke(state);
 
         _poolSize = _item.Size;
         _pool = Direct3D11CaptureFramePool.CreateFreeThreaded(_winrtDevice, DirectXPixelFormat.B8G8R8A8UIntNormalized, 2, _poolSize);
@@ -342,30 +374,41 @@ public sealed class ScreenRecorder
         try
         {
             // The loop never throws: it must keep taking (and releasing) frames until Stop
-            // completes the queue, even after the writer failed.
-            foreach (var next in _queue.GetConsumingEnumerable())
+            // completes the queue, even after the writer failed. Between frames it writes the sound
+            // that has come in, and it writes a still screen's frame again every second so the video
+            // keeps up with the sound in the file.
+            while (true)
             {
-                if (failure is not null || !clock.Accept(next.Time, out var write))
+                if (_queue.TryTake(out var next, QueueWait))
                 {
-                    ComObjects.Release(next.Texture);
-                    continue;
+                    if (failure is not null || !clock.Accept(next.Time, out var write))
+                    {
+                        ComObjects.Release(next.Texture);
+                        continue;
+                    }
+                    if (write is { } w && held is { } h)
+                    {
+                        failure = Try(() => _writer.Write(h.Texture, w.Start, w.Duration));
+                        if (failure is null) frames++;
+                        ComObjects.Release(h.Texture);
+                    }
+                    held = next;
                 }
-                if (write is { } w && held is { } h)
+                else if (_queue.IsCompleted) break;
+                else if (failure is null && held is { } h && clock.Origin is { } origin)
                 {
-                    try
+                    long now = SampleClock.Now() - RepeatLag;
+                    if (now - origin - clock.Held >= RepeatAfter && clock.Accept(now, out var again) && again is { } a)
                     {
-                        _writer.Write(h.Texture, w.Start, w.Duration);
-                        frames++;
+                        failure = Try(() => _writer.Write(h.Texture, a.Start, a.Duration));
+                        if (failure is null) frames++;
                     }
-                    catch (Exception e) when (e is COMException or InvalidCastException)
-                    {
-                        failure = e;
-                    }
-                    ComObjects.Release(h.Texture);
                 }
-                held = next;
+                if (failure is null) failure = Try(() => WriteSound(clock, null));
+                else while (_sound.Chunks.TryDequeue(out _)) { } // nothing is written any more
             }
 
+            _sound.Stop(_stopAt);
             if (_discard || failure is not null)
             {
                 if (failure is not null) Log.Error("Recording failed while writing", failure);
@@ -374,6 +417,9 @@ public sealed class ScreenRecorder
             {
                 _writer.Write(h.Texture, last.Start, last.Duration);
                 frames++;
+                long end = last.Start + last.Duration;
+                WriteSound(clock, end);
+                WriteSilence(AudioTimeline.Frames(end));
                 var picture = ReadBack(h.Texture);
                 _writer.Finish();
                 result = new RecordingResult(_path, SampleClock.Length(last), frames, _dropped, _writer.Hardware, picture);
@@ -399,6 +445,58 @@ public sealed class ScreenRecorder
             _done.TrySetResult(result);
         if (result is not null)
             Log.Info($"Recording saved: {result.Length.TotalSeconds:0.0} s, {result.Frames} frames, {result.Dropped} dropped");
+    }
+
+    private static Exception? Try(Action write)
+    {
+        try
+        {
+            write();
+            return null;
+        }
+        catch (Exception e) when (e is COMException or InvalidCastException)
+        {
+            return e;
+        }
+    }
+
+    /// <summary>
+    /// The sound chunks that have come in, cut to the video (from its first frame, up to
+    /// <paramref name="end"/> ticks from it when stopping). Chunks follow each other without gaps.
+    /// </summary>
+    private void WriteSound(SampleClock clock, long? end)
+    {
+        if (clock.Origin is not { } origin) return;
+        long zero = Math.Max(0, AudioTimeline.Frames(origin - _sound.Start));
+        long stop = end is { } e ? zero + AudioTimeline.Frames(e) : long.MaxValue;
+        while (_sound.Chunks.TryDequeue(out var chunk))
+        {
+            int frames = chunk.Pcm.Length / AudioTimeline.Channels;
+            if (!AudioCut.Fit(chunk.Position, frames, zero, stop, out int skip, out int count, out long start, out long duration)) continue;
+            _writer.WriteAudio(chunk.Pcm, skip, count, start, duration);
+            _soundWritten = Math.Max(_soundWritten, chunk.Position + skip + count - zero);
+        }
+        // The sound thread died mid-recording: silence keeps the track going, as far behind now as the sound was.
+        if (end is null && !_sound.Running && _sound.Chunks.IsEmpty)
+            WriteSilence(AudioTimeline.Frames(SampleClock.Now() - origin - SoundLag));
+    }
+
+    /// <summary>How far behind now the sound thread hands on its mix, with some slack (100 ns ticks).</summary>
+    private const long SoundLag = TimeSpan.TicksPerMillisecond * 200;
+
+    /// <summary>Silence from where the sound ended to <paramref name="end"/> frames (at most a few seconds: the sound thread hands on silence too).</summary>
+    private void WriteSilence(long end)
+    {
+        const int piece = AudioTimeline.Rate;
+        var zeros = new short[piece * AudioTimeline.Channels];
+        end = Math.Min(end, _soundWritten + piece * 5L);
+        while (_soundWritten < end)
+        {
+            int count = (int)Math.Min(piece, end - _soundWritten);
+            long start = AudioTimeline.Ticks(_soundWritten);
+            _writer.WriteAudio(zeros, 0, count, start, AudioTimeline.Ticks(_soundWritten + count) - start);
+            _soundWritten += count;
+        }
     }
 
     /// <summary>The texture's pixels, for the preview card.</summary>
@@ -441,6 +539,7 @@ public sealed class ScreenRecorder
         _closed = true;
         try { _pool?.Dispose(); } catch (Exception e) when (e is COMException or ObjectDisposedException) { }
         try { _session?.Dispose(); } catch (Exception e) when (e is COMException or ObjectDisposedException) { }
+        _sound?.Dispose();
         _writer?.Dispose();
         _writer = null!;
         if (_black is not null) Marshal.ReleaseComObject(_black);

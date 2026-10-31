@@ -12,7 +12,7 @@ using Orbit.Core.Settings;
 namespace Orbit.App.Features;
 
 /// <summary>
-/// Screen recording (Orbit: Recorder.swift), video only for now: Record Area and Record Window pick
+/// Screen recording (Orbit: Recorder.swift), with app sound and the microphone mixed into one track: Record Area and Record Window pick
 /// over the frozen monitors as a capture does, Record Screen takes the monitor under the pointer.
 /// Any Record action while recording stops it. The file goes into the capture library and shows as
 /// a preview card. No default shortcut, as in Orbit. Docs: docs/plan/06-recording.md.
@@ -60,8 +60,10 @@ internal sealed class RecordingFeature : IFeature
             }
             if (await PickAsync(mode, capture) is not ({ } source, { } monitor)) return;
 
-            var options = new RecordOptions(services.Preferences.Get<int>(Pref.RecordFps) >= 60 ? 60 : 30,
-                services.Preferences.Get<bool>(Pref.RecordCursor), capture.Borderless);
+            var prefs = services.Preferences;
+            bool wantMic = prefs.Get<bool>(Pref.RecordMic);
+            var options = new RecordOptions(prefs.Get<int>(Pref.RecordFps) >= 60 ? 60 : 30,
+                prefs.Get<bool>(Pref.RecordCursor), capture.Borderless, prefs.Get<bool>(Pref.RecordAppSound), wantMic);
             var draft = cards.Actions.Store.RecordingDraft(DateTime.Now);
             var recorder = await ScreenRecorder.StartAsync(source, options, draft);
             if (_disposed)
@@ -78,8 +80,29 @@ internal sealed class RecordingFeature : IFeature
                 Toast.Show(Strings.RecordingWindowClosed);
                 _ = StopAsync();
             });
+            recorder.MicFailed += state => Application.Current.Dispatcher.BeginInvoke(() =>
+            {
+                if (_recorder != recorder) return;
+                MicToast(state);
+                _chrome?.Refresh();
+            });
+            if (wantMic && recorder.MicState != MicState.Ready) MicToast(recorder.MicState);
+            var sound = new SoundSwitches(
+                () => recorder.AppSound,
+                on =>
+                {
+                    recorder.AppSound = on;
+                    prefs.Set(Pref.RecordAppSound, on);
+                },
+                () => recorder.Microphone,
+                on =>
+                {
+                    recorder.Microphone = on;
+                    prefs.Set(Pref.RecordMic, on);
+                },
+                () => recorder.MicState != MicState.Missing);
             _chrome = RecordingChrome.Show(monitor, source.Bounds, source.IsWindow ? null : source.Bounds,
-                () => _ = StopAsync(), () => _ = DiscardAsync());
+                () => _ = StopAsync(), () => _ = DiscardAsync(), sound);
         }
         catch (RecordingException e)
         {
@@ -107,6 +130,14 @@ internal sealed class RecordingFeature : IFeature
             _busy = false;
         }
     }
+
+    /// <summary>Why the microphone is not in the recording (Orbit: "Microphone access is off").</summary>
+    private static void MicToast(MicState state) => Toast.Show(Strings.RecordMicUnavailable, state switch
+    {
+        MicState.Denied => Strings.RecordMicDenied,
+        MicState.Missing => Strings.RecordMicMissing,
+        _ => null,
+    });
 
     /// <summary>What to record and the monitor it is on; null when the selection was cancelled.</summary>
     private static async Task<(RecordSource Source, MonitorInfo Monitor)?> PickAsync(Mode mode, WgcCapture capture)

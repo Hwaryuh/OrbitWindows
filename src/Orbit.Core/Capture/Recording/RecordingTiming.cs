@@ -62,6 +62,12 @@ public sealed class SampleClock
 
     public bool HasFrame => _origin is not null;
 
+    /// <summary>The first frame's time on the capture clock: the video's zero.</summary>
+    public long? Origin => _origin;
+
+    /// <summary>The held frame's start (from the origin).</summary>
+    public long Held => _held;
+
     /// <summary>
     /// Takes a new frame. False when it is not later than the held one (it is dropped). Otherwise
     /// <paramref name="write"/> is the held frame's start and length, or null for the first frame.

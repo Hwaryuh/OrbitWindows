@@ -171,20 +171,7 @@ public sealed class AudioMixer
         return any;
     }
 
-    private static IMMDevice? Output()
-    {
-        try
-        {
-            var enumerator = (IMMDeviceEnumerator)new MMDeviceEnumerator();
-            enumerator.GetDefaultAudioEndpoint(EDataFlow.eRender, ERole.eMultimedia, out var device);
-            return device;
-        }
-        catch (COMException)
-        {
-            // No output device (all unplugged or disabled).
-            return null;
-        }
-    }
+    private static IMMDevice? Output() => AudioDevices.Default(EDataFlow.eRender, ERole.eMultimedia);
 
     private static void WithEndpoint(Action<IAudioEndpointVolume> change)
     {

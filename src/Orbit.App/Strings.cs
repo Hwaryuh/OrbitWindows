@@ -93,6 +93,16 @@ internal static class Strings
     public static string RecordFrameRate => T("초당 프레임", "Frames per second");
     public static string RecordFrameRateDetail => T("60은 움직임이 부드럽고, 30은 파일이 작습니다.", "60 moves more smoothly; 30 makes smaller files.");
     public static string RecordShowCursor => T("마우스 포인터 보이기", "Show the pointer");
+    public static string RecordAppSound => T("앱 소리 녹음", "Record app sound");
+    public static string RecordMic => T("마이크 녹음", "Record microphone");
+    public static string RecordSoundDetail => T("녹화 중에도 언제든 켜고 끌 수 있습니다.", "Switch it on or off any time while recording.");
+    public static string RecordAppSoundOff => T("앱 소리 끄기", "Mute app sound");
+    public static string RecordAppSoundOn => T("앱 소리 켜기", "Record app sound");
+    public static string RecordMicOff => T("마이크 끄기", "Mute microphone");
+    public static string RecordMicOn => T("마이크 켜기", "Unmute microphone");
+    public static string RecordMicUnavailable => T("마이크를 쓸 수 없습니다.", "The microphone can't be used.");
+    public static string RecordMicDenied => T("설정 > 개인 정보 > 마이크에서 데스크톱 앱의 마이크 사용을 켜세요.", "Turn on microphone access for desktop apps in Settings > Privacy > Microphone.");
+    public static string RecordMicMissing => T("연결된 마이크가 없습니다.", "No microphone is connected.");
 
     // Capture editor
     public static string EditorTitle => T("캡처 편집", "Annotate");

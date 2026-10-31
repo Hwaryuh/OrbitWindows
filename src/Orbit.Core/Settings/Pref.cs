@@ -26,6 +26,10 @@ public static class Pref
     public const string RecordFps = "record.fps";
     /// <summary>The pointer is in recordings (Orbit: record.cursor).</summary>
     public const string RecordCursor = "record.cursor";
+    /// <summary>Other programs' sound in recordings (Orbit: record.systemAudio).</summary>
+    public const string RecordAppSound = "record.systemAudio";
+    /// <summary>The microphone in recordings (Orbit: record.mic).</summary>
+    public const string RecordMic = "record.mic";
     public const string Onboarded = "app.onboarded";
     public const string LaunchAtSignIn = "app.launchAtSignIn";
     public const string AwakeDisplay = "awake.keepDisplayOn";
@@ -92,6 +96,8 @@ public static class Pref
         [TimedCaptureSeconds] = 5,
         [RecordFps] = 60,
         [RecordCursor] = true,
+        [RecordAppSound] = false,
+        [RecordMic] = false,
         [LaunchAtSignIn] = true,
         [AwakeDisplay] = true,
         [AwakeBatteryFloor] = 20,

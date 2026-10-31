@@ -13,11 +13,15 @@ namespace Orbit.App.Features.Capture;
 
 /// <summary>
 /// What shows while recording (Orbit: RecordingChrome.swift): a small bar with a red dot, the time,
-/// stop and discard, and a dashed frame around a recorded area. Both stay out of the video.
+/// the app-sound and microphone switches, stop and discard, and a dashed frame around a recorded
+/// area. Both stay out of the video.
 /// </summary>
 internal sealed class RecordingChrome
 {
-    private const double BarWidth = 168, BarHeight = 40, Gap = 12;
+    private const double BaseWidth = 168, ButtonWidth = 34, BarHeight = 40, Gap = 12;
+
+    /// <summary>The recording red (Orbit's): the dot, the area's frame and a source that is off.</summary>
+    private static readonly Brush RecordRed = new SolidColorBrush(Color.FromRgb(255, 69, 58)).Frozen();
 
     private readonly ControlBar _bar;
     private readonly AreaFrame? _frame;
@@ -30,10 +34,11 @@ internal sealed class RecordingChrome
 
     /// <param name="area">What is recorded, in physical pixels; null for a window (it may move).</param>
     /// <param name="anchor">Where the bar goes: below this rectangle, or above it, or inside at the bottom.</param>
-    public static RecordingChrome Show(MonitorInfo monitor, PixelRect anchor, PixelRect? area, Action stop, Action discard)
+    /// <param name="sound">The sound switches: app sound always, the microphone when <see cref="SoundSwitches.HasMic"/>.</param>
+    public static RecordingChrome Show(MonitorInfo monitor, PixelRect anchor, PixelRect? area, Action stop, Action discard, SoundSwitches sound)
     {
-        var bar = new ControlBar(stop, discard);
-        bar.ShowAt(BarPlace(monitor, anchor));
+        var bar = new ControlBar(stop, discard, sound);
+        bar.ShowAt(BarPlace(monitor, anchor, bar.BarWidth));
         bar.ExcludeFromCapture();
         AreaFrame? frame = null;
         if (area is { } a && a != monitor.Bounds)
@@ -52,11 +57,14 @@ internal sealed class RecordingChrome
         _frame?.Close();
     }
 
+    /// <summary>The switches show the state again (after the microphone could not be opened).</summary>
+    public void Refresh() => _bar.Refresh();
+
     /// <summary>Below the anchor when there is room on its monitor, else above it, else inside at the bottom.</summary>
-    internal static PixelRect BarPlace(MonitorInfo monitor, PixelRect anchor)
+    internal static PixelRect BarPlace(MonitorInfo monitor, PixelRect anchor, double barWidth = BaseWidth)
     {
         double scale = monitor.Scale;
-        int width = (int)Math.Round(BarWidth * scale), height = (int)Math.Round(BarHeight * scale), gap = (int)Math.Round(Gap * scale);
+        int width = (int)Math.Round(barWidth * scale), height = (int)Math.Round(BarHeight * scale), gap = (int)Math.Round(Gap * scale);
         var work = monitor.WorkArea;
         int x = Math.Clamp(anchor.X + (anchor.Width - width) / 2, work.X, work.Right - width);
         int y;
@@ -71,17 +79,39 @@ internal sealed class RecordingChrome
         private readonly Stopwatch _clock = Stopwatch.StartNew();
         private readonly DispatcherTimer _timer;
         private readonly TextBlock _time;
+        private readonly SoundSwitches _sound;
+        private readonly Button _app;
+        private readonly Button? _mic;
 
-        public ControlBar(Action stop, Action discard) : base(activating: false, transparent: true, clickThrough: false)
+        public double BarWidth { get; }
+
+        public ControlBar(Action stop, Action discard, SoundSwitches sound) : base(activating: false, transparent: true, clickThrough: false)
         {
+            _sound = sound;
+            BarWidth = BaseWidth + ButtonWidth * (sound.HasMic() ? 2 : 1);
             _time = new TextBlock
             {
                 Text = CaptureCard.Clock(TimeSpan.Zero), FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = Brushes.White,
                 VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0), MinWidth = 44,
             };
             var row = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(14, 0, 8, 0) };
-            row.Children.Add(new Ellipse { Width = 10, Height = 10, Fill = new SolidColorBrush(Color.FromRgb(255, 69, 58)), VerticalAlignment = VerticalAlignment.Center });
+            row.Children.Add(new Ellipse { Width = 10, Height = 10, Fill = RecordRed, VerticalAlignment = VerticalAlignment.Center });
             row.Children.Add(_time);
+            _app = Button(Glyphs.Volume, Strings.RecordAppSoundOff, () =>
+            {
+                sound.SetApp(!sound.App());
+                Refresh();
+            });
+            row.Children.Add(_app);
+            if (sound.HasMic())
+            {
+                _mic = Button(Glyphs.Microphone, Strings.RecordMicOff, () =>
+                {
+                    sound.SetMic(!sound.Mic());
+                    Refresh();
+                });
+                row.Children.Add(_mic);
+            }
             row.Children.Add(Button("", Strings.RecordStop, stop));
             row.Children.Add(Button("", Strings.RecordDiscard, discard));
             Content = new Border
@@ -94,6 +124,25 @@ internal sealed class RecordingChrome
             _timer.Tick += (_, _) => _time.Text = CaptureCard.Clock(_clock.Elapsed);
             _timer.Start();
             Closed += (_, _) => _timer.Stop();
+            Refresh();
+        }
+
+        /// <summary>Each switch shows what it would do; a source that is off is drawn in red, as Orbit's accent.</summary>
+        public void Refresh()
+        {
+            Show(_app, _sound.App(), Glyphs.Volume, Glyphs.Mute, Strings.RecordAppSoundOff, Strings.RecordAppSoundOn);
+            // A microphone that could not be opened stays as a switch: pressing it again tries again.
+            if (_mic is not null) Show(_mic, _sound.Mic(), Glyphs.Microphone, Glyphs.MicOff, Strings.RecordMicOff, Strings.RecordMicOn);
+        }
+
+        private static void Show(Button button, bool on, string onGlyph, string offGlyph, string onHelp, string offHelp)
+        {
+            var text = (TextBlock)button.Content;
+            text.Text = on ? onGlyph : offGlyph;
+            text.Foreground = on ? Brushes.White : RecordRed;
+            string help = on ? onHelp : offHelp;
+            button.ToolTip = help;
+            System.Windows.Automation.AutomationProperties.SetName(button, help);
         }
 
         private static Button Button(string glyph, string help, Action click)
@@ -121,9 +170,12 @@ internal sealed class RecordingChrome
         {
             Content = new Rectangle
             {
-                Stroke = new SolidColorBrush(Color.FromRgb(255, 69, 58)), StrokeThickness = 1.5, StrokeDashArray = [4, 3],
+                Stroke = RecordRed, StrokeThickness = 1.5, StrokeDashArray = [4, 3],
                 Margin = new Thickness(1 / scale),
             };
         }
     }
 }
+
+/// <summary>What the bar's sound switches read and change.</summary>
+internal sealed record SoundSwitches(Func<bool> App, Action<bool> SetApp, Func<bool> Mic, Action<bool> SetMic, Func<bool> HasMic);

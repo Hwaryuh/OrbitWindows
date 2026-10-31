@@ -13,6 +13,10 @@ internal static class Glyphs
 
     public const string Search = "\uE721";
     public const string Settings = "\uE713";
+    public const string Volume = "\uE767";
+    public const string Mute = "\uE74F";
+    public const string Microphone = "\uE720";
+    public const string MicOff = "\uEC54";
     public const string Calculator = "\uE8EF";
     public const string Globe = "\uE774";
     public const string Window = "\uE737";

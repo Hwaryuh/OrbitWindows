@@ -6,7 +6,7 @@ using Windows.Win32.Media.MediaFoundation;
 namespace Orbit.Core.Capture.Recording;
 
 /// <summary>
-/// H.264 in MP4 through Media Foundation's sink writer, fed with BGRA D3D11 textures (Orbit:
+/// H.264 and an AAC sound track in MP4 through Media Foundation's sink writer, fed with BGRA D3D11 textures and 16-bit PCM (Orbit:
 /// RecordingWriter.swift, which writes HEVC; HEVC on Windows needs a paid extension). The writer
 /// shares the recording's device, so frames stay on the GPU: the sink writer adds the video
 /// processor that turns BGRA into the encoder's NV12. Not thread-safe; create and use it on one MTA
@@ -18,18 +18,19 @@ internal sealed unsafe class Mp4Writer : IDisposable
 
     private readonly IMFSinkWriter _writer;
     private readonly IMFDXGIDeviceManager _manager;
-    private readonly uint _stream;
+    private readonly uint _stream, _audio;
     private bool _finished;
 
     public int Width { get; }
     public int Height { get; }
     public bool Hardware { get; }
 
-    private Mp4Writer(IMFSinkWriter writer, IMFDXGIDeviceManager manager, uint stream, int width, int height, bool hardware)
+    private Mp4Writer(IMFSinkWriter writer, IMFDXGIDeviceManager manager, uint stream, uint audio, int width, int height, bool hardware)
     {
         _writer = writer;
         _manager = manager;
         _stream = stream;
+        _audio = audio;
         Width = width;
         Height = height;
         Hardware = hardware;
@@ -100,9 +101,10 @@ internal sealed unsafe class Mp4Writer : IDisposable
             // Positive: the first row is the top one, as in a D3D texture.
             input.SetUINT32(PInvoke.MF_MT_DEFAULT_STRIDE, (uint)(width * 4));
             writer.SetInputMediaType(stream, input, null);
+            uint audio = AddAudio(writer);
             writer.BeginWriting();
 
-            var result = new Mp4Writer(writer, manager, stream, width, height, hardware);
+            var result = new Mp4Writer(writer, manager, stream, audio, width, height, hardware);
             writer = null;
             return result;
         }
@@ -120,11 +122,71 @@ internal sealed unsafe class Mp4Writer : IDisposable
         }
     }
 
+    /// <summary>The sound track: AAC, 48 kHz stereo at 160 kbit/s, fed with 16-bit PCM.</summary>
+    private static uint AddAudio(IMFSinkWriter writer)
+    {
+        const int channels = AudioTimeline.Channels, rate = AudioTimeline.Rate;
+        IMFMediaType? output = null, input = null;
+        try
+        {
+            PInvoke.MFCreateMediaType(out output).ThrowOnFailure();
+            output.SetGUID(PInvoke.MF_MT_MAJOR_TYPE, PInvoke.MFMediaType_Audio);
+            output.SetGUID(PInvoke.MF_MT_SUBTYPE, PInvoke.MFAudioFormat_AAC);
+            output.SetUINT32(PInvoke.MF_MT_AUDIO_BITS_PER_SAMPLE, 16);
+            output.SetUINT32(PInvoke.MF_MT_AUDIO_SAMPLES_PER_SECOND, rate);
+            output.SetUINT32(PInvoke.MF_MT_AUDIO_NUM_CHANNELS, channels);
+            output.SetUINT32(PInvoke.MF_MT_AUDIO_AVG_BYTES_PER_SECOND, 160_000 / 8);
+            writer.AddStream(output, out uint stream);
+
+            PInvoke.MFCreateMediaType(out input).ThrowOnFailure();
+            input.SetGUID(PInvoke.MF_MT_MAJOR_TYPE, PInvoke.MFMediaType_Audio);
+            input.SetGUID(PInvoke.MF_MT_SUBTYPE, PInvoke.MFAudioFormat_PCM);
+            input.SetUINT32(PInvoke.MF_MT_AUDIO_BITS_PER_SAMPLE, 16);
+            input.SetUINT32(PInvoke.MF_MT_AUDIO_SAMPLES_PER_SECOND, rate);
+            input.SetUINT32(PInvoke.MF_MT_AUDIO_NUM_CHANNELS, channels);
+            input.SetUINT32(PInvoke.MF_MT_AUDIO_BLOCK_ALIGNMENT, channels * 2);
+            input.SetUINT32(PInvoke.MF_MT_AUDIO_AVG_BYTES_PER_SECOND, rate * channels * 2);
+            writer.SetInputMediaType(stream, input, null);
+            return stream;
+        }
+        finally
+        {
+            ComObjects.Release(output);
+            ComObjects.Release(input);
+        }
+    }
+
+    /// <summary>Sound: <paramref name="count"/> stereo frames of <paramref name="pcm"/> from frame <paramref name="skip"/>.</summary>
+    public void WriteAudio(short[] pcm, int skip, int count, long start, long duration)
+    {
+        uint bytes = (uint)(count * AudioTimeline.Channels * sizeof(short));
+        IMFMediaBuffer? buffer = null;
+        try
+        {
+            PInvoke.MFCreateMemoryBuffer(bytes, out buffer).ThrowOnFailure();
+            byte* data;
+            buffer.Lock(&data, null, null);
+            try
+            {
+                MemoryMarshal.AsBytes(pcm.AsSpan(skip * AudioTimeline.Channels, count * AudioTimeline.Channels)).CopyTo(new Span<byte>(data, (int)bytes));
+            }
+            finally
+            {
+                buffer.Unlock();
+            }
+            buffer.SetCurrentLength(bytes);
+            WriteBuffer(_audio, buffer, start, duration);
+        }
+        finally
+        {
+            ComObjects.Release(buffer);
+        }
+    }
+
     /// <summary>One frame. The texture must not change afterwards: the encoder may still read it.</summary>
     public void Write(ID3D11Texture2D texture, long start, long duration)
     {
         IMFMediaBuffer? buffer = null;
-        IMFSample? sample = null;
         try
         {
             var iid = typeof(ID3D11Texture2D).GUID;
@@ -132,16 +194,29 @@ internal sealed unsafe class Mp4Writer : IDisposable
             uint length;
             ((IMF2DBuffer)buffer).GetContiguousLength(out length);
             buffer.SetCurrentLength(length);
+            WriteBuffer(_stream, buffer, start, duration);
+        }
+        finally
+        {
+            ComObjects.Release(buffer);
+        }
+    }
+
+    /// <summary>One buffer as a sample of <paramref name="stream"/> at <paramref name="start"/> for <paramref name="duration"/> ticks.</summary>
+    private void WriteBuffer(uint stream, IMFMediaBuffer buffer, long start, long duration)
+    {
+        IMFSample? sample = null;
+        try
+        {
             PInvoke.MFCreateSample(out sample).ThrowOnFailure();
             sample.AddBuffer(buffer);
             sample.SetSampleTime(start);
             sample.SetSampleDuration(duration);
-            _writer.WriteSample(_stream, sample);
+            _writer.WriteSample(stream, sample);
         }
         finally
         {
             ComObjects.Release(sample);
-            ComObjects.Release(buffer);
         }
     }
 

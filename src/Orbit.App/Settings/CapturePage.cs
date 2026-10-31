@@ -43,7 +43,9 @@ internal sealed class CapturePage : StackPanel
             _parts.Row(Strings.RecordStartRow, null, RecordButtons()),
             _parts.Row(Strings.RecordFrameRate, Strings.RecordFrameRateDetail, _parts.Chips<int>(
                 [(60, "60"), (30, "30")], () => _preferences.Get<int>(Pref.RecordFps), v => _preferences.Set(Pref.RecordFps, v))),
-            _parts.Row(Strings.RecordShowCursor, null, BoolToggle(Pref.RecordCursor))));
+            _parts.Row(Strings.RecordShowCursor, null, BoolToggle(Pref.RecordCursor)),
+            _parts.Row(Strings.RecordAppSound, Strings.RecordSoundDetail, BoolToggle(Pref.RecordAppSound)),
+            _parts.Row(Strings.RecordMic, Strings.RecordSoundDetail, BoolToggle(Pref.RecordMic))));
         Children.Add(_parts.Group(Strings.CaptureSaving, null, SaveFolderRow()));
         Children.Add(_parts.Group(Strings.CaptureWhileSelecting, null,
             _parts.Row(Strings.CaptureShowKeyHints, Strings.CaptureShowKeyHintsDetail, BoolToggle(Pref.CaptureKeyHints)),
