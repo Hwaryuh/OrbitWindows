@@ -88,7 +88,10 @@ internal sealed class CaptureActions(CaptureStore store)
         return copied;
     }
 
-    /// <summary>A recording goes onto the clipboard as its file: it pastes into File Explorer and chats.</summary>
+    /// <summary>
+    /// A recording goes onto the clipboard as its file, which pastes into File Explorer and chats, and
+    /// as its quoted path, which is what a terminal or a text box takes (they read only text).
+    /// </summary>
     public static bool CopyVideo(string path)
     {
         if (!File.Exists(path))
@@ -98,6 +101,7 @@ internal sealed class CaptureActions(CaptureStore store)
         }
         var data = new System.Windows.DataObject();
         data.SetData(System.Windows.DataFormats.FileDrop, new[] { path });
+        data.SetData(System.Windows.DataFormats.UnicodeText, $"\"{path}\"");
         bool copied = Clipboards.Set(data);
         Toast.Show(copied ? Strings.VideoCopied : Strings.CopyFailed);
         return copied;
