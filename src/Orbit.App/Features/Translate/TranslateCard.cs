@@ -393,12 +393,12 @@ internal sealed class TranslateCard : OverlayWindow
             // footer, shadow), measured rather than guessed, so a long result scrolls inside the
             // card instead of pushing the footer off the screen.
             box.MaxHeight = double.PositiveInfinity;
-            card.Measure(space);
+            MeasureAfresh(card, space);
             double rest = card.DesiredSize.Height - box.DesiredSize.Height;
             // At least two lines show even on a very short work area.
             box.MaxHeight = Math.Max(FontSizePref * 3, work.Height / s - rest);
         }
-        card.Measure(space);
+        MeasureAfresh(card, space);
         int w = (int)Math.Ceiling((CardWidth + Shadow * 2) * s), h = (int)Math.Ceiling(card.DesiredSize.Height * s);
         h = Math.Min(h, work.Height);
         var (_, py) = Monitors.Cursor();
@@ -416,6 +416,24 @@ internal sealed class TranslateCard : OverlayWindow
             top = Math.Clamp(placed.Y, work.Y, Math.Max(work.Y, work.Bottom - h));
         }
         Place(new PixelRect(left, top, w, h));
+    }
+
+    /// <summary>
+    /// Measures the card as it is now. A plain Measure call returns the old size when the card was
+    /// last measured with the same space, even if something inside it changed (WPF tells the parents
+    /// only in its own layout pass): the card kept the height of the placeholder bars and cut the
+    /// result off. So every element in it is marked for measuring first.
+    /// </summary>
+    private static void MeasureAfresh(FrameworkElement card, Size space)
+    {
+        Invalidate(card);
+        card.Measure(space);
+
+        static void Invalidate(DependencyObject element)
+        {
+            if (element is UIElement e) e.InvalidateMeasure();
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(element); i++) Invalidate(VisualTreeHelper.GetChild(element, i));
+        }
     }
 
     private PixelRect CurrentRect()
