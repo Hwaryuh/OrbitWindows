@@ -7,7 +7,7 @@ public static class AppPaths
     public static string LocalFolder(string name) =>
         Create(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Orbit", name));
 
-    /// <summary>%APPDATA%\Orbit, created if missing: settings and data that follow the user (as Araso's %APPDATA%\Araso).</summary>
+    /// <summary>%APPDATA%\Orbit, created if missing: settings and data that follow the user.</summary>
     public static string RoamingFolder() =>
         Create(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Orbit"));
 

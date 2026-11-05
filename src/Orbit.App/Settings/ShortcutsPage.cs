@@ -107,7 +107,7 @@ internal sealed class ShortcutsPage : StackPanel
         {
             Say(key, problem switch
             {
-                ShortcutProblem.ArasoKey => Strings.ShortcutArasoKey,
+                ShortcutProblem.InputKey => Strings.ShortcutInputKey,
                 ShortcutProblem.Reserved => Strings.ShortcutReserved,
                 _ => Strings.ShortcutNeedsModifier,
             });

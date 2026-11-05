@@ -18,12 +18,9 @@ internal static class OverlapDetector
     public static Task<OverlapInput> DetectAsync() => Task.Run(() =>
     {
         string local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        string roaming = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         var run = ReadSmall(Path.Combine(local, "Microsoft", "PowerToys", "PowerToys Run", "settings.json"));
-        var araso = ReadSmall(Path.Combine(roaming, "Araso", "apps.json"));
         return new OverlapInput(RunningPrograms(), InstalledPrograms(),
-            run is null ? null : OverlapScan.ParsePowerToysRun(run),
-            araso is not null && OverlapScan.ArasoTakesAltSpace(araso));
+            run is null ? null : OverlapScan.ParsePowerToysRun(run));
     });
 
     private static List<string> RunningPrograms()

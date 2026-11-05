@@ -514,7 +514,7 @@ public sealed class EngineSettingsTests : IDisposable
 }
 
 /// <summary>
-/// The real engine, when tools/araso/build.ps1 has built it. Otherwise these tests return at once,
+/// The real engine, when tools/typing-engine/build.ps1 has built it. Otherwise these tests return at once,
 /// so a pass here says nothing about the engine on a machine without the build.
 /// </summary>
 public sealed class TypingEngineTests
@@ -525,8 +525,8 @@ public sealed class TypingEngineTests
     {
         for (var folder = new DirectoryInfo(AppContext.BaseDirectory); folder is not null; folder = folder.Parent)
         {
-            string stage = Path.Combine(folder.FullName, "artifacts", "araso-stage");
-            if (File.Exists(Path.Combine(stage, "ArasoBridge.dll")))
+            string stage = Path.Combine(folder.FullName, "artifacts", "typing-engine-stage");
+            if (File.Exists(Path.Combine(stage, EngineBridge.LibraryName)))
                 return EngineBridge.Start(stage, Path.Combine(Path.GetTempPath(), "orbit-typing-engine-" + Guid.NewGuid().ToString("N")));
         }
         return null;

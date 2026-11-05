@@ -131,7 +131,10 @@ internal sealed class SettingsWindow : Window
         panel.Children.Add(_parts.PageTitles(Strings.PageAbout, Strings.AboutSubtitle, bottom: 20));
         var version = typeof(SettingsWindow).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
         var logs = _parts.PillButton(Strings.AboutLogs, prominent: false, Shell.OpenLogFolder);
-        panel.Children.Add(_parts.Group(null, Strings.AboutNotice, _parts.Row(Strings.AboutVersion(version), null, logs)));
+        var notices = _parts.PillButton(Strings.AboutNotices, prominent: false, () => Shell.Open(System.IO.Path.Combine(AppContext.BaseDirectory, "THIRD-PARTY-NOTICES.txt")));
+        panel.Children.Add(_parts.Group(null, Strings.AboutNotice,
+            _parts.Row(Strings.AboutVersion(version), null, logs),
+            _parts.Row(Strings.AboutNotices, null, notices)));
         return panel;
     }
 }

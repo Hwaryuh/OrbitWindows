@@ -16,7 +16,7 @@ public sealed record Overlap(OverlapKind Kind, string Program, string? SlotKey =
 
 /// <summary>What was found on this PC. Anything unreadable is simply absent.</summary>
 public sealed record OverlapInput(
-    IReadOnlyCollection<string> Running, IReadOnlyCollection<string> Installed, Hotkey? PowerToysRunKey = null, bool ArasoTakesAltSpace = false);
+    IReadOnlyCollection<string> Running, IReadOnlyCollection<string> Installed, Hotkey? PowerToysRunKey = null);
 
 /// <summary>
 /// Which programs overlap with Orbit (Orbit's Overlaps, small): a pure reading of what
@@ -63,7 +63,6 @@ public static class OverlapScan
             }
             if (powerToys && input.PowerToysRunKey == keys) found.Add(new Overlap(OverlapKind.KeyClash, "PowerToys Run", slot, keys));
             if (flow && keys == AltSpace) found.Add(new Overlap(OverlapKind.KeyClash, FlowLauncher, slot, keys));
-            if (input.ArasoTakesAltSpace && keys == AltSpace) found.Add(new Overlap(OverlapKind.KeyClash, "Araso", slot, keys));
         }
         foreach (var program in detected)
             if (program.Job is { } job) found.Add(new Overlap(OverlapKind.SameJob, program.Name, Job: job));
@@ -109,28 +108,4 @@ public static class OverlapScan
         }
     }
 
-    /// <summary>
-    /// Whether Araso's apps.json gives Alt+Space to Araso anywhere. Any <c>switchKeys</c> list counts,
-    /// wherever it sits: the format is Araso's and may move.
-    /// </summary>
-    public static bool ArasoTakesAltSpace(string json)
-    {
-        try
-        {
-            return JsonNode.Parse(json) is { } root && HasSwitchKey(root);
-        }
-        catch (Exception e) when (e is JsonException or InvalidOperationException)
-        {
-            return false;
-        }
-    }
-
-    private static bool HasSwitchKey(JsonNode node) => node switch
-    {
-        JsonObject map => map.Any(p => p.Value is not null && (p.Key == "switchKeys" && p.Value is JsonArray keys
-            ? keys.Any(k => k is JsonValue value && value.TryGetValue<string>(out var name) && name == "optionSpace")
-            : HasSwitchKey(p.Value))),
-        JsonArray list => list.Any(item => item is not null && HasSwitchKey(item)),
-        _ => false,
-    };
 }

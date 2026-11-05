@@ -10,8 +10,8 @@ public class OverlapScanTests
     private static readonly Hotkey AltSpace = new(Modifiers.Alt, 0x20), Quiet = new(CtrlAlt, 'X');
     private static readonly string Launcher = OrbitAction.Launcher.Id();
 
-    private static OverlapInput On(string[]? running = null, string[]? installed = null, Hotkey? run = null, bool araso = false) =>
-        new(running ?? [], installed ?? [], run, araso);
+    private static OverlapInput On(string[]? running = null, string[]? installed = null, Hotkey? run = null) =>
+        new(running ?? [], installed ?? [], run);
 
     private static Dictionary<string, Hotkey> Keys(string slot, Hotkey keys) => new() { [slot] = keys };
 
@@ -37,12 +37,8 @@ public class OverlapScanTests
     }
 
     [Fact]
-    public void FlowLauncherAndArasoOnAltSpace()
-    {
+    public void FlowLauncherOnAltSpace() =>
         Assert.Contains(OverlapScan.Find(On(running: ["Flow.Launcher"]), Keys(Launcher, AltSpace)), o => o.Program == "Flow Launcher" && o.Kind == OverlapKind.KeyClash);
-        Assert.Contains(OverlapScan.Find(On(araso: true), Keys(Launcher, AltSpace)), o => o.Program == "Araso");
-        Assert.DoesNotContain(OverlapScan.Find(On(araso: true), Keys(Launcher, Quiet)), o => o.Program == "Araso");
-    }
 
     [Fact]
     public void WordHeadingsThePassThroughHandlesAreLeftOut()
@@ -107,21 +103,4 @@ public class OverlapScanTests
     [InlineData("""{"properties":{"open_powerlauncher":{"alt":true,"code":9999}}}""")]
     public void UnexpectedPowerToysFilesMeanNoData(string json) => Assert.Null(OverlapScan.ParsePowerToysRun(json));
 
-    [Theory]
-    [InlineData("""{"apps":[{"entry":{"switchKeys":["rightOption","optionSpace"]}}]}""", true)]
-    [InlineData("""{"default":{"switchKeys":["optionSpace"]}}""", true)]
-    [InlineData("""{"apps":[{"entry":{"switchKeys":["rightOption"]}}]}""", false)]
-    [InlineData("""{"apps":[{"entry":{"switchKeys":[1,null,{"a":"optionSpace"}]}}]}""", false)]
-    [InlineData("""{"note":"optionSpace"}""", false)]
-    [InlineData("""{"switchKeys":"optionSpace"}""", false)]
-    [InlineData("not json", false)]
-    [InlineData("", false)]
-    public void ArasoFile(string json, bool takes) => Assert.Equal(takes, OverlapScan.ArasoTakesAltSpace(json));
-
-    [Fact]
-    public void AnArasoFileTooDeepMeansNoData()
-    {
-        var json = string.Concat(Enumerable.Repeat("[", 5000));
-        Assert.False(OverlapScan.ArasoTakesAltSpace(json));
-    }
 }

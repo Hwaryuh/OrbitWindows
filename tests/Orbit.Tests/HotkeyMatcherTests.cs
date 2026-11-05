@@ -53,8 +53,8 @@ public class HotkeyMatcherTests
     }
 
     [Theory]
-    [InlineData(VkRMenu)]     // Araso's switch tap, 한/영 on Korean keyboards
-    [InlineData(VkRControl)]  // Araso's pause tap
+    [InlineData(VkRMenu)]     // 한/영 on Korean keyboards
+    [InlineData(VkRControl)]  // 한자 on Korean keyboards
     [InlineData(VkRShift)]
     [InlineData(VkRWin)]
     public void ARightModifierRulesOutAMatch(uint right)

@@ -6,7 +6,7 @@ namespace Orbit.Core.Input;
 public sealed record ShortcutSlot(string Key, Hotkey? Default);
 
 /// <summary>Why a key can't be a shortcut.</summary>
-public enum ShortcutProblem { None, NeedsModifier, ArasoKey, Reserved }
+public enum ShortcutProblem { None, NeedsModifier, InputKey, Reserved }
 
 /// <summary>What may be a shortcut, and who else is known to use a key (docs/plan/04-shortcuts.md).</summary>
 public static class ShortcutRules
@@ -19,7 +19,7 @@ public static class ShortcutRules
     /// <summary>Ctrl, Alt or Win is required: Shift alone or a bare key would take typing away.</summary>
     public static ShortcutProblem Check(Hotkey hotkey)
     {
-        if (hotkey.Key is VkHangul or VkHanja) return ShortcutProblem.ArasoKey;
+        if (hotkey.Key is VkHangul or VkHanja) return ShortcutProblem.InputKey;
         if ((hotkey.Modifiers & (Ctrl | Alt | Win)) == 0) return ShortcutProblem.NeedsModifier;
         if (hotkey.Key == VkEscape) return ShortcutProblem.Reserved;
         if (hotkey.Key == VkTab && hotkey.Modifiers.HasFlag(Alt)) return ShortcutProblem.Reserved;

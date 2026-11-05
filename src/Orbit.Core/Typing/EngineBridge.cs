@@ -6,17 +6,17 @@ using System.Text.Json.Serialization;
 
 namespace Orbit.Core.Typing;
 
-/// <summary>The text box as the engine is told about it: <c>TextContext</c> in Araso's protocol.</summary>
+/// <summary>The text box as the engine is told about it: <c>TextContext</c> in the engine's protocol.</summary>
 public sealed record EngineContext(int[] Selection, int[]? Marked, string Text, int Start)
 {
     /// <summary>Nothing is ever composed away from the caret here.</summary>
     public bool MarksAtCaret => true;
 }
 
-/// <summary>A key as the engine takes it: <c>WindowsKey</c> in Araso's protocol.</summary>
+/// <summary>A key as the engine takes it: <c>WindowsKey</c> in the engine's protocol.</summary>
 public readonly record struct EngineKey(int Vk, int Scan, bool Extended = false, bool Shift = false, bool Ctrl = false, bool Alt = false, bool Win = false, bool CapsLock = false);
 
-/// <summary>A change the engine wants: <c>EditOp</c> in Araso's protocol.</summary>
+/// <summary>A change the engine wants: <c>EditOp</c> in the engine's protocol.</summary>
 public sealed record EngineEdit(string Kind, string Text, int[]? Replace = null)
 {
     public const string Mark = "mark";
@@ -36,7 +36,7 @@ public interface ITypingEngine
 }
 
 /// <summary>
-/// ArasoBridge.dll, the Swift decision engine, called in-process. Its state is global and unguarded:
+/// The Swift decision engine (src/TypingEngine), called in-process. Its state is global and unguarded:
 /// call from one thread at a time, and keep one instance per process. Requests and answers are JSON
 /// and hold what was typed, so they are never logged.
 /// </summary>
@@ -48,16 +48,19 @@ public sealed unsafe class EngineBridge : ITypingEngine
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
+    /// <summary>What the build ships the engine as.</summary>
+    public const string LibraryName = "TypingEngine.dll";
+
     private readonly delegate* unmanaged[Cdecl]<byte*, byte*> _request;
     private readonly delegate* unmanaged[Cdecl]<byte*, void> _free;
     private readonly int _client;
 
     private EngineBridge(nint library, string resources, string support)
     {
-        var start = (delegate* unmanaged[Cdecl]<byte*, int>)NativeLibrary.GetExport(library, "araso_start");
-        var warmUp = (delegate* unmanaged[Cdecl]<void>)NativeLibrary.GetExport(library, "araso_warm_up");
-        _request = (delegate* unmanaged[Cdecl]<byte*, byte*>)NativeLibrary.GetExport(library, "araso_request");
-        _free = (delegate* unmanaged[Cdecl]<byte*, void>)NativeLibrary.GetExport(library, "araso_free");
+        var start = (delegate* unmanaged[Cdecl]<byte*, int>)NativeLibrary.GetExport(library, "engine_start");
+        var warmUp = (delegate* unmanaged[Cdecl]<void>)NativeLibrary.GetExport(library, "engine_warm_up");
+        _request = (delegate* unmanaged[Cdecl]<byte*, byte*>)NativeLibrary.GetExport(library, "engine_request");
+        _free = (delegate* unmanaged[Cdecl]<byte*, void>)NativeLibrary.GetExport(library, "engine_free");
 
         byte[] config = Encode(JsonSerializer.Serialize(new
         {
@@ -87,7 +90,7 @@ public sealed unsafe class EngineBridge : ITypingEngine
     {
         Directory.CreateDirectory(support);
         PrepareSettings(Path.Combine(support, "settings.json"));
-        nint library = NativeLibrary.Load(Path.Combine(folder, "ArasoBridge.dll"));
+        nint library = NativeLibrary.Load(Path.Combine(folder, LibraryName));
         return new EngineBridge(library, Path.Combine(folder, "Resources"), support);
     }
 

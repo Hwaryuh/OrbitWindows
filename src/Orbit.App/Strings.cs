@@ -684,7 +684,7 @@ internal static class Strings
     public static string InputSubtitle => T("치는 대로 한글과 영어를 구분해 바꿉니다.", "Tells Korean from English as you type.");
     public static string TypingTitle => T("한/영 자동 전환", "Automatic Korean/English");
     public static string TypingDetail => T("치는 대로 한글과 영어를 구분해 바꿉니다. 설치할 것이 없고 글자는 Windows 기본 입력처럼 보입니다.", "Tells Korean from English as you type. Nothing to install, and text looks as Windows draws it.");
-    public static string TypingFooter => T("Catchtype이나 Araso 입력기와 같이 켜면 입력이 꼬입니다. 하나만 켜 두세요. 비밀번호 입력란과 관리자 권한 창에서는 그대로 입력됩니다.", "It conflicts with Catchtype and the Araso input method: keep only one on. Password fields and elevated windows type as usual.");
+    public static string TypingFooter => T("다른 한/영 자동 전환 프로그램과 같이 켜면 입력이 꼬입니다. 하나만 켜 두세요. 비밀번호 입력란과 관리자 권한 창에서는 그대로 입력됩니다.", "It conflicts with other automatic Korean/English programs: keep only one on. Password fields and elevated windows type as usual.");
     public static string TypingNotBundled => T("이 빌드에는 판단 엔진이 없어서 켤 수 없습니다.", "This build doesn't carry the engine, so this can't be turned on.");
     public static string TypingFailed => T("판단 엔진을 시작하지 못했습니다. Orbit을 다시 시작해 보세요.", "The engine couldn't start. Try restarting Orbit.");
     public static string TypingInTerminals => T("터미널에서도 바꾸기", "In terminals too");
@@ -714,7 +714,7 @@ internal static class Strings
     public static string ShortcutReset => T("되돌리기", "Reset");
     public static string ShortcutPress => T("키를 누르세요. Esc는 취소, Delete는 지우기입니다.", "Press the keys. Esc cancels, Delete removes.");
     public static string ShortcutNeedsModifier => T("Ctrl, Alt, Win 중 하나와 함께 누르세요.", "Press it with Ctrl, Alt or Win.");
-    public static string ShortcutArasoKey => T("한/영 키와 한자 키는 입력 전환에 쓰므로 지정할 수 없습니다.", "The Korean/English and Hanja keys are kept for switching input.");
+    public static string ShortcutInputKey => T("한/영 키와 한자 키는 입력 전환에 쓰므로 지정할 수 없습니다.", "The Korean/English and Hanja keys are kept for switching input.");
     public static string ShortcutReserved => T("Windows가 쓰는 키라서 지정할 수 없습니다.", "Windows keeps those keys.");
     public static string ShortcutInUse(string holder) => T($"이미 '{holder}'에 쓰고 있습니다.", $"Already used for \"{holder}\".");
     public static string ShortcutKnownOwner(string owners) => T($"{owners}에서도 쓰는 키입니다. Orbit이 먼저 받으므로 그쪽 기능은 실행되지 않습니다.", $"{owners} also use these keys. Orbit gets them first, so that won't run.");
@@ -794,6 +794,7 @@ internal static class Strings
     public static string AboutVersion(string version) => T($"버전 {version}", $"Version {version}");
     public static string AboutLogs => T("로그 폴더 열기", "Open Log Folder");
     public static string AboutNotice => T(
-        "Orbit for Windows는 3x-haust/Orbit(MIT)을 바탕으로 만들었습니다. 한/영 자동 전환은 nyttastudio/araso(MIT, 한국어 빈도 목록 CC BY-SA 4.0)를, QR 코드 인식은 ZXing.Net(Apache 2.0)을, 메모장 미리 보기는 Markdig(BSD-2-Clause)을 사용합니다.",
-        "Orbit for Windows is based on 3x-haust/Orbit (MIT). Automatic Korean/English switching uses nyttastudio/araso (MIT; Korean frequency list CC BY-SA 4.0). QR codes are read with ZXing.Net (Apache 2.0). The Scratchpad preview uses Markdig (BSD-2-Clause).");
+        "Orbit for Windows는 3x-haust/Orbit(MIT)을 바탕으로 만들었습니다. 함께 들어간 오픈소스와 데이터의 라이선스는 오픈소스 고지에 있습니다.",
+        "Orbit for Windows is based on 3x-haust/Orbit (MIT). The licenses of the open source and data it includes are in the open source notices.");
+    public static string AboutNotices => T("오픈소스 고지", "Open Source Notices");
 }

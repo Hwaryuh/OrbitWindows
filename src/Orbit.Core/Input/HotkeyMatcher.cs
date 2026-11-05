@@ -51,7 +51,7 @@ public readonly record struct HotkeyDecision(bool Swallow, int Pressed, int Rele
 /// Matches shortcuts in the keyboard hook (docs/plan/04-shortcuts.md):
 /// <list type="bullet">
 /// <item>Required modifiers count only on the left side. Right Alt and right Ctrl down rule any
-/// match out: AltGr arrives as left Ctrl + right Alt, and they are Araso's keys. A modifier the
+/// match out: AltGr arrives as left Ctrl + right Alt, and they are input keys. A modifier the
 /// shortcut doesn't name rules it out too.</item>
 /// <item>A matched key belongs to Orbit until it goes up: its down, its repeats and its up are
 /// swallowed, even if the modifiers were let go first. Modifiers are never swallowed.</item>

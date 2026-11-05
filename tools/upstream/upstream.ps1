@@ -1,5 +1,4 @@
-# Follows the upstream repositories listed in tools/upstream/upstreams.json (Orbit, Araso,
-# Vorssaint). The clones under .refs/ stay at their pinned commit; this script fetches, reports what
+# Follows the upstream repositories listed in tools/upstream/upstreams.json (Orbit, # Vorssaint). The clones under .refs/ stay at their pinned commit; this script fetches, reports what
 # changed upstream since the pin (grouped by the areas in the manifest), and moves a pin forward
 # only when asked.
 #   powershell -File tools/upstream/upstream.ps1                         fetch every upstream, show state

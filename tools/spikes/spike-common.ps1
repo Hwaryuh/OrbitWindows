@@ -1,5 +1,5 @@
 ﻿# What the typing spikes share: real key events (scan codes, as a keyboard sends them), test
-# fields, cases, and Orbit started with its log watched. After Araso's windows/scripts/typing-test.ps1
+# fields, cases, and Orbit started with its log watched.
 # (MIT). Dot-source it: . "$PSScriptRoot\spike-common.ps1"
 Add-Type @"
 using System;
@@ -67,7 +67,7 @@ function Open-Field([string]$kind) {
     return @{ process = $process; window = $process.MainWindowHandle; read = { if (Test-Path $file) { [IO.File]::ReadAllText($file) } else { "" } }.GetNewClosure() }
 }
 
-# In front, in Korean (the language Araso and the Microsoft IME are listed under).
+# In front, in Korean (the language the Microsoft IME is listed under).
 function Ready($field) {
     for ($i = 0; $i -lt 10 -and [Keys]::GetForegroundWindow() -ne $field.window; $i++) { [Keys]::Front($field.window) | Out-Null; Start-Sleep -Milliseconds 300 }
     $thread = [Keys]::GetWindowThreadProcessId($field.window, [IntPtr]::Zero)

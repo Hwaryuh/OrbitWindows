@@ -27,10 +27,10 @@ internal sealed class TypingFeature : IFeature
 
     public TypingFeature() => _focusCallback = (_, _, _, _, _, _, _) => _worker?.FocusMoved();
 
-    private static string Folder => Path.Combine(AppContext.BaseDirectory, "araso");
+    private static string Folder => Path.Combine(AppContext.BaseDirectory, "engine");
 
     /// <summary>Whether this build carries the engine.</summary>
-    public bool Bundled { get; } = File.Exists(Path.Combine(Folder, "ArasoBridge.dll"));
+    public bool Bundled { get; } = File.Exists(Path.Combine(Folder, EngineBridge.LibraryName));
 
     /// <summary>The engine couldn't be loaded.</summary>
     public bool Failed => _worker?.Failed ?? false;

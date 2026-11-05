@@ -1,4 +1,4 @@
-﻿# Orbit's hotkey matcher with real key events and no Araso: shortcuts swallowed, no menu bar, keys
+﻿# Orbit's hotkey matcher with real key events : shortcuts swallowed, no menu bar, keys
 # the app already got left alone. Digits only, so the IME's Korean or English mode doesn't matter
 # (full-width mode would show as ０-９).
 #   powershell -File tools/spikes/hotkey-check.ps1 -Orbit <Orbit.exe>

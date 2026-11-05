@@ -9,7 +9,7 @@ import Foundation
 
 /// Starts the runtime with `ServiceRuntime.Configuration` as JSON. Returns 0, or -1 when the JSON
 /// can't be read.
-@_cdecl("araso_start")
+@_cdecl("engine_start")
 public func araso_start(_ configuration: UnsafePointer<CChar>?) -> Int32 {
     let text = configuration.map { String(cString: $0) }
     return MainActor.assumeIsolated {
@@ -21,13 +21,13 @@ public func araso_start(_ configuration: UnsafePointer<CChar>?) -> Int32 {
 }
 
 /// Builds the language models and loads the kanji dictionary, so the first key isn't slow.
-@_cdecl("araso_warm_up")
+@_cdecl("engine_warm_up")
 public func araso_warm_up() {
     MainActor.assumeIsolated { runtime?.warmUp() }
 }
 
 /// One request; the answer, or an answer with `error` set.
-@_cdecl("araso_request")
+@_cdecl("engine_request")
 public func araso_request(_ request: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
     let text = request.map { String(cString: $0) }
     nonisolated(unsafe) var answer = ""
@@ -46,13 +46,13 @@ public func araso_request(_ request: UnsafePointer<CChar>?) -> UnsafeMutablePoin
 }
 
 /// UI text in the user's language (loaded by `araso_start`), with `%@`/`%ld` left in.
-@_cdecl("araso_localize")
+@_cdecl("engine_localize")
 public func araso_localize(_ key: UnsafePointer<CChar>?) -> UnsafeMutablePointer<CChar>? {
     guard let key else { return copy("") }
     return copy(Strings.localized(String(cString: key)))
 }
 
-@_cdecl("araso_free")
+@_cdecl("engine_free")
 public func araso_free(_ string: UnsafeMutablePointer<CChar>?) {
     string?.deallocate()
 }
