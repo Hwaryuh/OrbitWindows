@@ -28,10 +28,10 @@ jobs:
         with:
           dotnet-version: 10.0.x
       # Swift, for the typing engine.
-      - uses: compnerd/gha-setup-swift@main
+      - uses: compnerd/gha-setup-swift@57fe462cd3c7b05ae8fcff79b00719312e305257 # main on 2026-11-06
         with:
-          branch: swift-6.4.1-release
-          tag: 6.4.1-RELEASE
+          swift-version: swift-6.4.1-release
+          swift-build: 6.4.1-RELEASE
       - name: Typing engine
         shell: pwsh
         run: tools/typing-engine/build.ps1
