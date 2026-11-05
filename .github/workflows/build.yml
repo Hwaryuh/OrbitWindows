@@ -27,7 +27,7 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
-      # The same Swift as upstream's windows.yml, for Araso's core.
+      # The same Swift as upstream's windows.yml, for Araso's decision engine.
       - uses: compnerd/gha-setup-swift@main
         with:
           branch: swift-6.4.1-release

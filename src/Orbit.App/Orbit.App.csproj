@@ -10,7 +10,7 @@
     <StartupObject>Orbit.App.Program</StartupObject>
   </PropertyGroup>
 
-  <!-- Araso, when tools/araso/build.ps1 has built it: copied beside Orbit.exe, registered from the Input page. -->
+  <!-- The typing engine, when tools/araso/build.ps1 has built it: copied beside Orbit.exe. -->
   <ItemGroup Condition="Exists('..\..\artifacts\araso-stage\version.txt')">
     <Content Include="..\..\artifacts\araso-stage\**\*" Link="araso\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>

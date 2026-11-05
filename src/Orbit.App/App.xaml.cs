@@ -45,14 +45,13 @@ public partial class App : Application
 
         _preferences = Preferences.OpenDefault();
         // These show nothing and run before the hooks and the tray.
-        if (e.Args.Contains("--selftest-scratchpad") || e.Args.Contains("--selftest-shortcuts") || e.Args.Contains("--selftest-video") || e.Args.Contains("--selftest-araso"))
+        if (e.Args.Contains("--selftest-scratchpad") || e.Args.Contains("--selftest-shortcuts") || e.Args.Contains("--selftest-video"))
         {
             int at = Array.IndexOf(e.Args, "--render");
             string? render = at >= 0 && at + 1 < e.Args.Length ? e.Args[at + 1] : null;
             bool passed = e.Args.Contains("--selftest-scratchpad")
                 ? Features.Scratchpad.ScratchpadSelfTest.Run(_preferences, render)
                 : e.Args.Contains("--selftest-shortcuts") ? Settings.ShortcutsSelfTest.Run(render)
-                : e.Args.Contains("--selftest-araso") ? Settings.ArasoSelfTest.Run(render)
                 : VideoEditorSelfTest.Run(render);
             Shutdown(passed ? 0 : 1);
             return;
@@ -67,7 +66,7 @@ public partial class App : Application
         _hooks = new HookThread();
         _services = new AppServices(_preferences, _actions, _hooks, _foreground, Notify);
         _services.Clipboard.Start();
-        _features.AddRange([new SettingsFeature(), new RingFeature(), new LauncherFeature(), new CaptureFeature(), new RecordingFeature(), new CleanUrlFeature(), new ClipboardFeature(), new TranslateFeature(), new SnippetFeature(), new KeepAwakeFeature(), new SystemFeature(), new DisplaysFeature(), new ScratchpadFeature(), new UpdateFeature(), new ArasoFeature(), new TypingFeature(), new ShortcutsFeature()]);
+        _features.AddRange([new SettingsFeature(), new RingFeature(), new LauncherFeature(), new CaptureFeature(), new RecordingFeature(), new CleanUrlFeature(), new ClipboardFeature(), new TranslateFeature(), new SnippetFeature(), new KeepAwakeFeature(), new SystemFeature(), new DisplaysFeature(), new ScratchpadFeature(), new UpdateFeature(), new TypingFeature(), new ShortcutsFeature()]);
         foreach (var feature in _features) feature.Start(_services);
         _services.Shortcuts.PassesToFront = PassesToFront;
         _services.Shortcuts.Apply();
