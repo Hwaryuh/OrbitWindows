@@ -134,7 +134,7 @@ internal sealed class SnippetPanel : OverlayWindow
             var keyword = new Border
             {
                 Background = on ? Palette.Fade(_palette.Canvas, 0.18) : _palette.Raised, CornerRadius = new CornerRadius(10), Padding = new Thickness(6, 1, 6, 1), VerticalAlignment = VerticalAlignment.Center,
-                Child = new TextBlock { Text = snippet.Keyword, FontSize = 11, FontWeight = FontWeights.SemiBold, FontFamily = new FontFamily("Cascadia Mono, Consolas"), Foreground = on ? _palette.Canvas : _palette.Ink },
+                Child = new TextBlock { Text = snippet.Keyword, FontSize = 11, FontWeight = FontWeights.SemiBold, FontFamily = Glyphs.Mono, Foreground = on ? _palette.Canvas : _palette.Ink },
             };
             DockPanel.SetDock(keyword, Dock.Right);
             row.Children.Add(keyword);

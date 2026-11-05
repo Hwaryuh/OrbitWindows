@@ -11,6 +11,9 @@ internal static class Glyphs
 {
     public static readonly FontFamily Font = new("Segoe Fluent Icons, Segoe MDL2 Assets");
 
+    /// <summary>Monospaced, for keywords, numbers and code.</summary>
+    public static readonly FontFamily Mono = new("Cascadia Mono, Consolas");
+
     public const string Search = "\uE721";
     public const string Settings = "\uE713";
     public const string Volume = "\uE767";
@@ -36,6 +39,7 @@ internal static class Glyphs
     public const string Preview = "\uE890";
     public const string Edit = "\uE70F";
     public const string Pointer = "\uE962";
+    public const string Network = "\uE839";
 
     private static readonly Dictionary<OrbitAction, string> ForAction = new()
     {

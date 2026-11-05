@@ -60,6 +60,11 @@ public sealed class Frecency(Preferences preferences)
 
     public int Boost(string id) => (int)Math.Min(150, Table().GetValueOrDefault(id) * 15);
 
+    public bool HasHistory => Table().Count > 0;
+
+    /// <summary>Forgets every use: the order starts over.</summary>
+    public void Clear() => preferences.Set(Key, new Dictionary<string, double>());
+
     private Dictionary<string, double> Table() => preferences.Get<Dictionary<string, double>>(Key) ?? [];
 }
 

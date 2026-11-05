@@ -295,7 +295,7 @@ internal sealed class ClipboardPanel : OverlayWindow
                 var grid = new Grid { Background = AnnotationRenderer.ToBrush(ClipItem.ColorValue(item.Text) ?? 0xFF808080) };
                 grid.Children.Add(new TextBlock
                 {
-                    Text = item.Text?.Trim(), FontSize = 15, FontWeight = FontWeights.SemiBold, FontFamily = new FontFamily("Cascadia Mono, Consolas"), Foreground = Brushes.White,
+                    Text = item.Text?.Trim(), FontSize = 15, FontWeight = FontWeights.SemiBold, FontFamily = Glyphs.Mono, Foreground = Brushes.White,
                     HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(10),
                     Effect = new DropShadowEffect { BlurRadius = 4, ShadowDepth = 0, Opacity = 0.6 },
                 });
@@ -305,7 +305,7 @@ internal sealed class ClipboardPanel : OverlayWindow
                 return new TextBlock
                 {
                     Text = item.Text, Margin = new Thickness(10), TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis,
-                    FontFamily = item.LooksLikeCode ? new FontFamily("Cascadia Mono, Consolas") : FontFamily, FontSize = item.LooksLikeCode ? 11 : 13,
+                    FontFamily = item.LooksLikeCode ? Glyphs.Mono : FontFamily, FontSize = item.LooksLikeCode ? 11 : 13,
                     Foreground = Palette.Fade(_palette.Ink, 0.9),
                 };
         }

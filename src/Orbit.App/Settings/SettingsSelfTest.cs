@@ -59,7 +59,7 @@ internal static class SettingsSelfTest
             {
                 Render(window, render);
                 // Pages whose controls show the design, and which need no running feature.
-                foreach (string page in new[] { "ports", "about", "overlaps" })
+                foreach (string page in new[] { "ports", "about", "overlaps", "launcher" })
                 {
                     sidebar.Select(page);
                     PumpFor(500);

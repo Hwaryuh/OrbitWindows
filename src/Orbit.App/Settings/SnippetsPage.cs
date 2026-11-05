@@ -82,7 +82,7 @@ internal sealed class SnippetsPage : StackPanel
             var row = new DockPanel();
             if (snippet.Keyword.Length > 0)
             {
-                var keyword = new TextBlock { Text = snippet.Keyword, FontSize = 11, FontFamily = new FontFamily("Cascadia Mono, Consolas"), Foreground = on ? _palette.Canvas : _palette.InkSecondary, VerticalAlignment = VerticalAlignment.Center };
+                var keyword = new TextBlock { Text = snippet.Keyword, FontSize = 11, FontFamily = Orbit.App.Design.Glyphs.Mono, Foreground = on ? _palette.Canvas : _palette.InkSecondary, VerticalAlignment = VerticalAlignment.Center };
                 DockPanel.SetDock(keyword, Dock.Right);
                 row.Children.Add(keyword);
             }
@@ -122,7 +122,7 @@ internal sealed class SnippetsPage : StackPanel
             var box = new TextBox
             {
                 Text = value, FontSize = 13, Padding = new Thickness(6, 4, 6, 4), Margin = new Thickness(0, 0, 0, 10),
-                FontFamily = mono ? new FontFamily("Cascadia Mono, Consolas") : TextElement.GetFontFamily(this), AcceptsReturn = multiline, AcceptsTab = multiline,
+                FontFamily = mono ? Orbit.App.Design.Glyphs.Mono : TextElement.GetFontFamily(this), AcceptsReturn = multiline, AcceptsTab = multiline,
                 TextWrapping = multiline ? TextWrapping.Wrap : TextWrapping.NoWrap, MinHeight = multiline ? 140 : 0, VerticalScrollBarVisibility = multiline ? ScrollBarVisibility.Auto : ScrollBarVisibility.Hidden,
             };
             _editor.Children.Add(box);

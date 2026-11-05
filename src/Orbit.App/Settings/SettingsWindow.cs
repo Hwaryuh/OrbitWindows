@@ -86,6 +86,7 @@ internal sealed class SettingsWindow : Window
         "shortcuts" => () => new ShortcutsPage(_services),
         "overlaps" => () => new OverlapsPage(_services),
         "ring" => () => new RingPage(_services),
+        "launcher" => () => new LauncherPage(_services),
         "capture" => () => new CapturePage(_services),
         "clipboard" => () => new ClipboardPage(_services),
         "translate" => () => new TranslatePage(_services),

@@ -91,4 +91,20 @@ public sealed class FrecencyTests : IDisposable
         for (int i = 0; i < 20; i++) frecency.Bump("app.x");
         Assert.Equal(150, frecency.Boost("app.x"));
     }
+
+    [Fact]
+    public void ClearingForgetsEveryUse()
+    {
+        using var prefs = new Preferences(_file, new Dictionary<string, object?>());
+        var frecency = new Frecency(prefs);
+        Assert.False(frecency.HasHistory);
+        frecency.Bump("app.x");
+        frecency.Bump("app.y");
+        Assert.True(frecency.HasHistory);
+        frecency.Clear();
+        Assert.False(frecency.HasHistory);
+        Assert.Equal(0, frecency.Boost("app.x"));
+        frecency.Bump("app.x");
+        Assert.Equal(15, frecency.Boost("app.x"));
+    }
 }

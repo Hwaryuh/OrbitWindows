@@ -124,7 +124,7 @@ internal sealed class PortsPage : StackPanel
 
     private FrameworkElement Row(PortEntry entry)
     {
-        var mono = new FontFamily("Cascadia Mono, Consolas");
+        var mono = Glyphs.Mono;
         var top = new StackPanel { Orientation = Orientation.Horizontal };
         top.Children.Add(new TextBlock { Text = entry.Port.ToString(), FontFamily = mono, FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = _palette.Ink, VerticalAlignment = VerticalAlignment.Center });
         top.Children.Add(Badge(entry.Protocol == PortProtocol.Tcp ? "TCP" : "UDP", null));
@@ -190,23 +190,9 @@ internal sealed class PortsPage : StackPanel
         var menu = new ContextMenu();
         menu.Items.Add(Design.Controls.MenuItem(Strings.PortsCopyPort, () => Clipboards.CopyText(entry.Port.ToString(), Strings.PortsCopied)));
         menu.Items.Add(Design.Controls.MenuItem(Strings.PortsCopyAddress, () => Clipboards.CopyText(entry.Endpoint, Strings.PortsCopied)));
-        if (BrowserAddress(entry) is { } url)
+        if (entry.BrowserUrl is { } url)
             menu.Items.Add(Design.Controls.MenuItem(Strings.PortsOpenBrowser, () => Shell.Open(url)));
         return menu;
-    }
-
-    /// <summary>http://host:port for a TCP listener; a wildcard bind is reached through loopback of its family.</summary>
-    private static string? BrowserAddress(PortEntry entry)
-    {
-        if (entry.Protocol != PortProtocol.Tcp || entry.Host.Contains('%')) return null;
-        string host = entry.Host switch
-        {
-            "0.0.0.0" => "127.0.0.1",
-            "::" => "[::1]",
-            var h when h.Contains(':') => $"[{h}]",
-            var h => h,
-        };
-        return $"http://{host}:{entry.Port}/";
     }
 
     private async Task End(PortEntry entry, bool force)

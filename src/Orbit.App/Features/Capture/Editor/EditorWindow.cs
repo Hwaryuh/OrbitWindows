@@ -537,7 +537,7 @@ internal sealed class EditorWindow : Window
             };
             cell.Children.Add(icon);
             cell.Children.Add(new TextBlock { Text = Strings.EditorToolTitle(tool), FontSize = 10, Foreground = Palette.DarkTheme.InkSecondary, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 4, 0, 0) });
-            cell.Children.Add(new TextBlock { Text = tool.Key().ToString(), FontSize = 9, FontFamily = new FontFamily("Cascadia Mono, Consolas"), Foreground = Palette.Fade(Brushes.White, 0.4), HorizontalAlignment = HorizontalAlignment.Center });
+            cell.Children.Add(new TextBlock { Text = tool.Key().ToString(), FontSize = 9, FontFamily = Glyphs.Mono, Foreground = Palette.Fade(Brushes.White, 0.4), HorizontalAlignment = HorizontalAlignment.Center });
             row.Children.Add(cell);
         }
         OpenPopup(row, under);

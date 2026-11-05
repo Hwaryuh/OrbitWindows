@@ -34,6 +34,26 @@ public sealed record PortEntry(PortProtocol Protocol, string Host, int Port, int
 
     /// <summary>"127.0.0.1:3000", "[::1]:3000".</summary>
     public string Endpoint => Host.Contains(':') ? $"[{Host}]:{Port}" : $"{Host}:{Port}";
+
+    /// <summary>
+    /// http://host:port for a TCP listener; a wildcard bind is reached through loopback of its family. Null for UDP
+    /// and for a scoped address a browser can't open.
+    /// </summary>
+    public string? BrowserUrl
+    {
+        get
+        {
+            if (Protocol != PortProtocol.Tcp || Host.Contains('%')) return null;
+            string host = Host switch
+            {
+                "0.0.0.0" => "127.0.0.1",
+                "::" => "[::1]",
+                var h when h.Contains(':') => $"[{h}]",
+                var h => h,
+            };
+            return $"http://{host}:{Port}/";
+        }
+    }
 }
 
 /// <summary>The listing; <see cref="Complete"/> is false when one of Windows' four tables could not be read.</summary>

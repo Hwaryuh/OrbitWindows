@@ -7,6 +7,7 @@ using Orbit.App.Settings;
 using Orbit.Core;
 using Orbit.Core.Actions;
 using Orbit.Core.Launcher;
+using Orbit.Core.Ports;
 using Orbit.Core.Settings;
 
 namespace Orbit.App.Features.Launcher;
@@ -28,7 +29,7 @@ internal sealed record LauncherItem(string Id, string Title, string? Subtitle, I
 /// nothing here fits. Empty: suggestions from what was used before.
 /// </summary>
 internal sealed class LauncherModel(AppServices services, AppIndex apps, Frecency frecency,
-    ExchangeRates rates, WeatherService weather, FileSearch files)
+    ExchangeRates rates, WeatherService weather, FileSearch files, PortSearch ports)
 {
     /// <summary>Rates, a weather report or file results arrived: build again. Raised on a background thread.</summary>
     public event Action? AnswersChanged
@@ -38,12 +39,14 @@ internal sealed class LauncherModel(AppServices services, AppIndex apps, Frecenc
             rates.Changed += value;
             weather.Changed += value;
             files.Changed += value;
+            ports.Changed += value;
         }
         remove
         {
             rates.Changed -= value;
             weather.Changed -= value;
             files.Changed -= value;
+            ports.Changed -= value;
         }
     }
 
@@ -78,6 +81,9 @@ internal sealed class LauncherModel(AppServices services, AppIndex apps, Frecenc
             result.Add(a.Item);
             answered |= a.Answers;
         }
+        var listening = ports.Results(q);
+        result.AddRange(listening.Select(Port));
+        answered |= listening.Count > 0;
 
         var pageScores = SettingsWindow.PageTitles.Select(p => (p, Fuzzy.Score(q, p.Title))).Where(x => x.Item2 is not null).Select(x => (x.p, x.Item2!.Value)).ToList();
         var commandScores = OrbitActions.All.Select(a => (a, Fuzzy.Score(q, a.Title(), a.Keywords()))).Where(x => x.Item2 is not null).Select(x => (x.a, x.Item2!.Value)).ToList();
@@ -124,8 +130,9 @@ internal sealed class LauncherModel(AppServices services, AppIndex apps, Frecenc
     public void Bump(LauncherItem item)
     {
         if (item.Id is "calc" or "web" or "fx" or "unit" or "weather") return;
+        // Ports come and go like windows: remembering them would only grow the table.
         if (item.Id.StartsWith("win.", StringComparison.Ordinal) || item.Id.StartsWith("clock.", StringComparison.Ordinal)
-            || item.Id.StartsWith("file.", StringComparison.Ordinal))
+            || item.Id.StartsWith("file.", StringComparison.Ordinal) || item.Id.StartsWith("port.", StringComparison.Ordinal))
             return;
         frecency.Bump(item.Id);
     }
@@ -205,6 +212,25 @@ internal sealed class LauncherModel(AppServices services, AppIndex apps, Frecenc
             new LauncherAction(Strings.ActionOpenFileLocation, Glyphs.Folder, () => Run(() => Shell.Reveal(path)), "Ctrl ↵"),
             new LauncherAction(Strings.ActionCopyPath, Glyphs.Copy, () => Copy(path)),
         ]);
+
+    /// <summary>
+    /// A listening port: open it in the browser, copy its address, or see it on the Ports page. Stopping is left to
+    /// that page, which says what a program is and confirms before ending it.
+    /// </summary>
+    private LauncherItem Port(PortEntry port)
+    {
+        // Shown as localhost when loopback or every address answers there; a program bound to one address answers only there.
+        var local = port.AllInterfaces || (System.Net.IPAddress.TryParse(port.Host, out var ip) && System.Net.IPAddress.IsLoopback(ip));
+        var address = local ? $"localhost:{port.Port}" : port.Endpoint;
+        var url = port.BrowserUrl ?? $"http://localhost:{port.Port}/";
+        return new($"port.{port.Port}.{port.Pid}", address, Strings.PortSubtitle(port.Name, port.Pid), IconKind.Glyph, Glyphs.Network,
+            port.AllInterfaces ? Strings.AccessoryNetwork : Strings.AccessoryPort, Strings.SectionPorts,
+            [
+                new LauncherAction(Strings.ActionOpenInBrowser, Glyphs.Globe, () => Open(url)),
+                new LauncherAction(Strings.ActionCopyUrl, Glyphs.Copy, () => Copy(url)),
+                new LauncherAction(Strings.ActionShowInPorts, Glyphs.Network, () => SettingsWindow.ShowOrActivate(services, "ports")),
+            ]);
+    }
 
     private IEnumerable<LauncherItem> Suggestions()
     {

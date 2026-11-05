@@ -114,7 +114,7 @@ internal sealed class SystemPage : StackPanel
         foreach (var p in _sampler.TopProcesses(8))
         {
             var row = new DockPanel { Margin = new Thickness(0, 3, 0, 3) };
-            var numbers = new TextBlock { Text = $"{p.Cpu,5:0.0}%   {Bytes((ulong)p.Memory),9}", FontSize = 12, FontFamily = new FontFamily("Cascadia Mono, Consolas"), Foreground = _palette.InkSecondary };
+            var numbers = new TextBlock { Text = $"{p.Cpu,5:0.0}%   {Bytes((ulong)p.Memory),9}", FontSize = 12, FontFamily = Glyphs.Mono, Foreground = _palette.InkSecondary };
             DockPanel.SetDock(numbers, Dock.Right);
             row.Children.Add(numbers);
             row.Children.Add(new TextBlock { Text = p.Name, FontSize = 13, Foreground = _palette.Ink, TextTrimming = TextTrimming.CharacterEllipsis });

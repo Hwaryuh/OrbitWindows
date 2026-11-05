@@ -42,7 +42,7 @@ internal sealed class SettingsSidebar : DockPanel
         ["input"] = Glyphs.Keyboard,
         ["keepAwake"] = "",
         ["system"] = "",
-        ["ports"] = "",
+        ["ports"] = Glyphs.Network,
         ["displays"] = "",
         ["overlaps"] = "",
         ["shortcuts"] = "",

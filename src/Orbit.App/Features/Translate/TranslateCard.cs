@@ -53,7 +53,7 @@ internal sealed class TranslateCard : OverlayWindow
         _engineName = Label(11, FontWeights.SemiBold, _palette.InkSecondary);
         _source = new TextBlock { FontSize = 12, Foreground = _palette.InkSecondary, TextWrapping = TextWrapping.Wrap, TextTrimming = TextTrimming.CharacterEllipsis, MaxHeight = 51, Margin = new Thickness(18, 0, 18, 10) };
         _count = Label(11, FontWeights.Normal, _palette.InkSecondary);
-        _copy = Pill(Strings.ActionCopy, "Enter", prominent: true, CopyResult);
+        _copy = Pill(Strings.ActionCopy, "Enter C", prominent: true, CopyResult);
         _replace = Pill(Strings.TranslateReplace, "Ctrl Enter", prominent: false, ReplaceSelection);
         _replace.Margin = new Thickness(0, 0, 8, 0);
 
@@ -455,7 +455,8 @@ internal sealed class TranslateCard : OverlayWindow
             case Key.Enter when mods == ModifierKeys.Control:
                 ReplaceSelection();
                 break;
-            case Key.Enter when mods == ModifierKeys.None:
+            // C copies too, as in Orbit: nothing on the card takes typing.
+            case Key.Enter or Key.C when mods == ModifierKeys.None:
                 CopyResult();
                 break;
             case Key.S when mods == (ModifierKeys.Control | ModifierKeys.Shift):

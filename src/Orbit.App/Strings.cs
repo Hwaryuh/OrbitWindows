@@ -602,6 +602,13 @@ internal static class Strings
     public static string StartupChangeFailed => T("로그인할 때 실행 설정을 바꾸지 못했습니다.", "The sign-in setting could not be changed.");
 
     // Launcher
+    public static string SectionPorts => T("포트", "Ports");
+    public static string AccessoryPort => T("포트", "Port");
+    public static string AccessoryNetwork => T("네트워크", "Network");
+    public static string PortSubtitle(string program, int pid) => $"{program} · PID {pid}";
+    public static string ActionOpenInBrowser => T("브라우저에서 열기", "Open in Browser");
+    public static string ActionCopyUrl => T("주소 복사", "Copy URL");
+    public static string ActionShowInPorts => T("포트 페이지에서 보기", "Show in Ports");
     public static string LauncherPlaceholder => T("앱, 명령, 설정 검색…", "Search apps, commands, settings…");
     public static string LauncherEmpty => T("결과가 없습니다", "No results");
     public static string LauncherEmptyHint => T("앱 이름, ‘캡처’ 같은 명령, 12*8 같은 계산을 입력하세요.", "Try an app name, a command like “capture”, or math like 12*8.");
@@ -718,6 +725,28 @@ internal static class Strings
     public static string ShortcutInUse(string holder) => T($"이미 '{holder}'에 쓰고 있습니다.", $"Already used for \"{holder}\".");
     public static string ShortcutKnownOwner(string owners) => T($"{owners}에서도 쓰는 키입니다. Orbit이 먼저 받으므로 그쪽 기능은 실행되지 않습니다.", $"{owners} also use these keys. Orbit gets them first, so that won't run.");
     public static string PageLauncher => T("런처", "Launcher");
+    public static string LauncherPageSubtitle => T("프로그램과 창, 파일을 찾고 계산, 환율, 단위, 날씨, 세계 시간을 바로 봅니다.", "Find programs, windows and files, and get math, currency, units, weather and world time at once.");
+    public static string LauncherOpenTitle => T("런처 열기", "Open the launcher");
+    public static string LauncherOpenDetail => T("단축키를 누르거나 여기서 엽니다. 한 번 더 누르면 닫힙니다.", "Press its shortcut, or open it here. Press again to close it.");
+    public static string LauncherOpen => T("열기", "Open");
+    public static string LauncherShortcutTitle => T("단축키 바꾸기", "Change the shortcut");
+    public static string LauncherChangeShortcut => T("단축키 페이지", "Shortcuts");
+    public static string LauncherFinds => T("이렇게 찾습니다", "What to type");
+    public static string LauncherFindsFooter => T("맞는 결과를 위에서부터 보여 주고, Enter로 엽니다.", "The best match comes first; Enter opens it.");
+    public static string LauncherFindApps => T("프로그램과 열린 창", "Programs and open windows");
+    public static string LauncherFindFiles => T("파일", "Files");
+    public static string LauncherFindFilesExample => T("이름의 일부", "part of the name");
+    public static string LauncherFindCommands => T("Orbit 명령과 Windows 설정", "Orbit commands and Windows settings");
+    public static string LauncherFindCommandsExample => T("캡처, 디스플레이", "capture, display");
+    public static string LauncherFindMath => T("계산", "Math");
+    public static string LauncherFindCurrency => T("환율", "Currency");
+    public static string LauncherFindUnits => T("단위", "Units");
+    public static string LauncherFindWeather => T("날씨", "Weather");
+    public static string LauncherFindClock => T("세계 시간", "World time");
+    public static string LauncherHistory => T("순서", "Order");
+    public static string LauncherHistoryTitle => T("자주 연 항목", "Often opened");
+    public static string LauncherHistoryDetail => T("자주 연 항목이 위로 올라옵니다. 지우면 처음 순서로 돌아갑니다.", "What you open often moves up. Clearing it starts over.");
+    public static string LauncherClearHistory => T("기록 지우기", "Clear");
     public static string PageCapture => T("캡처", "Capture");
     public static string PageClipboard => T("클립보드", "Clipboard");
     public static string PageTranslate => T("번역", "Translate");
