@@ -60,7 +60,7 @@ public sealed class ForegroundTracker : IDisposable
         uint process = 0;
         PInvoke.GetWindowThreadProcessId(window, &process);
         if (process != _process) LastExternal = window;
-        var name = process == _process ? "" : Path.GetFileName(Processes.ImagePath(process) ?? "").ToLowerInvariant();
+        var name = process == _process ? "" : Processes.FileName(process);
         if (name == ForegroundProcess) return;
         ForegroundProcess = name;
         Changed?.Invoke();

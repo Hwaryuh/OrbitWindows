@@ -32,6 +32,9 @@ public static class Processes
         }
     }
 
+    /// <summary>The program's file name in lowercase ("winword.exe"); empty for a process Orbit may not open.</summary>
+    public static string FileName(uint process) => Path.GetFileName(ImagePath(process) ?? "").ToLowerInvariant();
+
     /// <summary>A program's name as File Explorer shows it: its file description, else its file name.</summary>
     public static string DisplayName(string path)
     {

@@ -19,13 +19,20 @@ namespace Orbit.App.Features;
 internal sealed class TypingFeature : IFeature
 {
     private const uint EventObjectFocus = 0x8005;
+    private const uint EventSystemForeground = 0x0003;
 
     private readonly WINEVENTPROC _focusCallback;
+    private readonly WINEVENTPROC _frontCallback;
     private AppServices? _services;
     private TypingWorker? _worker;
     private HWINEVENTHOOK _focusHook;
+    private HWINEVENTHOOK _frontHook;
 
-    public TypingFeature() => _focusCallback = (_, _, _, _, _, _, _) => _worker?.FocusMoved();
+    public TypingFeature()
+    {
+        _focusCallback = (_, _, _, _, _, _, _) => _worker?.FocusMoved();
+        _frontCallback = (_, _, _, _, _, _, _) => _worker?.FrontMoved();
+    }
 
     private static string Folder => Path.Combine(AppContext.BaseDirectory, "engine");
 
@@ -45,18 +52,21 @@ internal sealed class TypingFeature : IFeature
     {
         _services = services;
         services.Typing = this;
+        // Focus inside Orbit's own windows moves without a window event: WPF controls have no window of their own.
+        System.Windows.EventManager.RegisterClassHandler(typeof(System.Windows.UIElement), System.Windows.Input.Keyboard.GotKeyboardFocusEvent,
+            new System.Windows.Input.KeyboardFocusChangedEventHandler((_, _) => _worker?.FocusMoved()), handledEventsToo: true);
         services.Preferences.Changed += key =>
         {
             if (key == Pref.TypingEnabled) Apply();
             else if (key is Pref.TypingExcludedApps or Pref.TypingInTerminals) _worker?.FrontMoved();
         };
-        services.Foreground.Changed += () => _worker?.FrontMoved();
         Apply();
     }
 
     public void Dispose()
     {
         if (!_focusHook.IsNull) PInvoke.UnhookWinEvent(_focusHook);
+        if (!_frontHook.IsNull) PInvoke.UnhookWinEvent(_frontHook);
         if (_services is not null) _services.Hooks.Typing = null;
         _worker?.Dispose();
     }
@@ -77,13 +87,24 @@ internal sealed class TypingFeature : IFeature
         {
             _worker?.SetEnabled(on);
         }
-        // Only while on: focus events are frequent.
-        if (on && _focusHook.IsNull)
-            _focusHook = PInvoke.SetWinEventHook(EventObjectFocus, EventObjectFocus, HMODULE.Null, _focusCallback, 0, 0, PInvoke.WINEVENT_OUTOFCONTEXT);
-        else if (!on && !_focusHook.IsNull)
+        // Only while on: focus events are frequent. Every window that comes to the front, not only another
+        // program: the foreground tracker says nothing between two windows it names alike, such as an
+        // elevated program and Orbit's launcher.
+        Follow(on, ref _focusHook, EventObjectFocus, _focusCallback);
+        Follow(on, ref _frontHook, EventSystemForeground, _frontCallback);
+    }
+
+    private static void Follow(bool on, ref HWINEVENTHOOK hook, uint winEvent, WINEVENTPROC callback)
+    {
+        if (on && hook.IsNull)
         {
-            PInvoke.UnhookWinEvent(_focusHook);
-            _focusHook = default;
+            hook = PInvoke.SetWinEventHook(winEvent, winEvent, HMODULE.Null, callback, 0, 0, PInvoke.WINEVENT_OUTOFCONTEXT);
+            if (hook.IsNull) Log.Warn($"Typing could not follow window event 0x{winEvent:X}");
+        }
+        else if (!on && !hook.IsNull)
+        {
+            PInvoke.UnhookWinEvent(hook);
+            hook = default;
         }
     }
 
@@ -110,8 +131,11 @@ internal sealed class TypingFeature : IFeature
 
         public TypingPlace Place()
         {
-            string process = services.Foreground.ForegroundProcess;
-            string className = ClassName(PInvoke.GetForegroundWindow());
+            // One reading of the window in front for all of it: the tracker's name may be from a window before.
+            var front = PInvoke.GetForegroundWindow();
+            uint id = ProcessOf(front);
+            string process = Processes.FileName(id);
+            string className = ClassName(front);
             var language = ImeMode.Language(ImeMode.FocusWindow(out _));
             // Letters go as keys only where no IME can catch them. On the Korean layout they go as Unicode:
             // Chrome's IME stays in Hangul mode through WM_IME_CONTROL and composes them (seen 2026-11-06).
@@ -121,8 +145,8 @@ internal sealed class TypingFeature : IFeature
             TypingPause pause;
             // Orbit's own windows take typing too, the launcher above all, and the box decides as anywhere.
             // A program it may not open (an elevated one) also reads as "", and its keys can't be sent.
-            if (IsOrbitInFront()) pause = TypingPause.None;
-            else if (process.Length == 0) pause = TypingPause.OwnWindow;
+            if (id == (uint)Environment.ProcessId) pause = TypingPause.None;
+            else if (front.IsNull || process.Length == 0) pause = TypingPause.OwnWindow;
             else if (className.StartsWith("Shell_", StringComparison.Ordinal)) pause = TypingPause.NotText;
             else if (ClipboardRules.IsIgnored(process, prefs.Get<string[]>(Pref.TypingExcludedApps))) pause = TypingPause.ExcludedApp;
             else if (!prefs.Get<bool>(Pref.TypingInTerminals) && Processes.Terminals.Contains(process)) pause = TypingPause.Terminal;
@@ -145,11 +169,12 @@ internal sealed class TypingFeature : IFeature
 
         public void Wait(int milliseconds) => Thread.Sleep(milliseconds);
 
-        private static unsafe bool IsOrbitInFront()
+        private static unsafe uint ProcessOf(HWND window)
         {
+            if (window.IsNull) return 0;
             uint process = 0;
-            PInvoke.GetWindowThreadProcessId(PInvoke.GetForegroundWindow(), &process);
-            return process == (uint)Environment.ProcessId;
+            PInvoke.GetWindowThreadProcessId(window, &process);
+            return process;
         }
 
         private static string ClassName(HWND window)
