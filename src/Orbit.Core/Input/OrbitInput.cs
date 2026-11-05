@@ -11,14 +11,14 @@ public static class OrbitInput
         var flags = up ? KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP : 0;
         if (vk is HotkeyMatcher.VkRControl or HotkeyMatcher.VkRMenu or HotkeyMatcher.VkLWin or HotkeyMatcher.VkRWin)
             flags |= KEYBD_EVENT_FLAGS.KEYEVENTF_EXTENDEDKEY;
+        return Event((ushort)vk, (ushort)PInvoke.MapVirtualKey(vk, MAP_VIRTUAL_KEY_TYPE.MAPVK_VK_TO_VSC), flags, HookThread.OrbitMarker);
+    }
+
+    /// <summary>One keyboard event, as given.</summary>
+    public static INPUT Event(ushort vk, ushort scan, KEYBD_EVENT_FLAGS flags, nuint marker)
+    {
         var input = new INPUT { type = INPUT_TYPE.INPUT_KEYBOARD };
-        input.Anonymous.ki = new KEYBDINPUT
-        {
-            wVk = (VIRTUAL_KEY)vk,
-            wScan = (ushort)PInvoke.MapVirtualKey(vk, MAP_VIRTUAL_KEY_TYPE.MAPVK_VK_TO_VSC),
-            dwFlags = flags,
-            dwExtraInfo = HookThread.OrbitMarker,
-        };
+        input.Anonymous.ki = new KEYBDINPUT { wVk = (VIRTUAL_KEY)vk, wScan = scan, dwFlags = flags, dwExtraInfo = marker };
         return input;
     }
 }
