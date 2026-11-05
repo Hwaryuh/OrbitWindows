@@ -229,6 +229,12 @@ internal sealed class LibraryWindow : Window
         if (!video) menu.Items.Add(Controls.MenuItem(Strings.CardEdit, () => Edit(entry)));
         menu.Items.Add(Controls.MenuItem(Strings.ActionCopy, () => Copy(entry)));
         menu.Items.Add(Controls.MenuItem(video ? Strings.CardOpenVideo : Strings.LibraryOpen, () => OpenFile(entry)));
+        if (video)
+            menu.Items.Add(Controls.MenuItem(Strings.CardEditVideo, () =>
+            {
+                Close();
+                VideoEditorWindow.OpenFor(entry.Path, _cards.Actions);
+            }));
         if (!video) menu.Items.Add(Controls.MenuItem(Strings.CardPin, () => Pin(entry)));
         menu.Items.Add(Controls.MenuItem(Strings.CardShowInExplorer, () => Reveal(entry)));
         menu.Items.Add(new Separator());

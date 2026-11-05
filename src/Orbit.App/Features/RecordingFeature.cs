@@ -39,6 +39,7 @@ internal sealed class RecordingFeature : IFeature
     {
         _services = services;
         services.Recording = this;
+        _ = Task.Run(VideoEditorWindow.ClearOldExports);
         services.Actions.Register(OrbitAction.RecordArea, () => _ = RunAsync(Mode.Area));
         services.Actions.Register(OrbitAction.RecordWindow, () => _ = RunAsync(Mode.Window));
         services.Actions.Register(OrbitAction.RecordScreen, () => _ = RunAsync(Mode.Screen));

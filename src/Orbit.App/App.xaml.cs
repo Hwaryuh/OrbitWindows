@@ -45,13 +45,14 @@ public partial class App : Application
 
         _preferences = Preferences.OpenDefault();
         // These show nothing and run before the hooks and the tray.
-        if (e.Args.Contains("--selftest-scratchpad") || e.Args.Contains("--selftest-shortcuts"))
+        if (e.Args.Contains("--selftest-scratchpad") || e.Args.Contains("--selftest-shortcuts") || e.Args.Contains("--selftest-video"))
         {
             int at = Array.IndexOf(e.Args, "--render");
             string? render = at >= 0 && at + 1 < e.Args.Length ? e.Args[at + 1] : null;
             bool passed = e.Args.Contains("--selftest-scratchpad")
                 ? Features.Scratchpad.ScratchpadSelfTest.Run(_preferences, render)
-                : Settings.ShortcutsSelfTest.Run(render);
+                : e.Args.Contains("--selftest-shortcuts") ? Settings.ShortcutsSelfTest.Run(render)
+                : VideoEditorSelfTest.Run(render);
             Shutdown(passed ? 0 : 1);
             return;
         }

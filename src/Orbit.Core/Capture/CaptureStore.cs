@@ -91,6 +91,9 @@ public sealed class CaptureStore(Preferences preferences, string folder)
         lock (_gate) _recent?.RemoveAll(p => string.Equals(p, libraryFile, StringComparison.OrdinalIgnoreCase));
     }
 
+    /// <summary>Where saved copies go.</summary>
+    public string SaveFolder => preferences.Get<string>(Pref.CaptureSaveFolder);
+
     /// <summary>A copy of a library file in the save folder (Pictures\Screenshots unless chosen); the copy's path.</summary>
     public string SaveCopy(string libraryFile)
     {

@@ -17,7 +17,7 @@ internal sealed unsafe class Mp4Writer : IDisposable
     private const uint ProgressiveInterlace = 2; // MFVideoInterlace_Progressive
 
     private readonly IMFSinkWriter _writer;
-    private readonly IMFDXGIDeviceManager _manager;
+    private readonly IMFDXGIDeviceManager? _manager;
     private readonly uint _stream, _audio;
     private bool _finished;
 
@@ -25,7 +25,7 @@ internal sealed unsafe class Mp4Writer : IDisposable
     public int Height { get; }
     public bool Hardware { get; }
 
-    private Mp4Writer(IMFSinkWriter writer, IMFDXGIDeviceManager manager, uint stream, uint audio, int width, int height, bool hardware)
+    private Mp4Writer(IMFSinkWriter writer, IMFDXGIDeviceManager? manager, uint stream, uint audio, int width, int height, bool hardware)
     {
         _writer = writer;
         _manager = manager;
@@ -60,18 +60,42 @@ internal sealed unsafe class Mp4Writer : IDisposable
         }
     }
 
-    private static Mp4Writer Create(string path, ID3D11Device device, int width, int height, int fps, bool hardware)
+    /// <summary>
+    /// A writer fed from system memory, for exporting: frames through <see cref="WriteBgra"/>. Width
+    /// and height must be even and positive, and <paramref name="sound"/> says whether it has a track.
+    /// </summary>
+    public static Mp4Writer CreateInMemory(string path, int width, int height, int fps, bool sound)
     {
-        uint token;
-        PInvoke.MFCreateDXGIDeviceManager(&token, out var manager).ThrowOnFailure();
+        if (width <= 0 || height <= 0 || width % 2 != 0 || height % 2 != 0 || width > 16384 || height > 16384)
+            throw new ArgumentException($"A video can't be {width} x {height}");
+        MediaFoundation.Start();
+        try
+        {
+            return Create(path, null, width, height, fps, hardware: true, sound);
+        }
+        catch
+        {
+            MediaFoundation.Stop();
+            throw;
+        }
+    }
+
+    private static Mp4Writer Create(string path, ID3D11Device? device, int width, int height, int fps, bool hardware, bool sound = true)
+    {
+        uint token = 0;
+        IMFDXGIDeviceManager? manager = null;
+        if (device is not null) PInvoke.MFCreateDXGIDeviceManager(&token, out manager).ThrowOnFailure();
         IMFAttributes? attributes = null;
         IMFMediaType? output = null, input = null;
         IMFSinkWriter? writer = null;
         try
         {
-            manager.ResetDevice(device, token);
             PInvoke.MFCreateAttributes(out attributes, 4).ThrowOnFailure();
-            attributes.SetUnknown(PInvoke.MF_SINK_WRITER_D3D_MANAGER, manager);
+            if (manager is not null)
+            {
+                manager.ResetDevice(device!, token);
+                attributes.SetUnknown(PInvoke.MF_SINK_WRITER_D3D_MANAGER, manager);
+            }
             attributes.SetUINT32(PInvoke.MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, hardware ? 1u : 0u);
             attributes.SetGUID(PInvoke.MF_TRANSCODE_CONTAINERTYPE, PInvoke.MFTranscodeContainerType_MPEG4);
             PInvoke.MFCreateSinkWriterFromURL(path, null, attributes, out writer).ThrowOnFailure();
@@ -101,7 +125,7 @@ internal sealed unsafe class Mp4Writer : IDisposable
             // Positive: the first row is the top one, as in a D3D texture.
             input.SetUINT32(PInvoke.MF_MT_DEFAULT_STRIDE, (uint)(width * 4));
             writer.SetInputMediaType(stream, input, null);
-            uint audio = AddAudio(writer);
+            uint audio = sound ? AddAudio(writer) : uint.MaxValue;
             writer.BeginWriting();
 
             var result = new Mp4Writer(writer, manager, stream, audio, width, height, hardware);
@@ -111,7 +135,7 @@ internal sealed unsafe class Mp4Writer : IDisposable
         catch
         {
             if (writer is not null) Marshal.ReleaseComObject(writer);
-            Marshal.ReleaseComObject(manager);
+            if (manager is not null) Marshal.ReleaseComObject(manager);
             throw;
         }
         finally
@@ -202,6 +226,35 @@ internal sealed unsafe class Mp4Writer : IDisposable
         }
     }
 
+    /// <summary>One frame from memory, top row first, <paramref name="stride"/> bytes a row; only the writer's width and height are used.</summary>
+    public void WriteBgra(byte[] pixels, int stride, long start, long duration)
+    {
+        int rowBytes = Width * 4;
+        uint bytes = (uint)(rowBytes * Height);
+        IMFMediaBuffer? buffer = null;
+        try
+        {
+            PInvoke.MFCreateMemoryBuffer(bytes, out buffer).ThrowOnFailure();
+            byte* data;
+            buffer.Lock(&data, null, null);
+            try
+            {
+                for (int y = 0; y < Height; y++)
+                    pixels.AsSpan(y * stride, rowBytes).CopyTo(new Span<byte>(data + y * rowBytes, rowBytes));
+            }
+            finally
+            {
+                buffer.Unlock();
+            }
+            buffer.SetCurrentLength(bytes);
+            WriteBuffer(_stream, buffer, start, duration);
+        }
+        finally
+        {
+            ComObjects.Release(buffer);
+        }
+    }
+
     /// <summary>One buffer as a sample of <paramref name="stream"/> at <paramref name="start"/> for <paramref name="duration"/> ticks.</summary>
     private void WriteBuffer(uint stream, IMFMediaBuffer buffer, long start, long duration)
     {
@@ -231,7 +284,7 @@ internal sealed unsafe class Mp4Writer : IDisposable
     public void Dispose()
     {
         Marshal.ReleaseComObject(_writer);
-        Marshal.ReleaseComObject(_manager);
+        if (_manager is not null) Marshal.ReleaseComObject(_manager);
         MediaFoundation.Stop();
     }
 }

@@ -35,7 +35,7 @@ internal sealed class CaptureItem(string path, BitmapSource image, TimeSpan? len
     public BitmapSource Image { get; } = image;
     public TimeSpan? Length { get; } = length;
 
-    /// <summary>A recording: it plays in the video player and has no editor, pin or text.</summary>
+    /// <summary>A recording: it plays in the video player, has its own editor, and no pin or text.</summary>
     public bool IsVideo => CaptureLibrary.IsVideo(Path);
 
     /// <summary>The picture read from a library file (a recording's thumbnail); null when it can't be read.</summary>

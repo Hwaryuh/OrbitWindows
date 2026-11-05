@@ -597,7 +597,11 @@ internal sealed class CaptureCard : Grid
     private ContextMenu Menu()
     {
         var menu = new ContextMenu();
-        if (_item.IsVideo) menu.Items.Add(Controls.MenuItem(Strings.CardOpenVideo, () => _owner.Open(_item)));
+        if (_item.IsVideo)
+        {
+            menu.Items.Add(Controls.MenuItem(Strings.CardOpenVideo, () => _owner.Open(_item)));
+            menu.Items.Add(Controls.MenuItem(Strings.CardEditVideo, () => VideoEditorWindow.OpenFor(_item.Path, _owner.Actions)));
+        }
         else
         {
             menu.Items.Add(Controls.MenuItem(Strings.CardEdit, () => _owner.Open(_item)));

@@ -191,6 +191,7 @@ MFCreateMediaType
 MFCreateSample
 MFCreateSinkWriterFromURL
 MFCreateSourceReaderFromURL
+MF_SOURCE_READER_ENABLE_VIDEO_PROCESSING
 MFCreateDXGIDeviceManager
 MFCreateDXGISurfaceBuffer
 IMFSinkWriter
