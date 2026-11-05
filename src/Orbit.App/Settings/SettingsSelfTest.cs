@@ -51,19 +51,21 @@ internal static class SettingsSelfTest
             results.Check("an unknown page changes nothing", sidebar.SelectedId == "general");
 
             // Long enough for the slide to end.
-            var frame = new System.Windows.Threading.DispatcherFrame();
-            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
-            timer.Tick += (_, _) =>
-            {
-                timer.Stop();
-                frame.Continue = false;
-            };
-            timer.Start();
-            System.Windows.Threading.Dispatcher.PushFrame(frame);
+            PumpFor(500);
             (card, row) = sidebar.CardAndRow();
             results.Check("the card ends on the selected row", Math.Abs(card - row) < 1);
 
-            if (render is not null) Render(window, render);
+            if (render is not null)
+            {
+                Render(window, render);
+                // Pages whose controls show the design, and which need no running feature.
+                foreach (string page in new[] { "ports", "about", "overlaps" })
+                {
+                    sidebar.Select(page);
+                    PumpFor(500);
+                    Render(window, Path.ChangeExtension(render, $".{page}.png"));
+                }
+            }
             return results.Finish();
         }
         finally

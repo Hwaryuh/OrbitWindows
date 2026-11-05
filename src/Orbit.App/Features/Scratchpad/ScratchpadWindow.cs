@@ -62,6 +62,8 @@ internal sealed class ScratchpadWindow : Window
         ResizeMode = ResizeMode.CanResizeWithGrip;
         ShowInTaskbar = false;
         Background = Brushes.White;
+        // Always light, whatever Windows uses, and so are its controls.
+        Design.Palette.Light.ApplyTo(Resources);
         BorderBrush = Line;
         BorderThickness = new Thickness(1);
         FontFamily = new FontFamily("Segoe UI Variable Text, Segoe UI, Malgun Gothic");

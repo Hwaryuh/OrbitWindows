@@ -56,6 +56,20 @@ internal static class SelfTestParts
         Dispatcher.PushFrame(frame);
     }
 
+    /// <summary>Lets the UI thread run this long, for animations to end.</summary>
+    public static void PumpFor(int milliseconds)
+    {
+        var frame = new DispatcherFrame();
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(milliseconds) };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            frame.Continue = false;
+        };
+        timer.Start();
+        Dispatcher.PushFrame(frame);
+    }
+
     /// <summary>Every element of a type under <paramref name="root"/>, through documents too.</summary>
     public static IEnumerable<T> All<T>(DependencyObject root) where T : DependencyObject
     {

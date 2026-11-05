@@ -40,6 +40,23 @@ internal sealed class Palette
     /// <summary>A selected row's background.</summary>
     public SolidColorBrush Selection { get; }
 
+    /// <summary>
+    /// Puts this palette where Design/ControlStyles.xaml finds it: the application's resources for the
+    /// Windows mode, or a window's own for a surface fixed to one palette.
+    /// </summary>
+    public void ApplyTo(System.Windows.ResourceDictionary resources)
+    {
+        resources["OrbitCanvas"] = Canvas;
+        resources["OrbitSurface"] = Surface;
+        resources["OrbitRaised"] = Raised;
+        resources["OrbitInk"] = Ink;
+        resources["OrbitInkSecondary"] = InkSecondary;
+        resources["OrbitHairline"] = Hairline;
+        resources["OrbitAccent"] = Accent;
+        resources["OrbitSelection"] = Selection;
+        resources["OrbitScrollBar"] = Fade(InkSecondary, 0.5);
+    }
+
     /// <summary>A borderless text field on this palette, as the launcher's search fields.</summary>
     public System.Windows.Controls.TextBox PlainField(double fontSize) => new()
     {

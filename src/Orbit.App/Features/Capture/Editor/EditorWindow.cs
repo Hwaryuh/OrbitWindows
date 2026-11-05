@@ -72,6 +72,8 @@ internal sealed class EditorWindow : Window
         InputMethod.SetIsInputMethodEnabled(this, false);
 
         _canvas = new EditorCanvas(this);
+        // Always dark, whatever Windows uses, and so are its controls.
+        Palette.DarkTheme.ApplyTo(Resources);
         _textBox = new TextBox
         {
             AcceptsReturn = true, BorderThickness = new Thickness(1), BorderBrush = Palette.DarkTheme.Accent, Background = Brushes.Transparent,

@@ -673,6 +673,8 @@ internal static class Strings
     public static string PageGeneral => T("일반", "General");
     public static string PageRing => T("링", "Ring");
     public static string PageShortcuts => T("단축키", "Shortcuts");
+    public static string GeneralSubtitle => T("Orbit이 어떻게 시작할지 정합니다.", "How Orbit starts.");
+    public static string AboutSubtitle => T("버전과 로그를 확인합니다.", "The version, and the logs.");
     public static string SettingsTagline => T("Windows 유틸리티를 한곳에", "Windows utilities, all in one");
     public static string SettingsSectionEssentials => T("기본", "Essentials");
     public static string SettingsSectionUtilities => T("유틸리티", "Utilities");

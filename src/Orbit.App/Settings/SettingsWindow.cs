@@ -1,3 +1,4 @@
+using Orbit.App.Design;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -14,9 +15,7 @@ internal sealed class SettingsWindow : Window
 {
     private static SettingsWindow? _open;
 
-    private static readonly Brush Ink = Brushes.Black;
-    private static readonly Brush Muted = new SolidColorBrush(Color.FromRgb(110, 110, 110));
-    private static readonly Brush Line = new SolidColorBrush(Color.FromRgb(230, 230, 230));
+    private readonly PageParts _parts = new(Palette.Light);
 
     private readonly Features.AppServices _services;
     private readonly Preferences _preferences;
@@ -44,8 +43,10 @@ internal sealed class SettingsWindow : Window
         MinWidth = 860;
         MinHeight = 480;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
-        Background = Brushes.White;
-        FontFamily = new FontFamily("Segoe UI Variable Text, Segoe UI, Malgun Gothic");
+        Background = Palette.Light.Canvas;
+        // Always light, whatever Windows uses, and so are its controls.
+        Palette.Light.ApplyTo(Resources);
+        FontFamily = (FontFamily)FindResource("OrbitTextFont");
 
         var pages = Sidebar = new SettingsSidebar(PageTitles);
         var builders = PageTitles.ToDictionary(p => p.Id, p => Build(p.Id, p.Title));
@@ -54,7 +55,7 @@ internal sealed class SettingsWindow : Window
         var layout = new DockPanel();
         DockPanel.SetDock(pages, Dock.Left);
         layout.Children.Add(pages);
-        layout.Children.Add(new Border { BorderBrush = Line, BorderThickness = new Thickness(1, 0, 0, 0), Child = new ScrollViewer { Content = _page, VerticalScrollBarVisibility = ScrollBarVisibility.Auto } });
+        layout.Children.Add(new Border { BorderBrush = Palette.Light.Hairline, BorderThickness = new Thickness(1, 0, 0, 0), Child = new ScrollViewer { Content = _page, VerticalScrollBarVisibility = ScrollBarVisibility.Auto } });
         Content = layout;
         pages.Select(PageTitles[0].Id);
         if (services.KeepAwake is { } awake)
@@ -101,56 +102,36 @@ internal sealed class SettingsWindow : Window
 
     private UIElement General()
     {
-        var panel = Page(Strings.PageGeneral);
-        var startup = new CheckBox
+        var panel = new StackPanel();
+        panel.Children.Add(_parts.PageTitles(Strings.PageGeneral, Strings.GeneralSubtitle, bottom: 20));
+        CheckBox? startup = null;
+        startup = _parts.Toggle(_preferences.Get<bool>(Pref.LaunchAtSignIn), on =>
         {
-            Content = Strings.LaunchAtSignIn,
-            IsChecked = _preferences.Get<bool>(Pref.LaunchAtSignIn),
-            FontSize = 14,
-            Foreground = Ink,
-            Margin = new Thickness(0, 4, 0, 2),
-        };
-        startup.Click += (_, _) =>
-        {
-            bool on = startup.IsChecked == true;
             if (StartupRegistration.Apply(on)) _preferences.Set(Pref.LaunchAtSignIn, on);
             else
             {
-                startup.IsChecked = !on;
+                startup!.IsChecked = !on;
                 Overlays.Toast.Show(Strings.StartupChangeFailed);
             }
-        };
-        panel.Children.Add(startup);
-        panel.Children.Add(Caption(Strings.LaunchAtSignInDetail));
+        });
+        panel.Children.Add(_parts.Group(null, null, _parts.Row(Strings.LaunchAtSignIn, Strings.LaunchAtSignInDetail, startup)));
         return panel;
     }
 
-    private static UIElement NotReady(string title)
-    {
-        var panel = Page(title);
-        panel.Children.Add(Caption(Strings.PageNotReady));
-        return panel;
-    }
-
-    private static UIElement About()
-    {
-        var panel = Page(Strings.PageAbout);
-        var version = typeof(SettingsWindow).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
-        panel.Children.Add(new TextBlock { Text = Strings.AboutVersion(version), FontSize = 14, Foreground = Ink });
-        panel.Children.Add(Caption(Strings.AboutNotice));
-        var logs = new Button { Content = Strings.AboutLogs, HorizontalAlignment = HorizontalAlignment.Left, Padding = new Thickness(12, 5, 12, 5), Margin = new Thickness(0, 16, 0, 0) };
-        logs.Click += (_, _) => Shell.OpenLogFolder();
-        panel.Children.Add(logs);
-        return panel;
-    }
-
-    private static StackPanel Page(string title)
+    private UIElement NotReady(string title)
     {
         var panel = new StackPanel();
-        panel.Children.Add(new TextBlock { Text = title, FontSize = 22, FontWeight = FontWeights.SemiBold, Foreground = Ink, Margin = new Thickness(0, 0, 0, 16) });
+        panel.Children.Add(_parts.PageTitles(title, Strings.PageNotReady));
         return panel;
     }
 
-    private static TextBlock Caption(string text) =>
-        new() { Text = text, FontSize = 12.5, Foreground = Muted, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) };
+    private UIElement About()
+    {
+        var panel = new StackPanel();
+        panel.Children.Add(_parts.PageTitles(Strings.PageAbout, Strings.AboutSubtitle, bottom: 20));
+        var version = typeof(SettingsWindow).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+        var logs = _parts.PillButton(Strings.AboutLogs, prominent: false, Shell.OpenLogFolder);
+        panel.Children.Add(_parts.Group(null, Strings.AboutNotice, _parts.Row(Strings.AboutVersion(version), null, logs)));
+        return panel;
+    }
 }

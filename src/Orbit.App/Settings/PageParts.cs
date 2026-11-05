@@ -72,7 +72,7 @@ internal sealed class PageParts(Palette palette)
     {
         var box = new CheckBox { IsChecked = on, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(12, 2, 0, 0), Cursor = Cursors.Hand };
         box.Click += (_, _) => changed(box.IsChecked == true);
-        return box;
+        return Controls.MakeSwitch(box);
     }
 
     public UIElement Group(string? title, string? footer, params UIElement[] rows)

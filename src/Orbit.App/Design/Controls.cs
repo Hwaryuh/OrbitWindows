@@ -28,6 +28,27 @@ internal static class Controls
         return freezable;
     }
 
+    /// <summary>
+    /// A check box drawn as a switch (Design/ControlStyles.xaml). The template places the knob by state;
+    /// a change slides it from where it was. In code, as a template's own event triggers throw when the
+    /// box changes before it has been shown, and on opening a page nothing should move.
+    /// </summary>
+    public static CheckBox MakeSwitch(CheckBox box)
+    {
+        box.Style = (Style)Application.Current.FindResource("OrbitSwitch");
+        box.Checked += (_, _) => SlideKnob(box, -16);
+        box.Unchecked += (_, _) => SlideKnob(box, 16);
+        return box;
+    }
+
+    private static void SlideKnob(CheckBox box, double from)
+    {
+        if (!box.IsLoaded || !SystemParameters.ClientAreaAnimation || box.Template.FindName("Knob", box) is not FrameworkElement knob) return;
+        var at = new System.Windows.Media.TranslateTransform();
+        knob.RenderTransform = at;
+        at.BeginAnimation(System.Windows.Media.TranslateTransform.XProperty, new System.Windows.Media.Animation.DoubleAnimation(from, 0, TimeSpan.FromMilliseconds(120)));
+    }
+
     public static MenuItem MenuItem(string header, Action click)
     {
         var item = new MenuItem { Header = header };

@@ -1,3 +1,4 @@
+using Orbit.App.Design;
 using System.Windows;
 using System.Windows.Threading;
 using Orbit.App.Features;
@@ -30,6 +31,8 @@ public partial class App : Application
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        Palette.Current().ApplyTo(Resources);
+        Microsoft.Win32.SystemEvents.UserPreferenceChanged += OnWindowsSettingChanged;
         // A self-test shows nothing and runs no hooks, so it runs beside the user's own Orbit, and
         // doesn't touch the name that says one is running.
         bool selfTest = e.Args.Any(a => a.StartsWith("--selftest-", StringComparison.Ordinal));
@@ -50,7 +53,7 @@ public partial class App : Application
         foreach (var action in ActionText.Missing()) Log.Error($"Action {action.Id()} has no title");
 
         // These show nothing and run before the hooks and the tray.
-        if (e.Args.Contains("--selftest-scratchpad") || e.Args.Contains("--selftest-shortcuts") || e.Args.Contains("--selftest-video") || e.Args.Contains("--selftest-settings"))
+        if (e.Args.Contains("--selftest-scratchpad") || e.Args.Contains("--selftest-shortcuts") || e.Args.Contains("--selftest-video") || e.Args.Contains("--selftest-settings") || e.Args.Contains("--selftest-controls"))
         {
             int at = Array.IndexOf(e.Args, "--render");
             string? render = at >= 0 && at + 1 < e.Args.Length ? e.Args[at + 1] : null;
@@ -61,6 +64,7 @@ public partial class App : Application
                     ? Features.Scratchpad.ScratchpadSelfTest.Run(Preferences.OpenDefault(), render)
                     : e.Args.Contains("--selftest-shortcuts") ? Settings.ShortcutsSelfTest.Run(render)
                     : e.Args.Contains("--selftest-settings") ? Settings.SettingsSelfTest.Run(render)
+                    : e.Args.Contains("--selftest-controls") ? ControlsSelfTest.Run(render)
                     : VideoEditorSelfTest.Run(render);
             }
             catch (Exception error)
@@ -128,6 +132,13 @@ public partial class App : Application
     }
 
     private bool PassesToFront(Hotkey hotkey) => PassThroughRule.Passes(PassThroughRule.Defaults, _foreground!.ForegroundProcess, hotkey);
+
+    /// <summary>The Windows mode changed, or something that may include it: fixed palettes keep theirs, in their own resources.</summary>
+    private void OnWindowsSettingChanged(object sender, Microsoft.Win32.UserPreferenceChangedEventArgs e)
+    {
+        if (e.Category == Microsoft.Win32.UserPreferenceCategory.General)
+            Dispatcher.BeginInvoke(() => Palette.Current().ApplyTo(Resources));
+    }
 
     private void OnHook(HookEvent e)
     {

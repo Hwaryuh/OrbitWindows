@@ -64,6 +64,7 @@ internal sealed class VideoEditorWindow : Window
         _actions = actions;
         Title = Path.GetFileNameWithoutExtension(path);
         Background = _palette.Canvas;
+        _palette.ApplyTo(Resources);
         FontFamily = new FontFamily("Segoe UI Variable Text, Segoe UI, Malgun Gothic");
         Foreground = _palette.Ink;
         MinWidth = 680;
