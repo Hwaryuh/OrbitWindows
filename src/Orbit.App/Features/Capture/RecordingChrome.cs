@@ -35,9 +35,10 @@ internal sealed class RecordingChrome
     /// <param name="area">What is recorded, in physical pixels; null for a window (it may move).</param>
     /// <param name="anchor">Where the bar goes: below this rectangle, or above it, or inside at the bottom.</param>
     /// <param name="sound">The sound switches: app sound always, the microphone when <see cref="SoundSwitches.HasMic"/>.</param>
-    public static RecordingChrome Show(MonitorInfo monitor, PixelRect anchor, PixelRect? area, Action stop, Action discard, SoundSwitches sound)
+    /// <param name="clicks">The click rings' switch; null when this recording can't have rings.</param>
+    public static RecordingChrome Show(MonitorInfo monitor, PixelRect anchor, PixelRect? area, Action stop, Action discard, SoundSwitches sound, ClickSwitch? clicks)
     {
-        var bar = new ControlBar(stop, discard, sound);
+        var bar = new ControlBar(stop, discard, sound, clicks);
         bar.ShowAt(BarPlace(monitor, anchor, bar.BarWidth));
         bar.ExcludeFromCapture();
         AreaFrame? frame = null;
@@ -56,6 +57,9 @@ internal sealed class RecordingChrome
         _bar.Close();
         _frame?.Close();
     }
+
+    /// <summary>Whether a point in physical pixels is on the bar.</summary>
+    public bool BarContains(int x, int y) => _bar.Placement.Contains(x, y);
 
     /// <summary>The switches show the state again (after the microphone could not be opened).</summary>
     public void Refresh() => _bar.Refresh();
@@ -82,13 +86,16 @@ internal sealed class RecordingChrome
         private readonly SoundSwitches _sound;
         private readonly Button _app;
         private readonly Button? _mic;
+        private readonly ClickSwitch? _clicks;
+        private readonly Button? _clicksButton;
 
         public double BarWidth { get; }
 
-        public ControlBar(Action stop, Action discard, SoundSwitches sound) : base(activating: false, transparent: true, clickThrough: false)
+        public ControlBar(Action stop, Action discard, SoundSwitches sound, ClickSwitch? clicks) : base(activating: false, transparent: true, clickThrough: false)
         {
             _sound = sound;
-            BarWidth = BaseWidth + ButtonWidth * (sound.HasMic() ? 2 : 1);
+            _clicks = clicks;
+            BarWidth = BaseWidth + ButtonWidth * (1 + (sound.HasMic() ? 1 : 0) + (clicks is null ? 0 : 1));
             _time = new TextBlock
             {
                 Text = CaptureCard.Clock(TimeSpan.Zero), FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = Brushes.White,
@@ -112,6 +119,15 @@ internal sealed class RecordingChrome
                 });
                 row.Children.Add(_mic);
             }
+            if (clicks is not null)
+            {
+                _clicksButton = Button(Glyphs.Pointer, Strings.RecordClicksOff, () =>
+                {
+                    clicks.Set(!clicks.Get());
+                    Refresh();
+                });
+                row.Children.Add(_clicksButton);
+            }
             row.Children.Add(Button("", Strings.RecordStop, stop));
             row.Children.Add(Button("", Strings.RecordDiscard, discard));
             Content = new Border
@@ -133,6 +149,7 @@ internal sealed class RecordingChrome
             Show(_app, _sound.App(), Glyphs.Volume, Glyphs.Mute, Strings.RecordAppSoundOff, Strings.RecordAppSoundOn);
             // A microphone that could not be opened stays as a switch: pressing it again tries again.
             if (_mic is not null) Show(_mic, _sound.Mic(), Glyphs.Microphone, Glyphs.MicOff, Strings.RecordMicOff, Strings.RecordMicOn);
+            if (_clicksButton is not null) Show(_clicksButton, _clicks!.Get(), Glyphs.Pointer, Glyphs.Pointer, Strings.RecordClicksOff, Strings.RecordClicksOn);
         }
 
         private static void Show(Button button, bool on, string onGlyph, string offGlyph, string onHelp, string offHelp)
@@ -179,3 +196,6 @@ internal sealed class RecordingChrome
 
 /// <summary>What the bar's sound switches read and change.</summary>
 internal sealed record SoundSwitches(Func<bool> App, Action<bool> SetApp, Func<bool> Mic, Action<bool> SetMic, Func<bool> HasMic);
+
+/// <summary>What the bar's click rings switch reads and changes.</summary>
+internal sealed record ClickSwitch(Func<bool> Get, Action<bool> Set);

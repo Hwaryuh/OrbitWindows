@@ -26,6 +26,10 @@ public static class Pref
     public const string RecordFps = "record.fps";
     /// <summary>The pointer is in recordings (Orbit: record.cursor).</summary>
     public const string RecordCursor = "record.cursor";
+    /// <summary>A ring shows where the mouse is pressed in recordings (Orbit: record.clicks).</summary>
+    public const string RecordClicks = "record.clicks";
+    /// <summary>Seconds counted before a recording starts; 0 is none (Orbit: record.countdown).</summary>
+    public const string RecordCountdown = "record.countdown";
     /// <summary>Other programs' sound in recordings (Orbit: record.systemAudio).</summary>
     public const string RecordAppSound = "record.systemAudio";
     /// <summary>The microphone in recordings (Orbit: record.mic).</summary>
@@ -96,6 +100,8 @@ public static class Pref
         [TimedCaptureSeconds] = 5,
         [RecordFps] = 60,
         [RecordCursor] = true,
+        [RecordClicks] = true,
+        [RecordCountdown] = 3,
         [RecordAppSound] = false,
         [RecordMic] = false,
         [LaunchAtSignIn] = true,

@@ -98,6 +98,11 @@ internal sealed class CaptureFeature : IFeature
                 lastArea, services.Preferences.Get<bool>(Pref.CaptureKeyHints));
             if (result is null) return;
             if (mode != Mode.Text && result.Window is null) store.LastArea = new LastArea(result.Area, result.Monitor.DeviceName);
+            if (result.Action == CaptureKeyAction.Record)
+            {
+                services.Recording?.RecordPicked(result);
+                return;
+            }
 
             var image = result.Window is { } window ? await WindowImageAsync(window, result) : result.Frame.Crop(result.Area);
             if (mode == Mode.Text || result.Action == CaptureKeyAction.Text) await CaptureActions.RecognizeAsync(image);

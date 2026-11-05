@@ -93,6 +93,17 @@ internal static class Strings
     public static string RecordFrameRate => T("초당 프레임", "Frames per second");
     public static string RecordFrameRateDetail => T("60은 움직임이 부드럽고, 30은 파일이 작습니다.", "60 moves more smoothly; 30 makes smaller files.");
     public static string RecordShowCursor => T("마우스 포인터 보이기", "Show the pointer");
+    public static string RecordClicksRow => T("클릭 강조", "Highlight clicks");
+    public static string RecordClicksDetail => T("영역과 화면 녹화에 표시됩니다. 창 녹화와 포인터를 끈 녹화에는 표시되지 않습니다.", "Shows in area and screen recordings, not in window recordings or with the pointer off.");
+    public static string RecordClicksOff => T("클릭 강조 끄기", "Stop highlighting clicks");
+    public static string RecordClicksOn => T("클릭 강조 켜기", "Highlight clicks");
+    public static string RecordCountdownRow => T("카운트다운", "Countdown");
+    public static string RecordCountdownDetail => T("녹화를 시작하기 전에 초를 셉니다. Esc를 누르면 취소합니다.", "Counts before recording starts. Esc cancels.");
+    public static string RecordCountdownOff => T("끔", "Off");
+    public static string RecordCountdownSeconds(int seconds) => T($"{seconds}초", $"{seconds} s");
+    public static string RecordCountdownCancel => T("Esc를 누르면 취소합니다", "Esc to cancel");
+    public static string RecordingAlreadyRunning => T("이미 녹화 중입니다.", "Already recording.");
+    public static string CaptureActionRecord => T("이 영역 녹화", "Record this area");
     public static string RecordAppSound => T("앱 소리 녹음", "Record app sound");
     public static string RecordMic => T("마이크 녹음", "Record microphone");
     public static string RecordSoundDetail => T("녹화 중에도 언제든 켜고 끌 수 있습니다.", "Switch it on or off any time while recording.");

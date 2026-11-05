@@ -9,6 +9,7 @@ using Orbit.App.Design;
 using Orbit.App.Features;
 using Orbit.Core.Actions;
 using Orbit.Core.Capture;
+using Orbit.Core.Capture.Recording;
 using Orbit.Core.Settings;
 
 namespace Orbit.App.Settings;
@@ -44,6 +45,10 @@ internal sealed class CapturePage : StackPanel
             _parts.Row(Strings.RecordFrameRate, Strings.RecordFrameRateDetail, _parts.Chips<int>(
                 [(60, "60"), (30, "30")], () => _preferences.Get<int>(Pref.RecordFps), v => _preferences.Set(Pref.RecordFps, v))),
             _parts.Row(Strings.RecordShowCursor, null, BoolToggle(Pref.RecordCursor)),
+            _parts.Row(Strings.RecordClicksRow, Strings.RecordClicksDetail, BoolToggle(Pref.RecordClicks)),
+            _parts.Row(Strings.RecordCountdownRow, Strings.RecordCountdownDetail, _parts.Chips<int>(
+                [(0, Strings.RecordCountdownOff), (3, Strings.RecordCountdownSeconds(3)), (5, Strings.RecordCountdownSeconds(5))],
+                () => RecordingExtras.CountdownSeconds(_preferences.Get<int>(Pref.RecordCountdown)), v => _preferences.Set(Pref.RecordCountdown, v))),
             _parts.Row(Strings.RecordAppSound, Strings.RecordSoundDetail, BoolToggle(Pref.RecordAppSound)),
             _parts.Row(Strings.RecordMic, Strings.RecordSoundDetail, BoolToggle(Pref.RecordMic))));
         Children.Add(_parts.Group(Strings.CaptureSaving, null, SaveFolderRow()));
@@ -54,7 +59,7 @@ internal sealed class CapturePage : StackPanel
         Children.Add(_parts.Group(Strings.CaptureWhileDragging, null,
             Tip("Shift", Strings.TipShiftRatio), Tip("Alt", Strings.TipAltCenter), Tip("Space", Strings.TipSpaceMove), Tip("←↑↓→", Strings.TipArrows)));
         Children.Add(_parts.Group(Strings.CaptureBeforeRelease, Strings.CaptureBeforeReleaseFooter,
-            Tip("C", Strings.TipCopyOnly), Tip("S", Strings.TipSave), Tip("E", Strings.TipEdit), Tip("P", Strings.TipPin), Tip("T", Strings.TipText)));
+            Tip("C", Strings.TipCopyOnly), Tip("S", Strings.TipSave), Tip("E", Strings.TipEdit), Tip("P", Strings.TipPin), Tip("T", Strings.TipText), Tip("V", Strings.CaptureActionRecord)));
     }
 
     private UIElement Header()

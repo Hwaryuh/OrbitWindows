@@ -35,6 +35,7 @@ internal static class Glyphs
     public const string Document = "\uE8A5";
     public const string Preview = "\uE890";
     public const string Edit = "\uE70F";
+    public const string Pointer = "\uE962";
 
     private static readonly Dictionary<OrbitAction, string> ForAction = new()
     {

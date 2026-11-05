@@ -6,7 +6,7 @@ using Windows.Win32.UI.WindowsAndMessaging;
 
 namespace Orbit.Core.Input;
 
-public enum HookNotice { RingOpen, RingRelease, HooksReinstalled, HotkeyDown, HotkeyUp, Click, Escape, CopyPressed, KeyTyped, TypingReset }
+public enum HookNotice { RingOpen, RingRelease, HooksReinstalled, HotkeyDown, HotkeyUp, Click, Escape, CopyPressed, KeyTyped, TypingReset, Press }
 
 /// <summary>Modifier and lock state with a <see cref="HookNotice.KeyTyped"/> key, as it was when the key went down.</summary>
 [Flags]
@@ -16,7 +16,7 @@ public enum TypedState { None = 0, Shift = 1, Ctrl = 2, Alt = 4, Win = 8, CapsLo
 /// What the hooks report. X and Y: the ring's press or a click, in physical pixels. Hotkey: the
 /// matched id. At: when it happened, Environment.TickCount64 milliseconds (Ctrl+C presses).
 /// For <see cref="HookNotice.KeyTyped"/>: X is the virtual key, Y the <see cref="TypedState"/>,
-/// Hotkey the scan code.
+/// Hotkey the scan code. For <see cref="HookNotice.Press"/>: X and Y as a click, Hotkey 1 for the right button.
 /// </summary>
 public readonly record struct HookEvent(HookNotice Notice, int X = 0, int Y = 0, int Hotkey = 0, long At = 0);
 
@@ -41,6 +41,8 @@ public sealed class HookThread : IDisposable
     private const uint WmCopyPressed = PInvoke.WM_APP + 7;
     private const uint WmKeyTyped = PInvoke.WM_APP + 8;
     private const uint WmTypingReset = PInvoke.WM_APP + 9;
+    private const uint WmPress = PInvoke.WM_APP + 10;
+    private const uint WmPressRight = PInvoke.WM_APP + 11;
     private const uint VkCapital = 0x14, VkRMenu = 0xA5;
     private const uint VkC = 0x43, VkControl = 0x11, VkMenu = 0x12, VkShift = 0x10, VkLWin = 0x5B, VkRWin = 0x5C;
     private const uint VkEscape = 0x1B;
@@ -63,6 +65,7 @@ public sealed class HookThread : IDisposable
     private int _silentMoves;
     private uint _lastReinstallLog;
     private volatile bool _reportClicks;
+    private volatile bool _reportPresses;
     private volatile bool _captureEscape;
     private volatile bool _reportCopies;
     private volatile bool _reportTyping;
@@ -92,6 +95,13 @@ public sealed class HookThread : IDisposable
     /// whether it was outside.
     /// </summary>
     public bool ReportClicks { set => _reportClicks = value; }
+
+    /// <summary>
+    /// While set (a recording draws click rings), every mouse press anywhere is reported as
+    /// <see cref="HookNotice.Press"/>. Apart from <see cref="ReportClicks"/>, which the ring turns
+    /// off when it closes. The press still goes to its window.
+    /// </summary>
+    public bool ReportPresses { set => _reportPresses = value; }
 
     /// <summary>
     /// While set, an Esc pressed from now on is Orbit's: reported as <see cref="HookNotice.Escape"/>
@@ -187,6 +197,12 @@ public sealed class HookThread : IDisposable
             case WmEscape:
                 Raise(new HookEvent(HookNotice.Escape));
                 break;
+            case WmPress:
+                Raise(new HookEvent(HookNotice.Press, (int)(nint)msg.wParam.Value, (int)msg.lParam.Value));
+                break;
+            case WmPressRight:
+                Raise(new HookEvent(HookNotice.Press, (int)(nint)msg.wParam.Value, (int)msg.lParam.Value, Hotkey: 1));
+                break;
             case WmCopyPressed:
                 Raise(new HookEvent(HookNotice.CopyPressed, At: (long)msg.wParam.Value));
                 break;
@@ -237,6 +253,8 @@ public sealed class HookThread : IDisposable
                 if (down && _reportTyping) PInvoke.PostThreadMessage(_threadId, WmTypingReset, default, default);
                 if (down && _reportClicks && button is MouseButton.Left or MouseButton.Right)
                     PInvoke.PostThreadMessage(_threadId, WmClick, (nuint)(nint)info->pt.X, info->pt.Y);
+                if (down && _reportPresses && button != MouseButton.None)
+                    PInvoke.PostThreadMessage(_threadId, button == MouseButton.Right ? WmPressRight : WmPress, (nuint)(nint)info->pt.X, info->pt.Y);
                 if (button != MouseButton.None)
                 {
                     var action = down
