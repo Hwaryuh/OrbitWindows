@@ -6,11 +6,13 @@
     <AssemblyName>Orbit</AssemblyName>
     <RootNamespace>Orbit.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Windows with no icon of their own take the exe's. Made by tools/icon/make-ico.ps1. -->
+    <ApplicationIcon>Assets\Orbit.ico</ApplicationIcon>
     <!-- Program.Main, so Velopack's install and update hooks run before WPF starts. -->
     <StartupObject>Orbit.App.Program</StartupObject>
   </PropertyGroup>
 
-  <!-- The typing engine, when tools/araso/build.ps1 has built it: copied beside Orbit.exe. -->
+  <!-- The typing engine, when tools/araso/build.ps1 has built it: copied to araso\ beside Orbit.exe. -->
   <ItemGroup Condition="Exists('..\..\artifacts\araso-stage\version.txt')">
     <Content Include="..\..\artifacts\araso-stage\**\*" Link="araso\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
