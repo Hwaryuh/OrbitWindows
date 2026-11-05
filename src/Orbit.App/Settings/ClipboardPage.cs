@@ -174,7 +174,8 @@ internal sealed class ClipboardPage : StackPanel
             added.Children.Add(chip);
         }
         // Transparent, so the hint behind it shows while it is empty.
-        var field = new TextBox { Width = 180, FontSize = 13, Padding = new Thickness(6, 3, 6, 3), VerticalContentAlignment = VerticalAlignment.Center, Background = System.Windows.Media.Brushes.Transparent };
+        var field = _parts.TextField(180);
+        field.Background = System.Windows.Media.Brushes.Transparent;
         void Add()
         {
             var name = field.Text.Trim();

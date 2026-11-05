@@ -239,28 +239,7 @@ public static class VideoExport
     });
 
     /// <summary>Media Foundation's objects stay on one MTA thread, away from the UI.</summary>
-    private static Task<T> OnThread<T>(Func<T> work)
-    {
-        var done = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var thread = new Thread(() =>
-        {
-            try
-            {
-                done.SetResult(work());
-            }
-            catch (OperationCanceledException)
-            {
-                done.SetCanceled();
-            }
-            catch (Exception e)
-            {
-                done.SetException(e);
-            }
-        }) { IsBackground = true, Name = "Orbit video export" };
-        thread.SetApartmentState(ApartmentState.MTA);
-        thread.Start();
-        return done.Task;
-    }
+    private static Task<T> OnThread<T>(Func<T> work) => OwnThread.RunAsync(ApartmentState.MTA, "Orbit video export", work);
 }
 
 /// <summary>The delay of each GIF frame in hundredths of a second, carrying the rounding so the length holds.</summary>

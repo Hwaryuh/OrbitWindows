@@ -81,10 +81,7 @@ internal static class OverlapDetector
     {
         try
         {
-            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-            if (stream.Length > LargestFile) return null;
-            using var reader = new StreamReader(stream);
-            return reader.ReadToEnd();
+            return SharedFile.ReadText(path, LargestFile);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Security.SecurityException)
         {

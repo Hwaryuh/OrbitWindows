@@ -64,7 +64,8 @@ internal sealed class KeepAwakePage : StackPanel
         start.Children.Add(durations);
         Children.Add(start);
 
-        var time = new TextBox { Width = 70, FontSize = 13, Padding = new Thickness(6, 3, 6, 3), Text = DateTime.Now.AddHours(2).ToString("HH:mm", CultureInfo.InvariantCulture), VerticalContentAlignment = VerticalAlignment.Center };
+        var time = _parts.TextField(70);
+        time.Text = DateTime.Now.AddHours(2).ToString("HH:mm", CultureInfo.InvariantCulture);
         var untilRow = new StackPanel { Orientation = Orientation.Horizontal };
         untilRow.Children.Add(time);
         var startUntil = _parts.PillButton(Strings.AwakeStart, prominent: false, () =>

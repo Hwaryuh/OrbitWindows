@@ -48,21 +48,7 @@ internal sealed class SystemFeature : IFeature
     /// <summary>The shell's verbs want a single-threaded apartment, and ejecting takes a moment: a thread of its own.</summary>
     private static Task<T> OnSta<T>(Func<T> work)
     {
-        var done = new TaskCompletionSource<T>();
-        var thread = new Thread(() =>
-        {
-            try
-            {
-                done.SetResult(work());
-            }
-            catch (Exception e)
-            {
-                done.SetException(e);
-            }
-        }) { IsBackground = true };
-        thread.SetApartmentState(ApartmentState.STA);
-        thread.Start();
-        return done.Task;
+        return OwnThread.RunAsync(ApartmentState.STA, "Orbit shell verb", work);
     }
 
     private static async Task EjectAllAsync()

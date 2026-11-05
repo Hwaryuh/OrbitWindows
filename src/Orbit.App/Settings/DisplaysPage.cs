@@ -44,7 +44,7 @@ internal sealed class DisplaysPage : StackPanel
         _cards.Children.Add(_parts.Caption(Strings.DisplaysAsking));
         Children.Add(_cards);
 
-        var name = new TextBox { Width = 140, FontSize = 13, Padding = new Thickness(6, 3, 6, 3), VerticalContentAlignment = VerticalAlignment.Center };
+        var name = _parts.TextField(140);
         var save = _parts.PillButton(Strings.DisplaysSave, true, () => SavePreset(name));
         save.Margin = new Thickness(8, 0, 0, 0);
         name.KeyDown += (_, e) =>

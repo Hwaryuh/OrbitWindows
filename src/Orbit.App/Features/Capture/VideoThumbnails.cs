@@ -22,20 +22,6 @@ internal static class VideoThumbnails
     /// <summary>Off the UI thread, on a short-lived thread of its own apartment, as the shell wants.</summary>
     public static Task<BitmapSource?> ReadAsync(string path)
     {
-        var done = new TaskCompletionSource<BitmapSource?>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var thread = new Thread(() =>
-        {
-            try
-            {
-                done.SetResult(Read(path));
-            }
-            catch (Exception e)
-            {
-                done.SetException(e);
-            }
-        }) { IsBackground = true, Name = "Orbit video thumbnail" };
-        thread.SetApartmentState(ApartmentState.STA);
-        thread.Start();
-        return done.Task;
+        return Orbit.Core.OwnThread.RunAsync(ApartmentState.STA, "Orbit video thumbnail", () => Read(path));
     }
 }

@@ -40,6 +40,10 @@ internal sealed class PageParts(Palette palette)
         VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 0, bottom),
     };
 
+    /// <summary>A one-line text box as the pages show them.</summary>
+    public TextBox TextField(double width) =>
+        new() { Width = width, FontSize = 13, Padding = new Thickness(6, 3, 6, 3), VerticalContentAlignment = VerticalAlignment.Center };
+
     /// <summary>A page's title and the line under it.</summary>
     public StackPanel PageTitles(string title, string subtitle, double bottom = 0)
     {

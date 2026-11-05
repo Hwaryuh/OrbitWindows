@@ -69,7 +69,8 @@ internal sealed class RingPage : StackPanel
         _search = _palette.PlainField(12);
         _search.TextChanged += (_, _) => FillLibrary();
         // Transparent, so the hint behind it shows while it is empty.
-        _name = new TextBox { Width = 220, FontSize = 13, Padding = new Thickness(6, 3, 6, 3), VerticalContentAlignment = VerticalAlignment.Center, Background = Brushes.Transparent };
+        _name = _parts.TextField(220);
+        _name.Background = Brushes.Transparent;
         _name.KeyDown += (_, e) =>
         {
             if (e.Key == Key.Enter) CommitName();
