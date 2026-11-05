@@ -10,6 +10,11 @@
     <StartupObject>Orbit.App.Program</StartupObject>
   </PropertyGroup>
 
+  <!-- Araso, when tools/araso/build.ps1 has built it: copied beside Orbit.exe, registered from the Input page. -->
+  <ItemGroup Condition="Exists('..\..\artifacts\araso-stage\version.txt')">
+    <Content Include="..\..\artifacts\araso-stage\**\*" Link="araso\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <!-- Where updates come from. CI sets it (build.yml); without it the build can't check. -->
   <ItemGroup Condition="'$(UpdateRepo)' != ''">
     <AssemblyMetadata Include="UpdateRepo" Value="$(UpdateRepo)" />

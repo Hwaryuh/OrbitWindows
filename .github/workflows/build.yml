@@ -27,6 +27,14 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
+      # The same Swift as upstream's windows.yml, for Araso's core.
+      - uses: compnerd/gha-setup-swift@main
+        with:
+          branch: swift-6.4.1-release
+          tag: 6.4.1-RELEASE
+      - name: Araso
+        shell: pwsh
+        run: tools/araso/build.ps1
       - name: Version
         id: version
         shell: pwsh

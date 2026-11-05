@@ -1,0 +1,4 @@
+/* The name System Settings and the input menu show for the input source. */
+CFBundleName = "Araso";
+CFBundleDisplayName = "Araso";
+"com.nyttastudio.inputmethod.Araso" = "Araso";

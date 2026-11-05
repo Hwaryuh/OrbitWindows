@@ -54,6 +54,9 @@ internal sealed class AppServices(Preferences preferences, ActionRunner actions,
     /// <summary>Screen recording; null until that feature starts. V in the capture selection hands it the area.</summary>
     public RecordingFeature? Recording { get; set; }
 
+    /// <summary>Araso, the input method; null until that feature starts.</summary>
+    public ArasoFeature? Araso { get; set; }
+
     /// <summary>Snippets; null until that feature starts.</summary>
     public SnippetFeature? Snippets { get; set; }
 

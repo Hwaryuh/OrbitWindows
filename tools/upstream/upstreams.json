@@ -101,8 +101,8 @@
       "license": "MIT",
       "policy": "port",
       "follow": "branch",
-      "pin": "d5b47b32cd4ab9420ab2417d1abeec1d55d4f3c6",
-      "pinDate": "2026-10-29",
+      "pin": "e9d59554aa9d0d9534ed5df3c55ac1709a0061d2",
+      "pinDate": "2026-11-04",
       "areas": [
         { "path": "windows/", "status": "planned", "feature": "Windows input method (M6 Stage A, Stage B fork)", "note": "See docs/plan/02-araso.md" },
         { "path": "Sources/", "status": "skip", "feature": "macOS input method" },

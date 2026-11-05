@@ -1,0 +1,2 @@
+# Upstream's data files are read byte for byte, and Araso.iss needs its BOM and line ends: no conversion here.
+* -text

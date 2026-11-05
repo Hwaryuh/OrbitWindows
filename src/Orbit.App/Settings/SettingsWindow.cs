@@ -28,7 +28,7 @@ internal sealed class SettingsWindow : Window
     [
         ("general", Strings.PageGeneral), ("shortcuts", Strings.PageShortcuts), ("overlaps", Strings.PageOverlaps), ("ring", Strings.PageRing), ("launcher", Strings.PageLauncher),
         ("capture", Strings.PageCapture), ("clipboard", Strings.PageClipboard), ("translate", Strings.PageTranslate),
-        ("snippets", Strings.PageSnippets), ("keepAwake", Strings.PageKeepAwake), ("sound", Strings.PageSound),
+        ("snippets", Strings.PageSnippets), ("input", Strings.PageInput), ("keepAwake", Strings.PageKeepAwake), ("sound", Strings.PageSound),
         ("system", Strings.PageSystem), ("ports", Strings.PagePorts), ("displays", Strings.PageDisplays), ("about", Strings.PageAbout),
     ];
 
@@ -90,6 +90,7 @@ internal sealed class SettingsWindow : Window
         "clipboard" => () => new ClipboardPage(_services),
         "translate" => () => new TranslatePage(_services),
         "snippets" => () => new SnippetsPage(_services),
+        "input" => () => new InputPage(_services.Araso!),
         "keepAwake" => () => new KeepAwakePage(_services),
         "sound" => () => new SoundPage(),
         "system" => () => new SystemPage(_services),

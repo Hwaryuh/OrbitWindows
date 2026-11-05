@@ -12,6 +12,13 @@ public static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        // Started elevated for Araso: that one job and out, before Velopack's hooks or any window.
+        if (Orbit.Core.Araso.ArasoElevated.Run(args) is { } exitCode)
+        {
+            Environment.Exit(exitCode);
+            return;
+        }
+
         VelopackApp.Build()
             // A fresh install starts at sign-in, as the setting's default says; the user can turn it off.
             .OnFirstRun(_ => StartupRegistration.Apply(true))

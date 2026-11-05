@@ -1,0 +1,313 @@
+#include "Ui.h"
+
+#include "resource.h"
+
+#include <dwmapi.h>
+#include <shellscalingapi.h>
+
+#include <algorithm>
+
+namespace araso {
+
+namespace ui {
+
+namespace {
+
+DWORD ReadDword(HKEY root, const wchar_t *path, const wchar_t *name, DWORD fallback) {
+    DWORD value = 0, size = sizeof value;
+    if (RegGetValueW(root, path, name, RRF_RT_REG_DWORD, nullptr, &value, &size) == ERROR_SUCCESS) return value;
+    return fallback;
+}
+
+}  // namespace
+
+Theme CurrentTheme() {
+    bool dark = ReadDword(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+                          L"AppsUseLightTheme", 1) == 0;
+    DWORD colorization = 0;
+    BOOL opaque = FALSE;
+    COLORREF accent = RGB(0, 95, 184);
+    if (SUCCEEDED(DwmGetColorizationColor(&colorization, &opaque))) {
+        accent = RGB((colorization >> 16) & 0xFF, (colorization >> 8) & 0xFF, colorization & 0xFF);
+    }
+    Theme theme;
+    theme.dark = dark;
+    theme.background = dark ? RGB(44, 44, 44) : RGB(249, 249, 249);
+    theme.text = dark ? RGB(255, 255, 255) : RGB(26, 26, 26);
+    theme.secondary = dark ? RGB(170, 170, 170) : RGB(110, 110, 110);
+    theme.accent = accent;
+    theme.accentText = RGB(255, 255, 255);
+    theme.border = dark ? RGB(70, 70, 70) : RGB(220, 220, 220);
+    return theme;
+}
+
+UINT DpiAt(const RECT &rect) {
+    HMONITOR monitor = MonitorFromRect(&rect, MONITOR_DEFAULTTONEAREST);
+    UINT x = 96, y = 96;
+    if (FAILED(GetDpiForMonitor(monitor, MDT_EFFECTIVE_DPI, &x, &y))) return 96;
+    return x;
+}
+
+HFONT Font(UINT dpi, int pointsTimesTen, bool bold) {
+    NONCLIENTMETRICSW metrics = {sizeof metrics};
+    SystemParametersInfoForDpi(SPI_GETNONCLIENTMETRICS, sizeof metrics, &metrics, 0, dpi);
+    LOGFONTW font = metrics.lfMessageFont;
+    font.lfHeight = -MulDiv(pointsTimesTen, static_cast<int>(dpi), 720);
+    if (bold) font.lfWeight = FW_SEMIBOLD;
+    font.lfQuality = CLEARTYPE_QUALITY;
+    return CreateFontIndirectW(&font);
+}
+
+RECT WorkAreaAt(const RECT &rect) {
+    MONITORINFO info = {sizeof info};
+    GetMonitorInfoW(MonitorFromRect(&rect, MONITOR_DEFAULTTONEAREST), &info);
+    return info.rcWork;
+}
+
+void Round(HWND window) {
+    // DWMWA_WINDOW_CORNER_PREFERENCE (33) = DWMWCP_ROUNDSMALL (3); ignored before Windows 11.
+    DWORD preference = 3;
+    DwmSetWindowAttribute(window, 33, &preference, sizeof preference);
+}
+
+}  // namespace ui
+
+namespace {
+
+const wchar_t *kPauseClass = L"ArasoPauseHud";
+const wchar_t *kWordClass = L"ArasoWord";
+
+void RegisterOnce(const wchar_t *name, WNDPROC proc, bool shadow) {
+    WNDCLASSEXW cls = {sizeof cls};
+    if (GetClassInfoExW(GetModuleHandleW(nullptr), name, &cls)) return;
+    cls.style = CS_HREDRAW | CS_VREDRAW | (shadow ? CS_DROPSHADOW : 0);
+    cls.lpfnWndProc = proc;
+    cls.hInstance = GetModuleHandleW(nullptr);
+    cls.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+    cls.lpszClassName = name;
+    RegisterClassExW(&cls);
+}
+
+HWND MakePopup(const wchar_t *name, void *owner) {
+    HWND window = CreateWindowExW(WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_LAYERED, name, L"",
+                                  WS_POPUP, 0, 0, 1, 1, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
+    if (window) {
+        SetWindowLongPtrW(window, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(owner));
+        SetLayeredWindowAttributes(window, 0, 255, LWA_ALPHA);
+        ui::Round(window);
+    }
+    return window;
+}
+
+/// Puts a window of `size` under `anchor`, or above it when there is no room below, inside the
+/// monitor's work area.
+POINT Place(const RECT &anchor, SIZE size, int gap) {
+    RECT work = ui::WorkAreaAt(anchor);
+    POINT origin = {anchor.left, anchor.bottom + gap};
+    if (origin.y + size.cy > work.bottom) origin.y = anchor.top - gap - size.cy;
+    origin.x = std::max(work.left, std::min(origin.x, static_cast<LONG>(work.right - size.cx)));
+    origin.y = std::max(work.top, std::min(origin.y, static_cast<LONG>(work.bottom - size.cy)));
+    return origin;
+}
+
+}  // namespace
+
+// MARK: - The word at the caret
+
+namespace {
+
+/// The color most of the line has around the caret: the app's background, not its text.
+COLORREF BackgroundAt(HDC screen, const RECT &caret) {
+    const LONG x = caret.right + 3;
+    const POINT points[] = {{x, caret.top + 1}, {x, (caret.top + caret.bottom) / 2}, {x, caret.bottom - 2}, {x + 4, caret.top + 1}, {x + 4, caret.bottom - 2}};
+    COLORREF colors[5];
+    int count = 0;
+    for (const POINT &point : points) {
+        COLORREF color = GetPixel(screen, point.x, point.y);
+        if (color != CLR_INVALID) colors[count++] = color;
+    }
+    int best = -1, bestVotes = 0;
+    for (int i = 0; i < count; i++) {
+        int votes = 0;
+        for (int j = 0; j < count; j++) votes += colors[j] == colors[i];
+        if (votes > bestVotes) {
+            best = i;
+            bestVotes = votes;
+        }
+    }
+    return best >= 0 ? colors[best] : ui::CurrentTheme().background;
+}
+
+/// Black or white, whichever reads on this background.
+COLORREF InkOn(COLORREF back) {
+    int light = 299 * GetRValue(back) + 587 * GetGValue(back) + 114 * GetBValue(back);
+    return light > 128000 ? RGB(26, 26, 26) : RGB(255, 255, 255);
+}
+
+}  // namespace
+
+void WordWindow::Show(const std::wstring &text, const RECT &caret) {
+    if (text.empty() || caret.bottom <= caret.top) return Hide();
+    RegisterOnce(kWordClass, Proc, true);
+    if (!window_) window_ = MakePopup(kWordClass, this);
+    if (!window_) return;
+    text_ = text;
+    dpi_ = ui::DpiAt(caret);
+    HDC screen = GetDC(nullptr);
+    // Only while the window isn't over the place: afterwards it would read its own color.
+    if (!IsWindowVisible(window_)) {
+        back_ = BackgroundAt(screen, caret);
+        ink_ = InkOn(back_);
+    }
+    HFONT font = ui::Font(dpi_, 110);
+    HGDIOBJ old = SelectObject(screen, font);
+    SIZE extent = {};
+    GetTextExtentPoint32W(screen, text_.c_str(), static_cast<int>(text_.size()), &extent);
+    SelectObject(screen, old);
+    DeleteObject(font);
+    ReleaseDC(nullptr, screen);
+    int pad = ui::Scale(6, dpi_);
+    SIZE size = {extent.cx + 2 * pad, std::max(static_cast<LONG>(caret.bottom - caret.top), extent.cy) + pad};
+    // Where the word would be: from the caret, over its line.
+    RECT work = ui::WorkAreaAt(caret);
+    POINT origin = {caret.left, caret.top - pad / 2};
+    origin.x = std::max(work.left, std::min(origin.x, static_cast<LONG>(work.right - size.cx)));
+    origin.y = std::max(work.top, std::min(origin.y, static_cast<LONG>(work.bottom - size.cy)));
+    SetWindowPos(window_, HWND_TOPMOST, origin.x, origin.y, size.cx, size.cy, SWP_NOACTIVATE | SWP_SHOWWINDOW);
+    InvalidateRect(window_, nullptr, FALSE);
+}
+
+void WordWindow::Hide() {
+    if (window_) ShowWindow(window_, SW_HIDE);
+    text_.clear();
+}
+
+bool WordWindow::Shown(RECT &rect) const {
+    if (!window_ || !IsWindowVisible(window_)) return false;
+    return GetWindowRect(window_, &rect) != FALSE;
+}
+
+void WordWindow::Paint(HDC target) {
+    RECT client;
+    GetClientRect(window_, &client);
+    HDC dc = CreateCompatibleDC(target);
+    HBITMAP bitmap = CreateCompatibleBitmap(target, client.right, client.bottom);
+    HGDIOBJ oldBitmap = SelectObject(dc, bitmap);
+    HBRUSH background = CreateSolidBrush(back_);
+    FillRect(dc, &client, background);
+    DeleteObject(background);
+    HFONT font = ui::Font(dpi_, 110);
+    HGDIOBJ oldFont = SelectObject(dc, font);
+    SetBkMode(dc, TRANSPARENT);
+    SetTextColor(dc, ink_);
+    RECT text = client;
+    InflateRect(&text, -ui::Scale(6, dpi_), 0);
+    DrawTextW(dc, text_.c_str(), -1, &text, DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
+    // Underlined, as a composition is in the text.
+    SIZE extent = {};
+    GetTextExtentPoint32W(dc, text_.c_str(), static_cast<int>(text_.size()), &extent);
+    int y = (client.bottom + extent.cy) / 2;
+    RECT line = {text.left, y - ui::Scale(1, dpi_), text.left + extent.cx, y};
+    HBRUSH underline = CreateSolidBrush(ink_);
+    FillRect(dc, &line, underline);
+    DeleteObject(underline);
+    BitBlt(target, 0, 0, client.right, client.bottom, dc, 0, 0, SRCCOPY);
+    SelectObject(dc, oldFont);
+    DeleteObject(font);
+    SelectObject(dc, oldBitmap);
+    DeleteObject(bitmap);
+    DeleteDC(dc);
+}
+
+LRESULT CALLBACK WordWindow::Proc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
+    auto *self = reinterpret_cast<WordWindow *>(GetWindowLongPtrW(window, GWLP_USERDATA));
+    switch (message) {
+    case WM_MOUSEACTIVATE:
+        return MA_NOACTIVATE;
+    case WM_PAINT: {
+        PAINTSTRUCT paint;
+        HDC dc = BeginPaint(window, &paint);
+        if (self) self->Paint(dc);
+        EndPaint(window, &paint);
+        return 0;
+    }
+    case WM_ERASEBKGND:
+        return 1;
+    default:
+        return DefWindowProcW(window, message, wParam, lParam);
+    }
+}
+
+// MARK: - Pause indicator
+
+namespace {
+constexpr UINT_PTR kFadeTimer = 1;
+}
+
+void PauseHud::Show(bool paused, const RECT &caret) {
+    if (caret.bottom <= caret.top) return;
+    RegisterOnce(kPauseClass, Proc, false);
+    if (!window_) window_ = MakePopup(kPauseClass, this);
+    if (!window_) return;
+    paused_ = paused;
+    dpi_ = ui::DpiAt(caret);
+    alpha_ = 255;
+    // The size and gap of Windows' own input indicator by the caret.
+    int side = ui::Scale(28, dpi_);
+    SIZE size = {side, side};
+    POINT origin = Place(caret, size, ui::Scale(6, dpi_));
+    SetLayeredWindowAttributes(window_, 0, 255, LWA_ALPHA);
+    SetWindowPos(window_, HWND_TOPMOST, origin.x, origin.y, side, side, SWP_NOACTIVATE | SWP_SHOWWINDOW);
+    InvalidateRect(window_, nullptr, TRUE);
+    // Stays a moment, then fades.
+    SetTimer(window_, kFadeTimer, 800, nullptr);
+}
+
+LRESULT CALLBACK PauseHud::Proc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
+    auto *self = reinterpret_cast<PauseHud *>(GetWindowLongPtrW(window, GWLP_USERDATA));
+    switch (message) {
+    case WM_MOUSEACTIVATE:
+        return MA_NOACTIVATE;
+    case WM_NCHITTEST:
+        return HTTRANSPARENT;
+    case WM_PAINT: {
+        PAINTSTRUCT paint;
+        HDC dc = BeginPaint(window, &paint);
+        if (self) {
+            RECT client;
+            GetClientRect(window, &client);
+            ui::Theme theme = ui::CurrentTheme();
+            HBRUSH background = CreateSolidBrush(theme.background);
+            FillRect(dc, &client, background);
+            DeleteObject(background);
+            int side = client.right - ui::Scale(8, self->dpi_);
+            HICON icon = static_cast<HICON>(LoadImageW(GetModuleHandleW(nullptr),
+                                                       MAKEINTRESOURCEW(self->paused_ ? IDI_HOST_PAUSED : IDI_HOST),
+                                                       IMAGE_ICON, side, side, 0));
+            if (icon) {
+                DrawIconEx(dc, ui::Scale(4, self->dpi_), ui::Scale(4, self->dpi_), icon, side, side, 0, nullptr, DI_NORMAL);
+                DestroyIcon(icon);
+            }
+        }
+        EndPaint(window, &paint);
+        return 0;
+    }
+    case WM_TIMER:
+        if (self && wParam == kFadeTimer) {
+            KillTimer(window, kFadeTimer);
+            SetTimer(window, kFadeTimer + 1, 16, nullptr);
+        } else if (self) {
+            self->alpha_ -= 32;
+            if (self->alpha_ <= 0) {
+                KillTimer(window, kFadeTimer + 1);
+                ShowWindow(window, SW_HIDE);
+            } else {
+                SetLayeredWindowAttributes(window, 0, static_cast<BYTE>(self->alpha_), LWA_ALPHA);
+            }
+        }
+        return 0;
+    }
+    return DefWindowProcW(window, message, wParam, lParam);
+}
+
+}  // namespace araso
