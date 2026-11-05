@@ -58,7 +58,10 @@ public readonly record struct HotkeyDecision(bool Swallow, int Pressed, int Rele
 /// <item>With Alt in the shortcut, the hook sends an unassigned key while Alt is down, so the app
 /// never sees a lone Alt tap and opens its menu bar.</item>
 /// </list>
-/// Ids are the caller's, and must not be 0. Runs on the hook thread; allocation-free.
+/// Ids are the caller's, must not be 0 and stay below <see cref="RecordedFlag"/>. The hook side runs
+/// on the hook thread and doesn't allocate. The shortcuts and what the app in front keeps sit in one
+/// table that is replaced whole, so the hook never sees one without the other, and a key held across
+/// a replacement stays owned with the modifiers it was matched with.
 /// </summary>
 public sealed class HotkeyMatcher
 {
@@ -69,43 +72,91 @@ public sealed class HotkeyMatcher
     /// <summary>Unassigned (0xE8): what AutoHotkey also sends to mask a lone Alt or Win.</summary>
     public const uint VkMenuMask = 0xE8;
 
-    private readonly int[] _ids = new int[32];
-    private readonly Hotkey[] _keys = new Hotkey[32];
+    /// <summary>How many shortcuts a table holds: what the app in front keeps is one bit each.</summary>
+    public const int MaxShortcuts = 64;
+
+    /// <summary>
+    /// Marks an id as a recorded key rather than a shortcut (see <see cref="Recording"/>): the
+    /// modifiers from bit 16, the key below.
+    /// </summary>
+    public const int RecordedFlag = 1 << 30;
+
+    private sealed class Table(int[] ids, Hotkey[] keys, long pass)
+    {
+        public readonly int[] Ids = ids;
+        public readonly Hotkey[] Keys = keys;
+        /// <summary>Shortcuts that go to the app in front instead, one bit each. Changed through <see cref="UpdatePassThrough"/>.</summary>
+        public long Pass = pass;
+    }
+
+    private volatile Table _table = new([], [], 0);
     /// <summary>Non-modifier keys down, as the hook saw them: a press the app got is told from its repeats.</summary>
     private readonly bool[] _down = new bool[256];
-    private int _count;
     private uint _ownedKey;
     private int _ownedId;
-    /// <summary>Registration slots whose shortcut goes to the app in front instead, one bit each.</summary>
-    private long _passSlots;
+    private Modifiers _ownedModifiers;
+    /// <summary>A bare recorded key let go by <see cref="Recover"/> while perhaps still held: its repeats and its up stay Orbit's.</summary>
+    private uint _recoveredKey;
+    private volatile bool _recording;
 
-    /// <summary>Set before the hook starts; not while it runs.</summary>
+    /// <summary>
+    /// While set, no shortcut matches: the next key pressed with left modifiers belongs to Orbit and
+    /// comes back as a press with <see cref="Recorded"/> in its id. The menu-mask key goes out as for
+    /// a shortcut, so recording Alt or Win combinations opens no menu bar or Start menu. Whoever
+    /// sets this must clear it on every way out, or every shortcut stays dead.
+    /// </summary>
+    public bool Recording { set => _recording = value; }
+
+    /// <summary>The key a press carries when it came from <see cref="Recording"/>; null for a shortcut's id.</summary>
+    public static Hotkey? Recorded(int id) =>
+        (id & RecordedFlag) == 0 ? null : new Hotkey((Modifiers)((id >> 16) & 0xF), (uint)(id & 0xFFFF));
+
+    /// <summary>
+    /// Puts these shortcuts in place at once, from any thread at any time. <paramref name="passes"/>
+    /// picks the ones the app in front keeps. A key held meanwhile stays owned until it goes up.
+    /// </summary>
+    public void Replace(IReadOnlyList<(int Id, Hotkey Key)> shortcuts, Func<Hotkey, bool>? passes = null)
+    {
+        if (shortcuts.Count > MaxShortcuts) throw new ArgumentException($"More than {MaxShortcuts} shortcuts", nameof(shortcuts));
+        var ids = new int[shortcuts.Count];
+        var keys = new Hotkey[shortcuts.Count];
+        for (int i = 0; i < shortcuts.Count; i++)
+        {
+            if (shortcuts[i].Id is <= 0 or >= RecordedFlag) throw new ArgumentOutOfRangeException(nameof(shortcuts), "An id is 1 or more and below RecordedFlag");
+            ids[i] = shortcuts[i].Id;
+            keys[i] = shortcuts[i].Key;
+        }
+        _table = new Table(ids, keys, passes is null ? 0 : PassMask(keys, passes));
+    }
+
+    /// <summary>Adds one shortcut to the table in place.</summary>
     public void Register(int id, Hotkey hotkey)
     {
         if (id == 0) throw new ArgumentOutOfRangeException(nameof(id), "0 means no hotkey");
-        if (_count == _ids.Length) throw new InvalidOperationException("Too many hotkeys");
-        _ids[_count] = id;
-        _keys[_count] = hotkey;
-        _count++;
-    }
-
-    /// <summary>
-    /// The slots of the registered shortcuts <paramref name="passes"/> picks, as a mask for
-    /// <see cref="SetPassThrough"/>. Off the hook thread: it reads the registrations only.
-    /// </summary>
-    public long Slots(Func<Hotkey, bool> passes)
-    {
-        long mask = 0;
-        for (int i = 0; i < _count; i++)
-            if (passes(_keys[i])) mask |= 1L << i;
-        return mask;
+        var table = _table;
+        var shortcuts = new List<(int, Hotkey)>(table.Ids.Length + 1);
+        for (int i = 0; i < table.Ids.Length; i++) shortcuts.Add((table.Ids[i], table.Keys[i]));
+        shortcuts.Add((id, hotkey));
+        Replace(shortcuts);
     }
 
     /// <summary>
     /// The shortcuts that go to the app in front, worked out when it came to the front (from any
-    /// thread): the hook only reads the mask, never asks which app it is.
+    /// thread): the hook only reads the result, never asks which app it is.
     /// </summary>
-    public void SetPassThrough(long slots) => Volatile.Write(ref _passSlots, slots);
+    public void UpdatePassThrough(Func<Hotkey, bool> passes)
+    {
+        var table = _table;
+        Volatile.Write(ref table.Pass, PassMask(table.Keys, passes));
+    }
+
+    private static long PassMask(Hotkey[] keys, Func<Hotkey, bool> passes)
+    {
+        long mask = 0;
+        for (int i = 0; i < keys.Length; i++)
+            if (passes(keys[i])) mask |= 1L << i;
+        return mask;
+    }
 
     public static bool IsModifier(uint vk) => vk is VkShift or VkControl or VkMenu or VkLWin or VkRWin
         or >= VkLShift and <= VkRMenu;
@@ -113,6 +164,7 @@ public sealed class HotkeyMatcher
     public HotkeyDecision KeyDown(uint vk, IKeyState state)
     {
         if (IsModifier(vk) || vk >= 256) return HotkeyDecision.Pass;
+        if (vk == _recoveredKey) return new HotkeyDecision(true, 0, 0, false);
         bool repeat = _down[vk];
         _down[vk] = true;
         // Auto-repeat of the key Orbit owns: still Orbit's.
@@ -122,22 +174,35 @@ public sealed class HotkeyMatcher
 
         var held = Held(state);
         if (held == Forbidden) return HotkeyDecision.Pass;
-        long pass = Volatile.Read(ref _passSlots);
-        for (int i = 0; i < _count; i++)
+        if (_recording) return Own(vk, RecordedFlag | (held << 16) | (int)vk, held);
+        var table = _table;
+        long pass = Volatile.Read(ref table.Pass);
+        for (int i = 0; i < table.Ids.Length; i++)
         {
-            if (_keys[i].Key != vk || _keys[i].Modifiers != (Modifiers)held) continue;
+            if (table.Keys[i].Key != vk || table.Keys[i].Modifiers != (Modifiers)held) continue;
             // The app in front keeps this one: the key goes on to it untouched.
             if ((pass & (1L << i)) != 0) return HotkeyDecision.Pass;
-            _ownedKey = vk;
-            _ownedId = _ids[i];
-            return new HotkeyDecision(true, _ownedId, 0, (held & (int)(Modifiers.Alt | Modifiers.Win)) != 0);
+            return Own(vk, table.Ids[i], held);
         }
         return HotkeyDecision.Pass;
+    }
+
+    private HotkeyDecision Own(uint vk, int id, int held)
+    {
+        _ownedKey = vk;
+        _ownedId = id;
+        _ownedModifiers = (Modifiers)held;
+        return new HotkeyDecision(true, id, 0, (held & (int)(Modifiers.Alt | Modifiers.Win)) != 0);
     }
 
     public HotkeyDecision KeyUp(uint vk)
     {
         if (vk < 256) _down[vk] = false;
+        if (vk == _recoveredKey && vk != 0)
+        {
+            _recoveredKey = 0;
+            return new HotkeyDecision(true, 0, 0, false);
+        }
         if (vk != _ownedKey || _ownedKey == 0) return HotkeyDecision.Pass;
         return new HotkeyDecision(true, 0, ReleaseOwned(), false);
     }
@@ -146,6 +211,7 @@ public sealed class HotkeyMatcher
     public int Reset()
     {
         int id = ReleaseOwned();
+        _recoveredKey = 0;
         Array.Clear(_down);
         return id;
     }
@@ -163,13 +229,13 @@ public sealed class HotkeyMatcher
             if (_down[vk] && vk != _ownedKey && !state.IsDown(vk)) _down[vk] = false;
 
         if (_ownedKey == 0) return 0;
-        var shortcut = Modifiers.None;
-        for (int i = 0; i < _count; i++)
-            if (_ids[i] == _ownedId) shortcut = _keys[i].Modifiers;
         var held = Held(state);
-        if (held != Forbidden && (held & (int)shortcut) != 0) return 0;
+        if (held != Forbidden && (held & (int)_ownedModifiers) != 0) return 0;
 
         _down[_ownedKey] = false;
+        // No modifiers to go by: a recording's Esc or Delete, which may still be held. An up that
+        // never comes costs one later press of that key, and only that key.
+        if (_ownedModifiers == Modifiers.None) _recoveredKey = _ownedKey;
         return ReleaseOwned();
     }
 

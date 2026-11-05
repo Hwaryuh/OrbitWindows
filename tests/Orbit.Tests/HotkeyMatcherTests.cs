@@ -165,14 +165,14 @@ public class HotkeyMatcherTests
         var matcher = Matcher();
         const int Area = 3;
         matcher.Register(Area, new Hotkey(Modifiers.Ctrl | Modifiers.Alt, 0x34));
-        matcher.SetPassThrough(matcher.Slots(h => PassThroughRule.Passes(PassThroughRule.Defaults, "winword.exe", h)));
+        matcher.UpdatePassThrough(h => PassThroughRule.Passes(PassThroughRule.Defaults, "winword.exe", h));
         var ctrlAlt = new Keys(VkLControl, VkLMenu);
         Assert.Equal(HotkeyDecision.Pass, matcher.KeyDown(0x34, ctrlAlt));
         Assert.Equal(HotkeyDecision.Pass, matcher.KeyUp(0x34));
         Assert.Equal(Ring, matcher.KeyDown(Space, ctrlAlt).Pressed);
         matcher.KeyUp(Space);
         // Back in another app, Orbit takes it again.
-        matcher.SetPassThrough(matcher.Slots(h => PassThroughRule.Passes(PassThroughRule.Defaults, "notepad.exe", h)));
+        matcher.UpdatePassThrough(h => PassThroughRule.Passes(PassThroughRule.Defaults, "notepad.exe", h));
         Assert.Equal(Area, matcher.KeyDown(0x34, ctrlAlt).Pressed);
     }
 

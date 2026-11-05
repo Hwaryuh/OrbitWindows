@@ -218,7 +218,7 @@ internal sealed class LauncherModel(AppServices services, AppIndex apps, Frecenc
     private LauncherItem Command(OrbitAction action, string section) =>
         new(CommandId(action), action.Title(), action.GroupTitle(), IconKind.Glyph, Glyphs.Of(action), null, section,
             [new LauncherAction(Strings.ActionRunCommand, Glyphs.Enter, () => services.Actions.Perform(action))],
-            services.ShortcutFor(action)?.Labels());
+            services.Shortcuts.For(action)?.Labels());
 
     /// <summary>An app: open it; a desktop app also shows its file (Ctrl+Enter), runs elevated, copies its path.</summary>
     private static LauncherItem App(AppEntry app, string section)

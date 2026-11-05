@@ -58,7 +58,7 @@ internal sealed class SnippetFeature : IFeature
         };
         services.Foreground.Changed += _buffer.Reset;
         UpdateListening();
-        _hotkey = services.AddHotkey(new Hotkey(Modifiers.Ctrl | Modifiers.Alt, 0x58), OrbitAction.Snippets);
+        _hotkey = services.Shortcuts.Declare(new Hotkey(Modifiers.Ctrl | Modifiers.Alt, 0x58), OrbitAction.Snippets);
         services.Actions.Register(OrbitAction.Snippets, TogglePanel);
     }
 

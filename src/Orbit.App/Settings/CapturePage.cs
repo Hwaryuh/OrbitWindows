@@ -81,7 +81,7 @@ internal sealed class CapturePage : StackPanel
                 Child = new TextBlock { Text = Glyphs.Of(action), FontFamily = Glyphs.Font, FontSize = 15, Foreground = _palette.Canvas, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center },
             });
             body.Children.Add(new TextBlock { Text = action.Title(), FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = _palette.Ink, Margin = new Thickness(0, 10, 0, 6), TextTrimming = TextTrimming.CharacterEllipsis });
-            if (_services.ShortcutFor(action) is { } hotkey)
+            if (_services.Shortcuts.For(action) is { } hotkey)
             {
                 var keys = KeyCap.Row(hotkey.Labels(), _palette);
                 keys.HorizontalAlignment = HorizontalAlignment.Left;

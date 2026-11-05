@@ -26,6 +26,8 @@ public static class Pref
     public const string RecordFps = "record.fps";
     /// <summary>The pointer is in recordings (Orbit: record.cursor).</summary>
     public const string RecordCursor = "record.cursor";
+    /// <summary>The user's shortcuts, as a difference from the defaults (<see cref="Input.ShortcutMap"/>).</summary>
+    public const string Shortcuts = "shortcuts.user";
     /// <summary>A ring shows where the mouse is pressed in recordings (Orbit: record.clicks).</summary>
     public const string RecordClicks = "record.clicks";
     /// <summary>Seconds counted before a recording starts; 0 is none (Orbit: record.countdown).</summary>
@@ -100,6 +102,7 @@ public static class Pref
         [TimedCaptureSeconds] = 5,
         [RecordFps] = 60,
         [RecordCursor] = true,
+        [Shortcuts] = "",
         [RecordClicks] = true,
         [RecordCountdown] = 3,
         [RecordAppSound] = false,

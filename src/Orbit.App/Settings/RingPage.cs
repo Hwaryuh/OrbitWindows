@@ -54,8 +54,12 @@ internal sealed class RingPage : StackPanel
     private string? _renaming;
     private int _dropTarget = -1;
 
-    public RingPage(Preferences preferences)
+    private readonly Features.AppServices _services;
+
+    public RingPage(Features.AppServices services)
     {
+        _services = services;
+        var preferences = services.Preferences;
         _preferences = preferences;
         _presets = new RingPresets(preferences);
         _slots = _presets.Current;
@@ -168,7 +172,7 @@ internal sealed class RingPage : StackPanel
         var section = new StackPanel { Margin = new Thickness(0, 0, 0, 28) };
         section.Children.Add(_parts.SectionTitle(Strings.RingOpenTitle, bottom: 10));
 
-        var keys = KeyCap.Row(Features.RingFeature.Shortcut.Labels(), _palette);
+        var keys = KeyCap.Row(_services.Shortcuts.For(Orbit.Core.Input.ShortcutRegistry.Ring)?.Labels() ?? [Strings.ShortcutNone], _palette);
         keys.HorizontalAlignment = HorizontalAlignment.Left;
         keys.Margin = new Thickness(0, 12, 0, 0);
         var keyboard = new StackPanel();

@@ -28,7 +28,7 @@ internal sealed class TranslatePage : StackPanel
         var header = _parts.PageTitles(Strings.PageTranslate, Strings.TranslatePageSubtitle, bottom: 20);
         Children.Add(header);
 
-        var keys = services.ShortcutFor(OrbitAction.Translate) is { } hotkey ? KeyCap.Row(hotkey.Labels(), _palette) : new StackPanel();
+        var keys = services.Shortcuts.For(OrbitAction.Translate) is { } hotkey ? KeyCap.Row(hotkey.Labels(), _palette) : new StackPanel();
         Children.Add(_parts.Group(null, null,
             _parts.Row(Strings.TranslateDoubleCopy, Strings.TranslateDoubleCopyDetail, BoolToggle(Pref.TranslateDoubleCopy)),
             _parts.Row(Strings.TranslateInterval, null, _parts.Chips<double>(

@@ -31,7 +31,7 @@ internal sealed class LauncherFeature : IFeature
         _weather = new WeatherService();
         _model = new LauncherModel(services, _apps, new Frecency(services.Preferences),
             new ExchangeRates(services.Preferences), _weather, new FileSearch());
-        _hotkey = services.AddHotkey(new Hotkey(Modifiers.Alt, HotkeyMatcher.VkSpace), OrbitAction.Launcher);
+        _hotkey = services.Shortcuts.Declare(new Hotkey(Modifiers.Alt, HotkeyMatcher.VkSpace), OrbitAction.Launcher);
         services.Actions.Register(OrbitAction.Launcher, Toggle);
     }
 

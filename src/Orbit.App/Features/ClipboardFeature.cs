@@ -49,7 +49,7 @@ internal sealed class ClipboardFeature : IFeature
         };
         services.Clipboard.Copied += OnCopied;
         services.ClipboardHistory = this;
-        _hotkey = services.AddHotkey(new Hotkey(Modifiers.Win | Modifiers.Alt, 0x56), OrbitAction.Clipboard);
+        _hotkey = services.Shortcuts.Declare(new Hotkey(Modifiers.Win | Modifiers.Alt, 0x56), OrbitAction.Clipboard);
         services.Actions.Register(OrbitAction.Clipboard, Toggle);
     }
 

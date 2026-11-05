@@ -45,11 +45,13 @@ public partial class App : Application
 
         _preferences = Preferences.OpenDefault();
         // These show nothing and run before the hooks and the tray.
-        if (e.Args.Contains("--selftest-scratchpad"))
+        if (e.Args.Contains("--selftest-scratchpad") || e.Args.Contains("--selftest-shortcuts"))
         {
             int at = Array.IndexOf(e.Args, "--render");
             string? render = at >= 0 && at + 1 < e.Args.Length ? e.Args[at + 1] : null;
-            bool passed = Features.Scratchpad.ScratchpadSelfTest.Run(_preferences, render);
+            bool passed = e.Args.Contains("--selftest-scratchpad")
+                ? Features.Scratchpad.ScratchpadSelfTest.Run(_preferences, render)
+                : Settings.ShortcutsSelfTest.Run(render);
             Shutdown(passed ? 0 : 1);
             return;
         }
@@ -63,8 +65,10 @@ public partial class App : Application
         _hooks = new HookThread();
         _services = new AppServices(_preferences, _actions, _hooks, _foreground, Notify);
         _services.Clipboard.Start();
-        _features.AddRange([new SettingsFeature(), new RingFeature(), new LauncherFeature(), new CaptureFeature(), new RecordingFeature(), new CleanUrlFeature(), new ClipboardFeature(), new TranslateFeature(), new SnippetFeature(), new KeepAwakeFeature(), new SystemFeature(), new DisplaysFeature(), new ScratchpadFeature()]);
+        _features.AddRange([new SettingsFeature(), new RingFeature(), new LauncherFeature(), new CaptureFeature(), new RecordingFeature(), new CleanUrlFeature(), new ClipboardFeature(), new TranslateFeature(), new SnippetFeature(), new KeepAwakeFeature(), new SystemFeature(), new DisplaysFeature(), new ScratchpadFeature(), new ShortcutsFeature()]);
         foreach (var feature in _features) feature.Start(_services);
+        _services.Shortcuts.PassesToFront = PassesToFront;
+        _services.Shortcuts.Apply();
         _hooks.Notice += e => Dispatcher.BeginInvoke(() => OnHook(e));
         // Shortcuts the app in front keeps, worked out here so the hook never asks which app it is.
         _foreground.Changed += UpdatePassThrough;
@@ -102,9 +106,10 @@ public partial class App : Application
 
     private void UpdatePassThrough()
     {
-        var process = _foreground!.ForegroundProcess;
-        _hooks!.Hotkeys.SetPassThrough(_hooks.Hotkeys.Slots(hotkey => PassThroughRule.Passes(PassThroughRule.Defaults, process, hotkey)));
+        _hooks!.Hotkeys.UpdatePassThrough(PassesToFront);
     }
+
+    private bool PassesToFront(Hotkey hotkey) => PassThroughRule.Passes(PassThroughRule.Defaults, _foreground!.ForegroundProcess, hotkey);
 
     private void OnHook(HookEvent e)
     {

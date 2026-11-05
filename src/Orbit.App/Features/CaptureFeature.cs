@@ -55,7 +55,7 @@ internal sealed class CaptureFeature : IFeature
     {
         var services = _services!;
         services.Actions.Register(action, () => _ = RunAsync(mode));
-        if (key is { } vk) _hotkeys[services.AddHotkey(new Hotkey(Modifiers.Ctrl | Modifiers.Alt, vk), action)] = action;
+        if (key is { } vk) _hotkeys[services.Shortcuts.Declare(new Hotkey(Modifiers.Ctrl | Modifiers.Alt, vk), action)] = action;
     }
 
     public void OnHook(HookEvent e)

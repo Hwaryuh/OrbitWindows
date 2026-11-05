@@ -29,7 +29,7 @@ internal sealed class RingFeature : IFeature
     public void Start(AppServices services)
     {
         _services = services;
-        _hotkey = services.AddHotkey(Shortcut);
+        _hotkey = services.Shortcuts.Declare(Shortcut, key: Orbit.Core.Input.ShortcutRegistry.Ring);
         ApplyMouseTrigger();
         services.Preferences.Changed += key =>
         {

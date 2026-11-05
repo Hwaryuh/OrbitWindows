@@ -39,7 +39,7 @@ internal sealed class TranslateFeature : IFeature
             if (key == Pref.TranslateDoubleCopy) services.Hooks.ReportCopies = prefs.Get<bool>(Pref.TranslateDoubleCopy);
         };
         services.Clipboard.Copied += OnCopied;
-        _hotkey = services.AddHotkey(new Hotkey(Modifiers.Ctrl | Modifiers.Alt, 0x54), OrbitAction.Translate);
+        _hotkey = services.Shortcuts.Declare(new Hotkey(Modifiers.Ctrl | Modifiers.Alt, 0x54), OrbitAction.Translate);
         services.Actions.Register(OrbitAction.Translate, TranslateClipboard);
     }
 
