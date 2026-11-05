@@ -97,7 +97,7 @@ internal sealed class TypingFeature : IFeature
     private sealed class TypingHost(AppServices services) : ITypingHost
     {
         private const int ReadLimitMs = 60;
-        private const ushort LanguageKorean = 0x0412, LanguageUsEnglish = 0x0409;
+        private const ushort LanguageUsEnglish = 0x0409;
 
         private readonly ImeMode _ime = new();
 
@@ -113,12 +113,16 @@ internal sealed class TypingFeature : IFeature
             string process = services.Foreground.ForegroundProcess;
             string className = ClassName(PInvoke.GetForegroundWindow());
             var language = ImeMode.Language(ImeMode.FocusWindow(out _));
-            bool usKeys = language is LanguageKorean or LanguageUsEnglish;
+            // Letters go as keys only where no IME can catch them. On the Korean layout they go as Unicode:
+            // Chrome's IME stays in Hangul mode through WM_IME_CONTROL and composes them (seen 2026-11-06).
+            bool usKeys = language == LanguageUsEnglish;
             bool chromium = className.StartsWith("Chrome_WidgetWin_", StringComparison.Ordinal);
             var prefs = services.Preferences;
             TypingPause pause;
-            // Orbit's own windows read as "", as does a program it may not open (an elevated one).
-            if (process.Length == 0) pause = TypingPause.OwnWindow;
+            // Orbit's own windows take typing too, the launcher above all, and the box decides as anywhere.
+            // A program it may not open (an elevated one) also reads as "", and its keys can't be sent.
+            if (IsOrbitInFront()) pause = TypingPause.None;
+            else if (process.Length == 0) pause = TypingPause.OwnWindow;
             else if (className.StartsWith("Shell_", StringComparison.Ordinal)) pause = TypingPause.NotText;
             else if (ClipboardRules.IsIgnored(process, prefs.Get<string[]>(Pref.TypingExcludedApps))) pause = TypingPause.ExcludedApp;
             else if (!prefs.Get<bool>(Pref.TypingInTerminals) && Processes.Terminals.Contains(process)) pause = TypingPause.Terminal;
@@ -140,6 +144,13 @@ internal sealed class TypingFeature : IFeature
         public bool Send(INPUT[] events) => KeyOutput.Send(events);
 
         public void Wait(int milliseconds) => Thread.Sleep(milliseconds);
+
+        private static unsafe bool IsOrbitInFront()
+        {
+            uint process = 0;
+            PInvoke.GetWindowThreadProcessId(PInvoke.GetForegroundWindow(), &process);
+            return process == (uint)Environment.ProcessId;
+        }
 
         private static string ClassName(HWND window)
         {

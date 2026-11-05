@@ -84,6 +84,9 @@ internal static class FieldReader
             string className = element.Current.ClassName;
             bool password = element.GetCurrentPropertyValue(AutomationElement.IsPasswordProperty) is true;
             if (password) return new FieldView(null, true, false, id, ClassName: className);
+            // Nothing to type into: a web page's body has a text pattern too, and its keys are the site's shortcuts.
+            if (element.TryGetCurrentPattern(ValuePattern.Pattern, out var value) && ((ValuePattern)value).Current.IsReadOnly)
+                return new FieldView(null, false, false, id, false, className);
             if (!element.TryGetCurrentPattern(TextPattern.Pattern, out var pattern))
             {
                 var kind = element.GetCurrentPropertyValue(AutomationElement.ControlTypeProperty);

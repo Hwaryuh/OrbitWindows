@@ -49,7 +49,12 @@ public sealed class ImeMode
         if (Ask(ime, GetConversionMode, 0) is not { } mode) return false;
         if ((mode & Native) == 0) return true;
         Ask(ime, SetConversionMode, mode & ~Native);
-        if (Ask(ime, GetConversionMode, 0) is not { } after || (after & Native) != 0) return false;
+        if (Ask(ime, GetConversionMode, 0) is not { } after || (after & Native) != 0)
+        {
+            Log.Info("The Microsoft IME stayed in Hangul mode");
+            return false;
+        }
+        Log.Info("The Microsoft IME went to alphanumeric mode");
         _changed = window;
         _modeBefore = mode;
         return true;

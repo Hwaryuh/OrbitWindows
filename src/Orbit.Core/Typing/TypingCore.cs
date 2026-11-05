@@ -232,7 +232,10 @@ public sealed class TypingCore(ITypingEngine engine, ITypingHost host, TypingGat
     private static void TakeSelection(FieldSnapshot? field, ref IReadOnlyList<FieldEdit> edits)
     {
         if (field is { HasSelection: true } && edits[0] is var first)
+        {
+            Log.Info("Typing took a selection first");
             edits = [first with { Deletes = first.Deletes + 1 }, .. edits.Skip(1)];
+        }
     }
 
     /// <summary>Boxes whose keys must never reach the engine, whatever was seen of them before.</summary>
