@@ -86,9 +86,7 @@ internal sealed class RingPage : StackPanel
 
     private UIElement Header()
     {
-        var titles = new StackPanel();
-        titles.Children.Add(new TextBlock { Text = Strings.PageRing, FontSize = 22, FontWeight = FontWeights.SemiBold, Foreground = _palette.Ink });
-        titles.Children.Add(_parts.Caption(Strings.RingSubtitle));
+        var titles = _parts.PageTitles(Strings.PageRing, Strings.RingSubtitle);
 
         var label = new StackPanel { Width = 38, VerticalAlignment = VerticalAlignment.Center };
         _count.Foreground = _palette.Ink;

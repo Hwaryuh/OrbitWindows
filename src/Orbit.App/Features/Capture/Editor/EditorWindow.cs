@@ -123,7 +123,7 @@ internal sealed class EditorWindow : Window
         PreviewKeyDown += KeyPressed;
         PreviewKeyUp += KeyReleased;
         SizeChanged += (_, _) => FitToolbar();
-        SourceInitialized += (_, _) => DarkTitleBar();
+        SourceInitialized += (_, _) => TitleBars.MakeDark(this);
         Closed += (_, _) =>
         {
             OpenEditors.Remove(this);
@@ -152,11 +152,6 @@ internal sealed class EditorWindow : Window
         return WindowPlacement.Centered(monitor, Math.Max(820, pictureWidth * fit + chromeW), Math.Max(480, pictureHeight * fit + chromeH));
     }
 
-    private unsafe void DarkTitleBar()
-    {
-        int on = 1;
-        PInvoke.DwmSetWindowAttribute(new(new WindowInteropHelper(this).Handle), DWMWINDOWATTRIBUTE.DWMWA_USE_IMMERSIVE_DARK_MODE, &on, sizeof(int));
-    }
 
     public EditorModel Model => _model;
     public AnnotationRenderer Renderer => _renderer;

@@ -18,16 +18,14 @@ internal static class CaptureSelfTest
         var clock = Stopwatch.StartNew();
         var frames = await ScreenFreeze.AllAsync(capture, monitors);
         long frozenMs = clock.ElapsedMilliseconds;
-        bool passed = true;
+        var results = new SelfTestLog("Capture");
         for (int i = 0; i < monitors.Count; i++)
         {
             var reference = GdiCapture.Capture(monitors[i].Bounds);
             double match = FrameCompare.MatchRatio(frames[i], reference);
             bool ok = frames[i].Source == "WGC" && frames[i].Bounds == monitors[i].Bounds && match >= 0.995;
-            passed &= ok;
-            Log.Info($"Capture self-test {(ok ? "PASS" : "FAIL")}: {monitors[i]} via {frames[i].Source} {frames[i].Bounds}, match with GDI {match:P3}");
+            results.Check($"{monitors[i]} via {frames[i].Source} {frames[i].Bounds}, match with GDI {match:P3}", ok);
         }
-        Log.Info($"Capture self-test {(passed ? "PASS" : "FAIL")}: {monitors.Count} monitors in {frozenMs} ms");
-        return passed;
+        return results.Finish($"{monitors.Count} monitors in {frozenMs} ms");
     }
 }

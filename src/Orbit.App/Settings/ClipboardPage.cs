@@ -56,9 +56,7 @@ internal sealed class ClipboardPage : StackPanel
         open.VerticalAlignment = VerticalAlignment.Top;
         DockPanel.SetDock(open, Dock.Right);
         header.Children.Add(open);
-        var titles = new StackPanel();
-        titles.Children.Add(new TextBlock { Text = Strings.PageClipboard, FontSize = 22, FontWeight = FontWeights.SemiBold, Foreground = _palette.Ink });
-        titles.Children.Add(_parts.Caption(Strings.ClipPageSubtitle));
+        var titles = _parts.PageTitles(Strings.PageClipboard, Strings.ClipPageSubtitle);
         header.Children.Add(titles);
         return header;
     }

@@ -25,9 +25,7 @@ internal sealed class TranslatePage : StackPanel
     {
         _services = services;
         _preferences = services.Preferences;
-        var header = new StackPanel { Margin = new Thickness(0, 0, 0, 20) };
-        header.Children.Add(new TextBlock { Text = Strings.PageTranslate, FontSize = 22, FontWeight = FontWeights.SemiBold, Foreground = _palette.Ink });
-        header.Children.Add(_parts.Caption(Strings.TranslatePageSubtitle));
+        var header = _parts.PageTitles(Strings.PageTranslate, Strings.TranslatePageSubtitle, bottom: 20);
         Children.Add(header);
 
         var keys = services.ShortcutFor(OrbitAction.Translate) is { } hotkey ? KeyCap.Row(hotkey.Labels(), _palette) : new StackPanel();

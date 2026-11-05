@@ -33,9 +33,7 @@ internal sealed class SystemPage : StackPanel
     public SystemPage(AppServices services)
     {
         _services = services;
-        var header = new StackPanel { Margin = new Thickness(0, 0, 0, 20) };
-        header.Children.Add(new TextBlock { Text = Strings.PageSystem, FontSize = 22, FontWeight = FontWeights.SemiBold, Foreground = _palette.Ink });
-        header.Children.Add(_parts.Caption(Strings.SysSubtitle));
+        var header = _parts.PageTitles(Strings.PageSystem, Strings.SysSubtitle, bottom: 20);
         Children.Add(header);
 
         var grid = new UniformGrid { Columns = 3, Margin = new Thickness(0, 0, 0, 28) };

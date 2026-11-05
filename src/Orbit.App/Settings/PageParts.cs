@@ -40,6 +40,15 @@ internal sealed class PageParts(Palette palette)
         VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 0, bottom),
     };
 
+    /// <summary>A page's title and the line under it.</summary>
+    public StackPanel PageTitles(string title, string subtitle, double bottom = 0)
+    {
+        var titles = new StackPanel { Margin = new Thickness(0, 0, 0, bottom) };
+        titles.Children.Add(new TextBlock { Text = title, FontSize = 22, FontWeight = FontWeights.SemiBold, Foreground = _palette.Ink });
+        titles.Children.Add(Caption(subtitle));
+        return titles;
+    }
+
     public TextBlock Caption(string text) =>
         new() { Text = text, FontSize = 11.5, Foreground = _palette.InkSecondary, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) };
 

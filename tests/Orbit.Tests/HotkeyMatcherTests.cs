@@ -18,10 +18,6 @@ public class HotkeyMatcherTests
     private const uint Space = 0x20, Q = 0x51;
     private const int Ring = 1, Launcher = 2;
 
-    private sealed class Keys(params uint[] down) : IKeyState
-    {
-        public bool IsDown(uint vk) => down.Contains(vk);
-    }
 
     private static HotkeyMatcher Matcher()
     {

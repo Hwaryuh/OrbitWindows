@@ -31,9 +31,7 @@ internal sealed class SoundPage : StackPanel
 
     public SoundPage()
     {
-        var header = new StackPanel { Margin = new Thickness(0, 0, 0, 20) };
-        header.Children.Add(new TextBlock { Text = Strings.PageSound, FontSize = 22, FontWeight = FontWeights.SemiBold, Foreground = _palette.Ink });
-        header.Children.Add(_parts.Caption(Strings.SoundSubtitle));
+        var header = _parts.PageTitles(Strings.PageSound, Strings.SoundSubtitle, bottom: 20);
         Children.Add(header);
         Children.Add(_parts.Group(null, null, _master));
         Children.Add(_parts.Group(Strings.SoundApps, Strings.SoundFooter, _apps));

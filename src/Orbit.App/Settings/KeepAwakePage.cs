@@ -30,9 +30,7 @@ internal sealed class KeepAwakePage : StackPanel
     {
         _awake = services.KeepAwake!;
         _preferences = services.Preferences;
-        var header = new StackPanel { Margin = new Thickness(0, 0, 0, 20) };
-        header.Children.Add(new TextBlock { Text = Strings.PageKeepAwake, FontSize = 22, FontWeight = FontWeights.SemiBold, Foreground = _palette.Ink });
-        header.Children.Add(_parts.Caption(Strings.AwakeSubtitle));
+        var header = _parts.PageTitles(Strings.PageKeepAwake, Strings.AwakeSubtitle, bottom: 20);
         Children.Add(header);
 
         _stop = _parts.PillButton(Strings.AwakeStop, prominent: true, () => _awake.End(Strings.AwakeStopped));

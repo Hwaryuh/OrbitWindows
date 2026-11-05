@@ -29,9 +29,7 @@ internal sealed class PortsPage : StackPanel
 
     public PortsPage()
     {
-        var header = new StackPanel { Margin = new Thickness(0, 0, 0, 20) };
-        header.Children.Add(new TextBlock { Text = Strings.PagePorts, FontSize = 22, FontWeight = FontWeights.SemiBold, Foreground = _palette.Ink });
-        header.Children.Add(_parts.Caption(Strings.PortsSubtitle));
+        var header = _parts.PageTitles(Strings.PagePorts, Strings.PortsSubtitle, bottom: 20);
         Children.Add(header);
 
         _search = new TextBox { FontSize = 13, Padding = new Thickness(8, 5, 8, 5), VerticalContentAlignment = VerticalAlignment.Center };

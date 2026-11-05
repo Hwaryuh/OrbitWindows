@@ -41,9 +41,7 @@ internal sealed class SnippetsPage : StackPanel
         tools.Children.Add(export);
         DockPanel.SetDock(tools, Dock.Right);
         header.Children.Add(tools);
-        var titles = new StackPanel();
-        titles.Children.Add(new TextBlock { Text = Strings.PageSnippets, FontSize = 22, FontWeight = FontWeights.SemiBold, Foreground = _palette.Ink });
-        titles.Children.Add(_parts.Caption(Strings.SnippetPageSubtitle));
+        var titles = _parts.PageTitles(Strings.PageSnippets, Strings.SnippetPageSubtitle);
         header.Children.Add(titles);
         Children.Add(header);
 

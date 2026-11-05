@@ -59,9 +59,7 @@ internal sealed class CapturePage : StackPanel
 
     private UIElement Header()
     {
-        var titles = new StackPanel { Margin = new Thickness(0, 0, 0, 20) };
-        titles.Children.Add(new TextBlock { Text = Strings.PageCapture, FontSize = 22, FontWeight = FontWeights.SemiBold, Foreground = _palette.Ink });
-        titles.Children.Add(_parts.Caption(Strings.CapturePageSubtitle));
+        var titles = _parts.PageTitles(Strings.PageCapture, Strings.CapturePageSubtitle, bottom: 20);
         return titles;
     }
 

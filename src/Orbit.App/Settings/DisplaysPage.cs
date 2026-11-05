@@ -37,9 +37,7 @@ internal sealed class DisplaysPage : StackPanel
         again.VerticalAlignment = VerticalAlignment.Top;
         DockPanel.SetDock(again, Dock.Right);
         header.Children.Add(again);
-        var title = new StackPanel();
-        title.Children.Add(new TextBlock { Text = Strings.PageDisplays, FontSize = 22, FontWeight = FontWeights.SemiBold, Foreground = _palette.Ink });
-        title.Children.Add(_parts.Caption(Strings.DisplaysSubtitle));
+        var title = _parts.PageTitles(Strings.PageDisplays, Strings.DisplaysSubtitle);
         header.Children.Add(title);
         Children.Add(header);
 
