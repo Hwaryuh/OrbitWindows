@@ -57,6 +57,9 @@ internal sealed class AppServices(Preferences preferences, ActionRunner actions,
     /// <summary>Araso, the input method; null until that feature starts.</summary>
     public ArasoFeature? Araso { get; set; }
 
+    /// <summary>Automatic Korean/English typing; null until that feature starts.</summary>
+    public TypingFeature? Typing { get; set; }
+
     /// <summary>Snippets; null until that feature starts.</summary>
     public SnippetFeature? Snippets { get; set; }
 

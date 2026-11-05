@@ -90,7 +90,7 @@ internal sealed class SettingsWindow : Window
         "clipboard" => () => new ClipboardPage(_services),
         "translate" => () => new TranslatePage(_services),
         "snippets" => () => new SnippetsPage(_services),
-        "input" => () => new InputPage(_services.Araso!),
+        "input" => () => new InputPage(_services.Araso!, _services),
         "keepAwake" => () => new KeepAwakePage(_services),
         "sound" => () => new SoundPage(),
         "system" => () => new SystemPage(_services),

@@ -25,8 +25,6 @@ namespace Orbit.App.Features;
 /// </summary>
 internal sealed class SnippetFeature : IFeature
 {
-    /// <summary>Terminals for snippets.inTerminals (docs/plan/03-milestones.md); VS Code counts as an editor.</summary>
-    private static readonly string[] Terminals = ["windowsterminal.exe", "openconsole.exe", "conhost.exe", "cmd.exe", "powershell.exe", "pwsh.exe", "wezterm-gui.exe", "alacritty.exe", "mintty.exe"];
     private const ushort KoreanLanguage = 0x0412;
     private const uint VkLeft = 0x25;
 
@@ -114,6 +112,9 @@ internal sealed class SnippetFeature : IFeature
         }
         var typed = TextOf(vk, scan, state, out bool korean);
         if (typed is null) return;
+        // With automatic typing the keys may have come out as Hangul whatever the layout says, so an
+        // unreadable field isn't safe to count back in either.
+        korean |= _services!.Typing?.IsTaking == true;
         if (typed.Any(c => char.IsControl(c) && c != '\t'))
         {
             _buffer.Reset();
@@ -164,7 +165,7 @@ internal sealed class SnippetFeature : IFeature
         if (process.Length == 0) return false;
         var prefs = _services.Preferences;
         if (ClipboardRules.IsIgnored(process, prefs.Get<string[]>(Pref.SnippetsExcludedApps))) return false;
-        return prefs.Get<bool>(Pref.SnippetsInTerminals) || !Terminals.Contains(process);
+        return prefs.Get<bool>(Pref.SnippetsInTerminals) || !Processes.Terminals.Contains(process);
     }
 
     // MARK: Expanding
@@ -192,7 +193,8 @@ internal sealed class SnippetFeature : IFeature
             }
 
             string delimiter = match.Delimiter is { } d ? d.ToString() : "";
-            if (await DeleteCountAsync(snippet.Keyword + delimiter, Dubeolsik.Compose(snippet.Keyword) + delimiter, korean) is not var (count, element)) return;
+            bool inTerminals = _services!.Preferences.Get<bool>(Pref.SnippetsInTerminals);
+            if (await DeleteCountAsync(snippet.Keyword + delimiter, Dubeolsik.Compose(snippet.Keyword) + delimiter, korean, inTerminals) is not var (count, element)) return;
             if (generation != _generation) return;
             var rendered = Render(snippet, inputs);
             // A delimiter after a {cursor} would land at the end, away from where the caret goes.
@@ -210,9 +212,11 @@ internal sealed class SnippetFeature : IFeature
     /// <summary>
     /// How many characters to take back: the keyword as the field shows it before the caret (typed
     /// letters, or their 2-set composition). Null leaves it alone: a password, a selection, a field
-    /// ending otherwise, or an unreadable field on the Korean layout. Each read is checked.
+    /// ending otherwise, or an unreadable field on the Korean layout, or a terminal inside an app when
+    /// terminals are off (the program's name, which <see cref="Allowed"/> goes by, doesn't show those).
+    /// Each read is checked.
     /// </summary>
-    private static async Task<(int Count, int[]? Element)?> DeleteCountAsync(string literal, string composed, bool korean)
+    private static async Task<(int Count, int[]? Element)?> DeleteCountAsync(string literal, string composed, bool korean, bool inTerminals)
     {
         int length = Math.Max(literal.Length, composed.Length) + 2;
         var field = await FieldReader.ReadAsync(length);
@@ -223,6 +227,7 @@ internal sealed class SnippetFeature : IFeature
             field = await FieldReader.ReadAsync(length);
         }
         if (field is { IsPassword: true } or { HasSelection: true }) return null;
+        if (field is { IsTerminal: true } && !inTerminals) return null;
         if (field is { BeforeCaret: { } before })
         {
             if (before.EndsWith(literal, StringComparison.Ordinal)) return (Elements(literal), field.Value.Element);

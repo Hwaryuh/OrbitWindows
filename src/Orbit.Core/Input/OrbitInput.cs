@@ -14,6 +14,9 @@ public static class OrbitInput
         return Event((ushort)vk, (ushort)PInvoke.MapVirtualKey(vk, MAP_VIRTUAL_KEY_TYPE.MAPVK_VK_TO_VSC), flags, HookThread.OrbitMarker);
     }
 
+    /// <summary>Down in Windows' view, right now.</summary>
+    public static bool IsDown(uint vk) => (PInvoke.GetAsyncKeyState((int)vk) & 0x8000) != 0;
+
     /// <summary>One keyboard event, as given.</summary>
     public static INPUT Event(ushort vk, ushort scan, KEYBD_EVENT_FLAGS flags, nuint marker)
     {

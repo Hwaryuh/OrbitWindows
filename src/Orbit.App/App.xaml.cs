@@ -67,7 +67,7 @@ public partial class App : Application
         _hooks = new HookThread();
         _services = new AppServices(_preferences, _actions, _hooks, _foreground, Notify);
         _services.Clipboard.Start();
-        _features.AddRange([new SettingsFeature(), new RingFeature(), new LauncherFeature(), new CaptureFeature(), new RecordingFeature(), new CleanUrlFeature(), new ClipboardFeature(), new TranslateFeature(), new SnippetFeature(), new KeepAwakeFeature(), new SystemFeature(), new DisplaysFeature(), new ScratchpadFeature(), new UpdateFeature(), new ArasoFeature(), new ShortcutsFeature()]);
+        _features.AddRange([new SettingsFeature(), new RingFeature(), new LauncherFeature(), new CaptureFeature(), new RecordingFeature(), new CleanUrlFeature(), new ClipboardFeature(), new TranslateFeature(), new SnippetFeature(), new KeepAwakeFeature(), new SystemFeature(), new DisplaysFeature(), new ScratchpadFeature(), new UpdateFeature(), new ArasoFeature(), new TypingFeature(), new ShortcutsFeature()]);
         foreach (var feature in _features) feature.Start(_services);
         _services.Shortcuts.PassesToFront = PassesToFront;
         _services.Shortcuts.Apply();

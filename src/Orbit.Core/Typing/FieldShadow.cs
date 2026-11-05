@@ -27,6 +27,9 @@ public sealed class FieldShadow
     /// <summary>Whether a word is on show that the engine may still change.</summary>
     public bool HasWord => _markedLength > 0;
 
+    /// <summary>What the box should have just before the caret, of the word held.</summary>
+    public string Word => _word;
+
     private int Caret => _wordStart + _word.Length;
 
     public EngineContext Context() => new(

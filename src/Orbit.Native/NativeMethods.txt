@@ -271,3 +271,7 @@ COPYDATASTRUCT
 WM_COPYDATA
 ProcessIdToSessionId
 MoveFileEx
+
+// Hook typing: the Microsoft IME mode, and the caret
+ImmGetDefaultIMEWnd
+GetGUIThreadInfo

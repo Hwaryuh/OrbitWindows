@@ -7,6 +7,7 @@ using Orbit.App.Features;
 using Orbit.App.Overlays;
 using Orbit.Core;
 using Orbit.Core.Araso;
+using Orbit.Core.Settings;
 
 namespace Orbit.App.Settings;
 
@@ -25,10 +26,12 @@ internal sealed class InputPage : StackPanel
     private string _language = "korean";
     private string? _note;
 
-    public InputPage(ArasoFeature araso)
+    /// <param name="services">Null in the self-test, which only looks at Araso's rows.</param>
+    public InputPage(ArasoFeature araso, AppServices? services = null)
     {
         _araso = araso;
         Children.Add(_parts.PageTitles(Strings.PageInput, Strings.InputSubtitle, bottom: 20));
+        if (services is not null) Children.Add(TypingGroup(services));
         Children.Add(_status);
         Children.Add(_lists);
         _changed = RebuildStatus;
@@ -40,6 +43,23 @@ internal sealed class InputPage : StackPanel
         };
         Unloaded += (_, _) => _araso.Changed -= _changed;
         RebuildStatus();
+    }
+
+    private UIElement TypingGroup(AppServices services)
+    {
+        var typing = services.Typing!;
+        var preferences = services.Preferences;
+        var excluded = new StackPanel();
+        _parts.ProgramList(excluded, preferences, Pref.TypingExcludedApps);
+        var group = new StackPanel { Margin = new Thickness(0, 0, 0, 24) };
+        var toggle = _parts.Toggle(preferences.Get<bool>(Pref.TypingEnabled), on => preferences.Set(Pref.TypingEnabled, on));
+        toggle.IsEnabled = typing.Bundled;
+        string? problem = !typing.Bundled ? Strings.TypingNotBundled : typing.Failed ? Strings.TypingFailed : null;
+        group.Children.Add(_parts.Group(null, problem ?? Strings.TypingFooter,
+            _parts.Row(Strings.TypingTitle, Strings.TypingDetail, toggle),
+            _parts.Row(Strings.TypingInTerminals, Strings.TypingInTerminalsDetail, _parts.Toggle(preferences.Get<bool>(Pref.TypingInTerminals), on => preferences.Set(Pref.TypingInTerminals, on)))));
+        group.Children.Add(_parts.Group(Strings.TypingExcluded, null, excluded));
+        return group;
     }
 
     private void RebuildStatus()

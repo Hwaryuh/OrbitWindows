@@ -675,6 +675,14 @@ internal static class Strings
     public static string PageShortcuts => T("단축키", "Shortcuts");
     public static string PageInput => T("입력", "Input");
     public static string InputSubtitle => T("한/영을 자동으로 바꾸는 입력기 Araso를 켜고 관리합니다.", "Turn on and manage Araso, the input method that switches Korean and English for you.");
+    public static string TypingTitle => T("한/영 자동 전환", "Automatic Korean/English");
+    public static string TypingDetail => T("치는 대로 한글과 영어를 구분해 바꿉니다. 설치할 것이 없고 글자는 Windows 기본 입력처럼 보입니다.", "Tells Korean from English as you type. Nothing to install, and text looks as Windows draws it.");
+    public static string TypingFooter => T("Catchtype이나 Araso 입력기와 같이 켜면 입력이 꼬입니다. 하나만 켜 두세요. 비밀번호 입력란과 관리자 권한 창에서는 그대로 입력됩니다.", "It conflicts with Catchtype and the Araso input method: keep only one on. Password fields and elevated windows type as usual.");
+    public static string TypingNotBundled => T("이 빌드에는 판단 엔진이 없어서 켤 수 없습니다.", "This build doesn't carry the engine, so this can't be turned on.");
+    public static string TypingFailed => T("판단 엔진을 시작하지 못했습니다. Orbit을 다시 시작해 보세요.", "The engine couldn't start. Try restarting Orbit.");
+    public static string TypingInTerminals => T("터미널에서도 바꾸기", "In terminals too");
+    public static string TypingInTerminalsDetail => T("터미널이 비밀번호를 물을 때도 글자가 바뀌니 주의하세요.", "Careful: this also changes what you type when a terminal asks for a password.");
+    public static string TypingExcluded => T("제외할 프로그램", "Programs to leave alone");
     public static string InputLooking => T("확인하는 중입니다.", "Checking.");
     public static string InputInstalled => T("파일 준비", "Files in place");
     public static string InputRegistered => T("Windows 입력기 등록", "Known to Windows");

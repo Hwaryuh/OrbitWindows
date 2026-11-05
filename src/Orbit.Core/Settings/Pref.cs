@@ -73,6 +73,13 @@ public static class Pref
     public const string SnippetsTrigger = "snippets.trigger";
     public const string SnippetsExcludedApps = "snippets.excludedApps";
     public const string SnippetsInTerminals = "snippets.inTerminals";
+    /// <summary>As Orbit's list by bundle ID. A new array each time: defaults are handed out.</summary>
+    private static string[] PasswordManagers => ["1password.exe", "bitwarden.exe", "keepass.exe", "keepassxc.exe", "dashlane.exe", "enpass.exe", "lastpass.exe"];
+
+    /// <summary>Automatic Korean/English typing.</summary>
+    public const string TypingEnabled = "typing.enabled";
+    public const string TypingExcludedApps = "typing.excludedApps";
+    public const string TypingInTerminals = "typing.inTerminals";
     /// <summary>The screen the brightness actions change: "pointer", "main" or "all" (Orbit: displays.keyTarget).</summary>
     public const string DisplaysTarget = "displays.keyTarget";
     /// <summary>Orbit's brightness bar after a change (Orbit: displays.osd).</summary>
@@ -133,9 +140,13 @@ public static class Pref
         [CleanUrlLastRemoved] = Array.Empty<string>(),
         [SnippetsEnabled] = true,
         [SnippetsTrigger] = "immediate",
-        // Password managers, as Orbit's list by bundle ID.
-        [SnippetsExcludedApps] = new[] { "1password.exe", "bitwarden.exe", "keepass.exe", "keepassxc.exe", "dashlane.exe", "enpass.exe", "lastpass.exe" },
+        [SnippetsExcludedApps] = PasswordManagers,
         [SnippetsInTerminals] = true,
+        [TypingEnabled] = false,
+        // And remote sessions, whose far end doesn't take these keys as typed.
+        [TypingExcludedApps] = (string[])[.. PasswordManagers, "mstsc.exe", "vmconnect.exe"],
+        // A terminal asks for passwords with no sign a field could show.
+        [TypingInTerminals] = false,
         [DisplaysTarget] = "pointer",
         [DisplaysHud] = true,
         [DisplaysPresets] = "",

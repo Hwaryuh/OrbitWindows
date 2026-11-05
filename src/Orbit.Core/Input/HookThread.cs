@@ -1,3 +1,4 @@
+using Orbit.Core.Typing;
 using Windows.Win32;
 using Orbit.Core.Display;
 using Windows.Win32.Foundation;
@@ -59,6 +60,7 @@ public sealed class HookThread : IDisposable
     private nuint _watchdogTimer;
     private uint _lastMouseTick;
     private uint _lastKeyboardTick;
+    private volatile TypingWorker? _typing;
     private System.Drawing.Point _lastCursor;
     private uint _lastReinstall;
     private uint _backoffUntil;
@@ -121,6 +123,9 @@ public sealed class HookThread : IDisposable
     /// Only key codes and states travel; the text they make is worked out by the listener.
     /// </summary>
     public bool ReportTyping { set => _reportTyping = value; }
+
+    /// <summary>Automatic Korean/English typing: sees every key the hotkeys and the listeners leave.</summary>
+    public TypingWorker? Typing { set => _typing = value; }
 
     public void Start()
     {
@@ -250,6 +255,7 @@ public sealed class HookThread : IDisposable
                     return PInvoke.CallNextHookEx(HHOOK.Null, code, wParam, lParam);
                 }
                 var (button, down) = Decode(message, info->mouseData);
+                if (down) _typing?.BoxMayHaveChanged();
                 if (down && _reportTyping) PInvoke.PostThreadMessage(_threadId, WmTypingReset, default, default);
                 if (down && _reportClicks && button is MouseButton.Left or MouseButton.Right)
                     PInvoke.PostThreadMessage(_threadId, WmClick, (nuint)(nint)info->pt.X, info->pt.Y);
@@ -277,6 +283,9 @@ public sealed class HookThread : IDisposable
         {
             _lastKeyboardTick = PInvoke.GetTickCount();
             var info = (KBDLLHOOKSTRUCT*)lParam.Value;
+            // Typing's own keys go straight through; another feature's mean the box just changed.
+            if (info->dwExtraInfo == KeyOutput.Marker) return PInvoke.CallNextHookEx(HHOOK.Null, code, wParam, lParam);
+            if (info->dwExtraInfo == OrbitMarker) _typing?.BoxMayHaveChanged();
             if (info->dwExtraInfo != OrbitMarker)
             {
                 uint message = (uint)wParam.Value;
@@ -321,12 +330,24 @@ public sealed class HookThread : IDisposable
                 if (decision.Released != 0) PInvoke.PostThreadMessage(_threadId, WmHotkeyUp, (nuint)decision.Released, default);
                 if (decision.Swallow) return (LRESULT)1;
                 if (down && _reportTyping && !HotkeyMatcher.IsModifier(info->vkCode)) PostTyped(info->vkCode, info->scanCode);
+                if (_typing is { } typing)
+                {
+                    // Another program's keys aren't typing: its text just changes the box.
+                    if ((info->flags & KBDLLHOOKSTRUCT_FLAGS.LLKHF_INJECTED) != 0)
+                    {
+                        typing.BoxMayHaveChanged();
+                    }
+                    else if (typing.KeyArrived(info->vkCode, info->scanCode, (info->flags & KBDLLHOOKSTRUCT_FLAGS.LLKHF_EXTENDED) != 0, down, (PInvoke.GetKeyState((int)VkCapital) & 1) != 0))
+                    {
+                        return (LRESULT)1;
+                    }
+                }
             }
         }
         return PInvoke.CallNextHookEx(HHOOK.Null, code, wParam, lParam);
     }
 
-    private static bool IsDown(uint vk) => (PInvoke.GetAsyncKeyState((int)vk) & 0x8000) != 0;
+    private static bool IsDown(uint vk) => OrbitInput.IsDown(vk);
 
     /// <summary>A key and the state it was typed in, posted for the snippet listener. Allocation-free.</summary>
     private void PostTyped(uint vk, uint scan)
@@ -345,7 +366,7 @@ public sealed class HookThread : IDisposable
     private sealed class AsyncKeyState : IKeyState
     {
         public static readonly AsyncKeyState Instance = new();
-        public bool IsDown(uint vk) => (PInvoke.GetAsyncKeyState((int)vk) & 0x8000) != 0;
+        public bool IsDown(uint vk) => OrbitInput.IsDown(vk);
     }
 
     /// <summary>

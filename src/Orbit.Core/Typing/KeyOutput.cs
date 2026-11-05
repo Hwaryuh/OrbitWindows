@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using Orbit.Core.Input;
+using Windows.Win32;
 using Windows.Win32.UI.Input.KeyboardAndMouse;
 
 namespace Orbit.Core.Typing;
@@ -56,8 +57,18 @@ public static class KeyOutput
         return [.. events];
     }
 
-    /// <summary>The Windows SDK's size of one event, for SendInput.</summary>
-    public static int EventSize => Marshal.SizeOf<INPUT>();
+    /// <summary>A key event going on to the app just as it came in.</summary>
+    public static INPUT Raw(KeyEvent key)
+    {
+        KEYBD_EVENT_FLAGS flags = 0;
+        if (key.Extended) flags |= KEYBD_EVENT_FLAGS.KEYEVENTF_EXTENDEDKEY;
+        if (!key.Down) flags |= KEYBD_EVENT_FLAGS.KEYEVENTF_KEYUP;
+        return Event((ushort)key.Vk, key.Scan, flags);
+    }
+
+    /// <summary>All were accepted. A blocked window (elevated, the secure desktop) takes none.</summary>
+    public static bool Send(INPUT[] events) =>
+        PInvoke.SendInput(events, Marshal.SizeOf<INPUT>()) == events.Length;
 
     private static void SetShift(List<INPUT> events, ref bool shift, bool wanted)
     {

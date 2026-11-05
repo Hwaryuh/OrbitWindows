@@ -97,7 +97,7 @@ public sealed class FieldShadowTests
         var context = shadow.Context();
         Assert.Equal("가라", context.Text);
         Assert.Equal([2, 0], context.Selection);
-        Assert.Equal([1, 1], context.Marked);
+        Assert.Equal([1, 1], context.Marked!);
     }
 
     [Fact]

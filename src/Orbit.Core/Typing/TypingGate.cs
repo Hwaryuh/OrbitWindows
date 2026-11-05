@@ -85,7 +85,7 @@ public sealed class TypingGate
     private static bool IsShortcutModifier(uint vk) => HotkeyMatcher.IsModifier(vk) && !IsShift(vk);
 
     /// <summary>Keys that put a character in: letters, digits, the number pad's, punctuation, Space.</summary>
-    private static bool Types(uint vk) =>
+    internal static bool Types(uint vk) =>
         vk == HotkeyMatcher.VkSpace
         || vk is >= 0x30 and <= 0x39
         || vk is >= 0x41 and <= 0x5A
