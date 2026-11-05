@@ -41,3 +41,7 @@ Orbit's design, behavior and icon come from [3x-haust/Orbit](https://github.com/
 Third-party code and data and their licenses are listed in
 [`src/Orbit.App/THIRD-PARTY-NOTICES.txt`](src/Orbit.App/THIRD-PARTY-NOTICES.txt), which the app also opens from
 its About page.
+
+## License
+
+[MIT](LICENSE) © Hwaryuh. Parts from other projects keep their own licenses, listed in the notices file above.
