@@ -20,23 +20,27 @@ concurrency:
 jobs:
   build:
     runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
       - name: Version
+        id: version
         shell: pwsh
         run: |
           # A v<version> tag names the release; anything else is 0.1.<run number>.
           $version = if ("${{ github.ref }}" -like "refs/tags/v*") { "${{ github.ref_name }}".Substring(1) } else { "0.1.${{ github.run_number }}" }
           "ORBIT_VERSION=$version" >> $env:GITHUB_ENV
+          "version=$version" >> $env:GITHUB_OUTPUT
       - name: Build
-        run: dotnet build Orbit.slnx -c Release -p:Version=${{ env.ORBIT_VERSION }}
+        run: dotnet build Orbit.slnx -c Release -p:Version=${{ env.ORBIT_VERSION }} -p:UpdateRepo=https://github.com/${{ github.repository }}
       - name: Test
         run: dotnet test tests/Orbit.Tests -c Release --no-build
       - name: Publish
-        run: dotnet publish src/Orbit.App -c Release -o artifacts/publish -p:Version=${{ env.ORBIT_VERSION }}
+        run: dotnet publish src/Orbit.App -c Release -o artifacts/publish -p:Version=${{ env.ORBIT_VERSION }} -p:UpdateRepo=https://github.com/${{ github.repository }}
       - name: Pack
         run: |
           dotnet tool restore
@@ -45,3 +49,25 @@ jobs:
         with:
           name: Orbit-${{ env.ORBIT_VERSION }}
           path: artifacts/releases
+
+  # Only a v<version> tag becomes a release, so other builds never reach the update feed. The only
+  # job that may write: it runs nothing from the repository but its pinned vpk tool.
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/download-artifact@v4
+        with:
+          name: Orbit-${{ needs.build.outputs.version }}
+          path: artifacts/releases
+      - name: Publish release
+        run: |
+          dotnet tool restore
+          dotnet vpk upload github --outputDir artifacts/releases --repoUrl https://github.com/${{ github.repository }} --token ${{ secrets.GITHUB_TOKEN }} --releaseName "Orbit ${{ needs.build.outputs.version }}" --tag ${{ github.ref_name }} --publish

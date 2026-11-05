@@ -10,6 +10,11 @@
     <StartupObject>Orbit.App.Program</StartupObject>
   </PropertyGroup>
 
+  <!-- Where updates come from. CI sets it (build.yml); without it the build can't check. -->
+  <ItemGroup Condition="'$(UpdateRepo)' != ''">
+    <AssemblyMetadata Include="UpdateRepo" Value="$(UpdateRepo)" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="H.NotifyIcon.Wpf" Version="2.4.1" />
     <PackageReference Include="Velopack" Version="1.2.161" />

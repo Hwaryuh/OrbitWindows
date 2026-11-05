@@ -26,7 +26,7 @@ internal sealed class SettingsWindow : Window
     /// <summary>The pages, by id and title: the launcher finds them by name.</summary>
     public static IReadOnlyList<(string Id, string Title)> PageTitles { get; } =
     [
-        ("general", Strings.PageGeneral), ("shortcuts", Strings.PageShortcuts), ("ring", Strings.PageRing), ("launcher", Strings.PageLauncher),
+        ("general", Strings.PageGeneral), ("shortcuts", Strings.PageShortcuts), ("overlaps", Strings.PageOverlaps), ("ring", Strings.PageRing), ("launcher", Strings.PageLauncher),
         ("capture", Strings.PageCapture), ("clipboard", Strings.PageClipboard), ("translate", Strings.PageTranslate),
         ("snippets", Strings.PageSnippets), ("keepAwake", Strings.PageKeepAwake), ("sound", Strings.PageSound),
         ("system", Strings.PageSystem), ("ports", Strings.PagePorts), ("displays", Strings.PageDisplays), ("about", Strings.PageAbout),
@@ -84,6 +84,7 @@ internal sealed class SettingsWindow : Window
     {
         "general" => General,
         "shortcuts" => () => new ShortcutsPage(_services),
+        "overlaps" => () => new OverlapsPage(_services),
         "ring" => () => new RingPage(_services),
         "capture" => () => new CapturePage(_services),
         "clipboard" => () => new ClipboardPage(_services),

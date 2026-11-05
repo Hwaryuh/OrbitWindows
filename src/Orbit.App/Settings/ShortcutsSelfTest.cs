@@ -135,6 +135,19 @@ internal static class ShortcutsSelfTest
 
             if (render is not null) Render(window, render);
 
+            // The overlaps page on this PC, read-only: it finishes and draws.
+            var overlaps = new OverlapsPage(services);
+            window.Content = new ScrollViewer { Content = new Border { Padding = new Thickness(24), Child = overlaps } };
+            Pump();
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            while (Texts(overlaps).Contains(Strings.OverlapsLooking) && clock.Elapsed < TimeSpan.FromSeconds(20))
+            {
+                Thread.Sleep(50);
+                Pump();
+            }
+            results.Check($"the overlaps page finishes looking in {clock.ElapsedMilliseconds} ms", !Texts(overlaps).Contains(Strings.OverlapsLooking));
+            Pump();
+            if (render is not null) Render(window, Path.ChangeExtension(render, ".overlaps.png"));
             window.Close();
         }
         catch (Exception e)
