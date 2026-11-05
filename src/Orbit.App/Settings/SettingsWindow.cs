@@ -21,7 +21,6 @@ internal sealed class SettingsWindow : Window
     private readonly Features.AppServices _services;
     private readonly Preferences _preferences;
     private readonly ContentControl _page = new() { Margin = new Thickness(28, 24, 28, 24) };
-    private readonly ListBox _pages;
 
     /// <summary>The pages, by id and title: the launcher finds them by name.</summary>
     public static IReadOnlyList<(string Id, string Title)> PageTitles { get; } =
@@ -32,49 +31,49 @@ internal sealed class SettingsWindow : Window
         ("system", Strings.PageSystem), ("ports", Strings.PagePorts), ("displays", Strings.PageDisplays), ("about", Strings.PageAbout),
     ];
 
-    private SettingsWindow(Features.AppServices services)
+    /// <summary>Internal for the self-test, which places it off screen; anything else opens it through <see cref="ShowOrActivate"/>.</summary>
+    internal SettingsWindow(Features.AppServices services)
     {
         _services = services;
         _preferences = services.Preferences;
         Title = Strings.SettingsTitle;
         // Wide enough for the ring page's ring beside its action list.
         Width = 960;
-        Height = 700;
+        // Every page in the sidebar without scrolling, where the screen allows.
+        Height = Math.Min(830, SystemParameters.WorkArea.Height - 40);
         MinWidth = 860;
         MinHeight = 480;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         Background = Brushes.White;
         FontFamily = new FontFamily("Segoe UI Variable Text, Segoe UI, Malgun Gothic");
 
-        var pages = _pages = new ListBox
-        {
-            BorderThickness = new Thickness(0),
-            Background = new SolidColorBrush(Color.FromRgb(247, 247, 247)),
-            Padding = new Thickness(8, 12, 8, 12),
-            Width = 190,
-        };
-        foreach (var (id, title) in PageTitles)
-            pages.Items.Add(new ListBoxItem { Content = title, Tag = Build(id, title), Padding = new Thickness(10, 7, 10, 7), FontSize = 14 });
-        pages.SelectionChanged += (_, _) =>
-        {
-            if (pages.SelectedItem is ListBoxItem { Tag: Func<UIElement> build }) _page.Content = build();
-        };
+        var pages = Sidebar = new SettingsSidebar(PageTitles);
+        var builders = PageTitles.ToDictionary(p => p.Id, p => Build(p.Id, p.Title));
+        pages.PageSelected += id => _page.Content = builders[id]();
 
         var layout = new DockPanel();
         DockPanel.SetDock(pages, Dock.Left);
         layout.Children.Add(pages);
         layout.Children.Add(new Border { BorderBrush = Line, BorderThickness = new Thickness(1, 0, 0, 0), Child = new ScrollViewer { Content = _page, VerticalScrollBarVisibility = ScrollBarVisibility.Auto } });
         Content = layout;
-        pages.SelectedIndex = 0;
+        pages.Select(PageTitles[0].Id);
+        if (services.KeepAwake is { } awake)
+        {
+            void ShowAwake() => pages.SetDot("keepAwake", awake.Session is not null);
+            awake.Changed += ShowAwake;
+            Closed += (_, _) => awake.Changed -= ShowAwake;
+            ShowAwake();
+        }
         Closed += (_, _) => _open = null;
     }
+
+    internal SettingsSidebar Sidebar { get; }
 
     /// <param name="page">A page id from <see cref="PageTitles"/>; null keeps the one shown.</param>
     public static void ShowOrActivate(Features.AppServices services, string? page = null)
     {
         _open ??= new SettingsWindow(services);
-        int index = PageTitles.ToList().FindIndex(p => p.Id == page);
-        if (index >= 0) _open._pages.SelectedIndex = index;
+        if (page is not null) _open.Sidebar.Select(page);
         _open.Show();
         if (_open.WindowState == WindowState.Minimized) _open.WindowState = WindowState.Normal;
         _open.Activate();

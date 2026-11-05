@@ -673,6 +673,11 @@ internal static class Strings
     public static string PageGeneral => T("일반", "General");
     public static string PageRing => T("링", "Ring");
     public static string PageShortcuts => T("단축키", "Shortcuts");
+    public static string SettingsTagline => T("Windows 유틸리티를 한곳에", "Windows utilities, all in one");
+    public static string SettingsSectionEssentials => T("기본", "Essentials");
+    public static string SettingsSectionUtilities => T("유틸리티", "Utilities");
+    public static string SettingsSectionWindows => T("Windows", "Windows");
+    public static string SettingsSectionSettings => T("설정", "Settings");
     public static string PageInput => T("입력", "Input");
     public static string InputSubtitle => T("치는 대로 한글과 영어를 구분해 바꿉니다.", "Tells Korean from English as you type.");
     public static string TypingTitle => T("한/영 자동 전환", "Automatic Korean/English");

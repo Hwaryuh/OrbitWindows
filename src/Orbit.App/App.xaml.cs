@@ -30,12 +30,18 @@ public partial class App : Application
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
-        _instance = new Mutex(true, @"Local\Orbit.Windows.Instance", out bool first);
-        if (!first)
+        // A self-test shows nothing and runs no hooks, so it runs beside the user's own Orbit, and
+        // doesn't touch the name that says one is running.
+        bool selfTest = e.Args.Any(a => a.StartsWith("--selftest-", StringComparison.Ordinal));
+        if (!selfTest)
         {
-            MessageBox.Show(Strings.AlreadyRunning, Strings.AppName);
-            Shutdown();
-            return;
+            _instance = new Mutex(true, @"Local\Orbit.Windows.Instance", out bool first);
+            if (!first)
+            {
+                MessageBox.Show(Strings.AlreadyRunning, Strings.AppName);
+                Shutdown();
+                return;
+            }
         }
 
         DispatcherUnhandledException += OnUnhandledException;
@@ -43,19 +49,30 @@ public partial class App : Application
         LogMonitors();
         foreach (var action in ActionText.Missing()) Log.Error($"Action {action.Id()} has no title");
 
-        _preferences = Preferences.OpenDefault();
         // These show nothing and run before the hooks and the tray.
-        if (e.Args.Contains("--selftest-scratchpad") || e.Args.Contains("--selftest-shortcuts") || e.Args.Contains("--selftest-video"))
+        if (e.Args.Contains("--selftest-scratchpad") || e.Args.Contains("--selftest-shortcuts") || e.Args.Contains("--selftest-video") || e.Args.Contains("--selftest-settings"))
         {
             int at = Array.IndexOf(e.Args, "--render");
             string? render = at >= 0 && at + 1 < e.Args.Length ? e.Args[at + 1] : null;
-            bool passed = e.Args.Contains("--selftest-scratchpad")
-                ? Features.Scratchpad.ScratchpadSelfTest.Run(_preferences, render)
-                : e.Args.Contains("--selftest-shortcuts") ? Settings.ShortcutsSelfTest.Run(render)
-                : VideoEditorSelfTest.Run(render);
+            bool passed = false;
+            try
+            {
+                passed = e.Args.Contains("--selftest-scratchpad")
+                    ? Features.Scratchpad.ScratchpadSelfTest.Run(Preferences.OpenDefault(), render)
+                    : e.Args.Contains("--selftest-shortcuts") ? Settings.ShortcutsSelfTest.Run(render)
+                    : e.Args.Contains("--selftest-settings") ? Settings.SettingsSelfTest.Run(render)
+                    : VideoEditorSelfTest.Run(render);
+            }
+            catch (Exception error)
+            {
+                // A failure, not a process left running with no window to close.
+                Log.Error("A self-test failed with an exception", error);
+            }
             Shutdown(passed ? 0 : 1);
             return;
         }
+
+        _preferences = Preferences.OpenDefault();
         // Refresh an installed copy's sign-in entry (an update moves the executable); never add one
         // here: the installer's first run does. Apply leaves the Run value alone for a dev build.
         if (_preferences.Get<bool>(Pref.LaunchAtSignIn) && StartupRegistration.IsEnabled()) StartupRegistration.Apply(true);

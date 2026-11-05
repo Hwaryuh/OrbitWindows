@@ -13,6 +13,7 @@ internal sealed class Palette
     {
         Dark = dark;
         Canvas = Solid(dark ? 0x0B0B0C : 0xFFFFFF);
+        Sidebar = Solid(dark ? 0x070708 : 0xF6F6F7);
         Surface = Solid(dark ? 0x18181A : 0xF4F4F5);
         Raised = Solid(dark ? 0x242427 : 0xE9E9EB);
         Ink = Solid(dark ? 0xFAFAFA : 0x0B0B0C);
@@ -25,6 +26,8 @@ internal sealed class Palette
     public bool Dark { get; }
     /// <summary>Window and panel background.</summary>
     public SolidColorBrush Canvas { get; }
+    /// <summary>The settings window's left side.</summary>
+    public SolidColorBrush Sidebar { get; }
     /// <summary>Cards, rows, grouped content.</summary>
     public SolidColorBrush Surface { get; }
     /// <summary>Controls resting on a surface.</summary>
