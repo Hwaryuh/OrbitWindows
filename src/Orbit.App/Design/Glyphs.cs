@@ -33,6 +33,8 @@ internal static class Glyphs
     public const string Cloud = "\uE753";
     public const string Sun = "\uE706";
     public const string Document = "\uE8A5";
+    public const string Preview = "\uE890";
+    public const string Edit = "\uE70F";
 
     private static readonly Dictionary<OrbitAction, string> ForAction = new()
     {

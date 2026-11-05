@@ -44,6 +44,15 @@ public partial class App : Application
         foreach (var action in ActionText.Missing()) Log.Error($"Action {action.Id()} has no title");
 
         _preferences = Preferences.OpenDefault();
+        // These show nothing and run before the hooks and the tray.
+        if (e.Args.Contains("--selftest-scratchpad"))
+        {
+            int at = Array.IndexOf(e.Args, "--render");
+            string? render = at >= 0 && at + 1 < e.Args.Length ? e.Args[at + 1] : null;
+            bool passed = Features.Scratchpad.ScratchpadSelfTest.Run(_preferences, render);
+            Shutdown(passed ? 0 : 1);
+            return;
+        }
         // Refresh an installed copy's sign-in entry (an update moves the executable); never add one
         // here: the installer's first run does. Apply leaves the Run value alone for a dev build.
         if (_preferences.Get<bool>(Pref.LaunchAtSignIn) && StartupRegistration.IsEnabled()) StartupRegistration.Apply(true);

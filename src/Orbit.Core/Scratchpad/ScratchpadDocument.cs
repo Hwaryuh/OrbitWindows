@@ -4,7 +4,11 @@ using System.Text.Json.Serialization;
 namespace Orbit.Core.Scratchpad;
 
 /// <summary>One tab of the pad.</summary>
-public sealed record Pad(Guid Id, string Name, string Text, DateTimeOffset Modified);
+public sealed record Pad(Guid Id, string Name, string Text, DateTimeOffset Modified)
+{
+    /// <summary>Whether the tab shows its Markdown instead of its text. Older files have none: text.</summary>
+    public bool Preview { get; init; }
+}
 
 /// <summary>
 /// The pad's tabs, the selected one and the recently closed ones (behavior after Vorssaint's

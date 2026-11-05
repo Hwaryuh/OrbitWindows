@@ -11,11 +11,13 @@ using Orbit.Core.Settings;
 namespace Orbit.App.Features.Scratchpad;
 
 /// <summary>
-/// The pad (behavior after Vorssaint's Scratchpad; Orbit has none): tabs of plain text, saved as
-/// they change. One text box per tab, kept while the pad lives, so each tab keeps its own undo.
+/// The pad (behavior after Vorssaint's Scratchpad; Orbit has none): tabs of text, saved as they
+/// change. One text box per tab, kept while the pad lives, so each tab keeps its own undo. A tab
+/// can show its Markdown instead; its box then stays Hidden, not Collapsed, because a Collapsed box
+/// that never had a layout has no undo, and task boxes flip through it.
 /// Hides when another app is clicked unless pinned. Keys: Ctrl+T new tab, Ctrl+W close it (the
-/// last one hides the pad), Ctrl+Shift+T reopen, Ctrl+Tab and Ctrl+Shift+Tab, Ctrl+F find, F3 and
-/// Shift+F3, Esc.
+/// last one hides the pad), Ctrl+Shift+T reopen, Ctrl+Tab and Ctrl+Shift+Tab, Ctrl+E preview,
+/// Ctrl+F find, F3 and Shift+F3, Esc.
 /// </summary>
 internal sealed class ScratchpadWindow : Window
 {
@@ -35,9 +37,16 @@ internal sealed class ScratchpadWindow : Window
     private readonly TextBlock _findStatus;
     private readonly TextBlock _status;
     private readonly Button _pin;
+    private readonly Button _previewToggle;
+    private readonly FlowDocumentScrollViewer _preview = new()
+    {
+        IsToolBarVisible = false, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+        HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, Visibility = Visibility.Collapsed,
+    };
     private readonly DispatcherTimer _saveTimer = new() { Interval = TimeSpan.FromMilliseconds(600) };
     private bool _dirty;
     private bool _quitting;
+    private bool _flipping;
 
     public ScratchpadWindow(ScratchpadStore store, ScratchpadDocument document, Preferences preferences)
     {
@@ -68,7 +77,9 @@ internal sealed class ScratchpadWindow : Window
             more.ContextMenu.IsOpen = true;
         };
         var close = HeaderButton("", Strings.ScratchpadHide, HidePad);
+        _previewToggle = HeaderButton(Glyphs.Preview, Strings.ScratchpadShowPreview, TogglePreview);
         var right = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(6, 0, 4, 0) };
+        right.Children.Add(_previewToggle);
         right.Children.Add(_pin);
         right.Children.Add(more);
         right.Children.Add(close);
@@ -104,6 +115,7 @@ internal sealed class ScratchpadWindow : Window
         layout.Children.Add(_status);
         DockPanel.SetDock(_findBar, Dock.Bottom);
         layout.Children.Add(_findBar);
+        _editorHost.Children.Add(_preview);
         layout.Children.Add(_editorHost);
         Content = layout;
 
@@ -299,24 +311,103 @@ internal sealed class ScratchpadWindow : Window
                 var text = editor.Text;
                 _document.Update(id, p => p with { Text = text, Modified = DateTimeOffset.Now });
                 Changed();
+                // Undo and redo in the preview; a flip already shows its own change.
+                if (!_flipping && id == _document.Selected && InPreview) RenderPreview(keepScroll: true);
             };
             _editors[id] = editor;
             _editorHost.Children.Add(editor);
         }
-        foreach (var (key, box) in _editors) box.Visibility = key == id ? Visibility.Visible : Visibility.Collapsed;
+        ShowSelected();
         FillTabs();
-        // An open find bar searches the tab now in front, from its own caret.
+        // An open find bar searches the tab now in front, from its own caret; a preview has none.
         if (_findBar.Visibility == Visibility.Visible)
         {
-            _findAnchor = editor.SelectionStart;
-            FindAsTyped();
+            if (InPreview) _findBar.Visibility = Visibility.Collapsed;
+            else
+            {
+                _findAnchor = editor.SelectionStart;
+                FindAsTyped();
+            }
         }
         FocusEditor();
     }
 
     private void FocusEditor()
     {
-        if (_editors.TryGetValue(_document.Selected, out var editor) && IsVisible) Dispatcher.BeginInvoke(DispatcherPriority.Input, () => editor.Focus());
+        if (!IsVisible) return;
+        if (InPreview) Dispatcher.BeginInvoke(DispatcherPriority.Input, () => _preview.Focus());
+        else if (_editors.TryGetValue(_document.Selected, out var editor)) Dispatcher.BeginInvoke(DispatcherPriority.Input, () => editor.Focus());
+    }
+
+    private bool InPreview => _document.Current.Preview;
+
+    /// <summary>Shows the selected tab as text or as its preview, and the button for the other one.</summary>
+    private void ShowSelected()
+    {
+        bool preview = InPreview;
+        foreach (var (key, box) in _editors)
+            box.Visibility = key != _document.Selected ? Visibility.Collapsed : preview ? Visibility.Hidden : Visibility.Visible;
+        _preview.Visibility = preview ? Visibility.Visible : Visibility.Collapsed;
+        if (preview) RenderPreview();
+        else _preview.Document = null;
+        ((TextBlock)_previewToggle.Content).Text = preview ? Glyphs.Edit : Glyphs.Preview;
+        _previewToggle.ToolTip = preview ? Strings.ScratchpadShowEditor : Strings.ScratchpadShowPreview;
+    }
+
+    private void RenderPreview(bool keepScroll = false)
+    {
+        double offset = keepScroll ? PreviewScroller()?.VerticalOffset ?? 0 : 0;
+        var id = _document.Selected;
+        _preview.Document = ScratchpadPreview.Build(_document.Current.Text, FontFamily, bracket => FlipTask(id, bracket));
+        if (keepScroll) Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => PreviewScroller()?.ScrollToVerticalOffset(offset));
+    }
+
+    private ScrollViewer? PreviewScroller() => _preview.Template?.FindName("PART_ContentHost", _preview) as ScrollViewer;
+
+    private void SetPreview(bool preview)
+    {
+        if (InPreview == preview) return;
+        _document.Update(_document.Selected, p => p with { Preview = preview });
+        Changed();
+        if (preview) _findBar.Visibility = Visibility.Collapsed;
+        ShowSelected();
+    }
+
+    private void TogglePreview()
+    {
+        SetPreview(!InPreview);
+        FocusEditor();
+    }
+
+    /// <summary>
+    /// Flips the task box at a source position as one undo step, keeping the box's selection. The
+    /// length stays the same, so the other boxes' positions hold and the preview needs no rebuild.
+    /// Says the box's new state, or null after a rebuild when the box is from another tab or the
+    /// text there isn't a box any more.
+    /// </summary>
+    private bool? FlipTask(Guid tab, int bracket)
+    {
+        if (!_editors.TryGetValue(tab, out var editor)) return null;
+        if (tab != _document.Selected || ScratchpadMarkdown.ToggledMark(editor.Text, bracket) is not { } mark)
+        {
+            RenderPreview(keepScroll: true);
+            return null;
+        }
+        int start = editor.SelectionStart, length = editor.SelectionLength;
+        _flipping = true;
+        try
+        {
+            editor.BeginChange();
+            editor.Select(bracket + 1, 1);
+            editor.SelectedText = mark.ToString();
+            editor.Select(start, length);
+            editor.EndChange();
+        }
+        finally
+        {
+            _flipping = false;
+        }
+        return mark != ' ';
     }
 
     private void NewTab()
@@ -365,8 +456,25 @@ internal sealed class ScratchpadWindow : Window
             case Key.T when ctrl: NewTab(); break;
             case Key.W when ctrl: CloseTab(_document.Selected); break;
             case Key.Tab when ctrl: Cycle(shift ? -1 : 1); break;
-            case Key.F when ctrl: OpenFind(); break;
-            case Key.F3: Find(forward: !shift); break;
+            case Key.E when ctrl: TogglePreview(); break;
+            // The preview has no keyboard edit of its own; a tab's name box keeps its undo.
+            case Key.Z when ctrl && shift && InPreview && Keyboard.FocusedElement is not TextBox: _editors[_document.Selected].Redo(); break;
+            case Key.Z when ctrl && InPreview && Keyboard.FocusedElement is not TextBox: _editors[_document.Selected].Undo(); break;
+            case Key.Y when ctrl && InPreview && Keyboard.FocusedElement is not TextBox: _editors[_document.Selected].Redo(); break;
+            case Key.F when ctrl:
+                SetPreview(false);
+                OpenFind();
+                break;
+            case Key.F3:
+                if (InPreview)
+                {
+                    // The preview closed the find bar and holds the focus: both go back to the text.
+                    SetPreview(false);
+                    _findBar.Visibility = Visibility.Visible;
+                    FocusEditor();
+                }
+                Find(forward: !shift);
+                break;
             case Key.Enter when _find.IsKeyboardFocused: Find(forward: !shift); break;
             // The tab name box handles its own Esc (put the name back).
             case Key.Escape when Keyboard.FocusedElement is TextBox box && box != _find && !_editors.ContainsValue(box): e.Handled = false; break;

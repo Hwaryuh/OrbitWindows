@@ -470,6 +470,9 @@ internal static class Strings
     public static string ScratchpadPin => T("항상 위에 고정", "Keep on top");
     public static string ScratchpadMore => T("더 보기", "More");
     public static string ScratchpadHide => T("숨기기 (Esc)", "Hide (Esc)");
+    public static string ScratchpadShowPreview => T("미리 보기 (Ctrl+E)", "Preview (Ctrl+E)");
+    public static string ScratchpadShowEditor => T("편집 (Ctrl+E)", "Edit (Ctrl+E)");
+    public static string ScratchpadLinkFailed => T("링크를 열 수 없습니다.", "Couldn't open the link.");
     public static string ScratchpadCopyAll => T("이 메모 모두 복사", "Copy this note");
     public static string ScratchpadCopied => T("메모를 복사했습니다.", "Note copied.");
     public static string ScratchpadReopen => T("닫은 메모 다시 열기", "Reopen closed note");
@@ -714,6 +717,6 @@ internal static class Strings
     public static string AboutVersion(string version) => T($"버전 {version}", $"Version {version}");
     public static string AboutLogs => T("로그 폴더 열기", "Open Log Folder");
     public static string AboutNotice => T(
-        "Orbit for Windows는 3x-haust/Orbit(MIT)을 바탕으로 만들었습니다. 한/영 자동 전환은 nyttastudio/araso(MIT, 한국어 빈도 목록 CC BY-SA 4.0)를, QR 코드 인식은 ZXing.Net(Apache 2.0)을 사용합니다.",
-        "Orbit for Windows is based on 3x-haust/Orbit (MIT). Automatic Korean/English switching uses nyttastudio/araso (MIT; Korean frequency list CC BY-SA 4.0). QR codes are read with ZXing.Net (Apache 2.0).");
+        "Orbit for Windows는 3x-haust/Orbit(MIT)을 바탕으로 만들었습니다. 한/영 자동 전환은 nyttastudio/araso(MIT, 한국어 빈도 목록 CC BY-SA 4.0)를, QR 코드 인식은 ZXing.Net(Apache 2.0)을, 메모장 미리 보기는 Markdig(BSD-2-Clause)을 사용합니다.",
+        "Orbit for Windows is based on 3x-haust/Orbit (MIT). Automatic Korean/English switching uses nyttastudio/araso (MIT; Korean frequency list CC BY-SA 4.0). QR codes are read with ZXing.Net (Apache 2.0). The Scratchpad preview uses Markdig (BSD-2-Clause).");
 }
