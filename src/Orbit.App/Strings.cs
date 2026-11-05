@@ -16,7 +16,6 @@ internal static class Strings
     public static string MenuOpenLogs => T("로그 폴더 열기", "Open Log Folder");
     public static string MenuQuit => T("종료", "Quit");
 
-    public static string AlreadyRunning => T("Orbit이 이미 실행 중입니다.", "Orbit is already running.");
     public static string SomethingFailed => T("문제가 생겨 작업을 끝내지 못했습니다. 다시 시도하세요.", "Something went wrong. Please try again.");
     public static string MonitorReportSaved => T("모니터 정보를 로그에 기록했습니다.", "Monitor info was written to the log.");
     public static string CaptureFailed => T("화면을 캡처하지 못했습니다. 다시 시도하세요.", "The screen could not be captured. Please try again.");

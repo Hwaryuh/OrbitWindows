@@ -262,3 +262,6 @@ GetGUIThreadInfo
 
 // System actions: the desktop's window
 FindWindow
+
+// A second launch hands the right to come to the front to the running Orbit
+AllowSetForegroundWindow

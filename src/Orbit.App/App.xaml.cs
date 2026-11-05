@@ -20,6 +20,10 @@ namespace Orbit.App;
 public partial class App : Application
 {
     private Mutex? _instance;
+    /// <summary>Set by a second launch (Start, Win+S): this one opens its window instead.</summary>
+    private const string ShowRequestName = @"Local\Orbit.Windows.Show";
+    private EventWaitHandle? _showRequest;
+    private RegisteredWaitHandle? _showWait;
     private Preferences? _preferences;
     private ForegroundTracker? _foreground;
     private HookThread? _hooks;
@@ -41,7 +45,7 @@ public partial class App : Application
             _instance = new Mutex(true, @"Local\Orbit.Windows.Instance", out bool first);
             if (!first)
             {
-                MessageBox.Show(Strings.AlreadyRunning, Strings.AppName);
+                AskRunningOrbitToShow();
                 Shutdown();
                 return;
             }
@@ -96,6 +100,7 @@ public partial class App : Application
         _foreground.Changed += UpdatePassThrough;
         UpdatePassThrough();
         _hooks.Start();
+        ListenForShowRequests();
 
         _services.Capture = await StartCaptureAsync();
 
@@ -114,6 +119,8 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _showWait?.Unregister(null);
+        _showRequest?.Dispose();
         _hooks?.Dispose();
         foreach (var feature in _features) feature.Dispose();
         _services?.Clipboard.Dispose();
@@ -124,6 +131,32 @@ public partial class App : Application
         _instance?.Dispose();
         Log.Info("Orbit stopped");
         base.OnExit(e);
+    }
+
+    /// <summary>
+    /// Orbit is already running: it opens its settings window, and this launch ends. The launch was the
+    /// user's, so it may hand the right to come to the front to the running copy.
+    /// </summary>
+    private static void AskRunningOrbitToShow()
+    {
+        if (!EventWaitHandle.TryOpenExisting(ShowRequestName, out var request))
+        {
+            // Still starting: it shows nothing yet, and will be in the tray in a moment.
+            Log.Info("Orbit launched again while the first copy was still starting");
+            return;
+        }
+        using (request)
+        {
+            global::Windows.Win32.PInvoke.AllowSetForegroundWindow(uint.MaxValue);
+            request.Set();
+        }
+    }
+
+    private void ListenForShowRequests()
+    {
+        _showRequest = new EventWaitHandle(false, EventResetMode.AutoReset, ShowRequestName);
+        _showWait = ThreadPool.RegisterWaitForSingleObject(_showRequest,
+            (_, _) => Dispatcher.BeginInvoke(() => Settings.SettingsWindow.ShowOrActivate(_services!)), null, Timeout.Infinite, false);
     }
 
     private void UpdatePassThrough()
