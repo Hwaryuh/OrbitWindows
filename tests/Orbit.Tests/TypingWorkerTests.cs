@@ -111,6 +111,23 @@ public sealed class TypingCoreTests
     }
 
     [Fact]
+    public void AnUnreadableWindowWithNoCaretIsLeftAlone()
+    {
+        var host = new FakeTypingHost { DefaultField = null, PlaceResult = new TypingPlace(TypingPause.None, true, false, MayTakeText: false) };
+        var (core, gate, _) = Make(new Engine(), host);
+        Assert.False(gate.Active);
+        Assert.Equal(TypingPause.NotText, core.Pause);
+    }
+
+    [Fact]
+    public void AnUnreadableWindowWithACaretStillTakesKeys()
+    {
+        var (core, gate, _) = Make(new Engine(), new FakeTypingHost { DefaultField = null });
+        Assert.True(gate.Active);
+        Assert.Equal(TypingPause.None, core.Pause);
+    }
+
+    [Fact]
     public void AnImeThatDoesNotAnswerPauses()
     {
         var (core, gate, _) = Make(new Engine(), new FakeTypingHost { ImeAnswers = false });

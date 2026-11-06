@@ -25,6 +25,7 @@ internal sealed class TypingFeature : IFeature
     private readonly WINEVENTPROC _frontCallback;
     private AppServices? _services;
     private TypingWorker? _worker;
+    private TypingHost? _host;
     private HWINEVENTHOOK _focusHook;
     private HWINEVENTHOOK _frontHook;
 
@@ -78,7 +79,8 @@ internal sealed class TypingFeature : IFeature
         {
             var services = _services;
             string support = Path.Combine(AppPaths.RoamingFolder(), "typing-engine");
-            _worker = new TypingWorker(() => EngineBridge.Start(Folder, support), new TypingHost(services));
+            _host = new TypingHost(services);
+            _worker = new TypingWorker(() => EngineBridge.Start(Folder, support), _host);
             _worker.PauseChanged += OnPauseChanged;
             _worker.Start(true);
             services.Hooks.Typing = _worker;
@@ -110,7 +112,7 @@ internal sealed class TypingFeature : IFeature
 
     private void OnPauseChanged()
     {
-        Log.Info($"Typing: {_worker?.Pause}");
+        Log.Info($"Typing: {_worker?.Pause} ({_host?.LastProcess})");
         System.Windows.Application.Current?.Dispatcher.BeginInvoke(() => Changed?.Invoke());
     }
 
@@ -121,6 +123,9 @@ internal sealed class TypingFeature : IFeature
         private const ushort LanguageUsEnglish = 0x0409;
 
         private readonly ImeMode _ime = new();
+
+        /// <summary>The program in front at the last look, for the log.</summary>
+        public volatile string LastProcess = "";
 
         public nint FocusWindow => ImeMode.FocusWindow(out _);
 
@@ -136,7 +141,8 @@ internal sealed class TypingFeature : IFeature
             uint id = ProcessOf(front);
             string process = Processes.FileName(id);
             string className = ClassName(front);
-            var language = ImeMode.Language(ImeMode.FocusWindow(out _));
+            LastProcess = process;
+            var language = ImeMode.Language(ImeMode.FocusWindow(out bool caret));
             // Letters go as keys only where no IME can catch them. On the Korean layout they go as Unicode:
             // Chrome's IME stays in Hangul mode through WM_IME_CONTROL and composes them (seen 2026-11-06).
             bool usKeys = language == LanguageUsEnglish;
@@ -145,13 +151,15 @@ internal sealed class TypingFeature : IFeature
             TypingPause pause;
             // Orbit's own windows take typing too, the launcher above all, and the box decides as anywhere.
             // A program it may not open (an elevated one) also reads as "", and its keys can't be sent.
-            if (id == (uint)Environment.ProcessId) pause = TypingPause.None;
+            bool own = id == (uint)Environment.ProcessId;
+            if (own) pause = TypingPause.None;
             else if (front.IsNull || process.Length == 0) pause = TypingPause.OwnWindow;
             else if (className.StartsWith("Shell_", StringComparison.Ordinal)) pause = TypingPause.NotText;
             else if (ClipboardRules.IsIgnored(process, prefs.Get<string[]>(Pref.TypingExcludedApps))) pause = TypingPause.ExcludedApp;
             else if (!prefs.Get<bool>(Pref.TypingInTerminals) && Processes.Terminals.Contains(process)) pause = TypingPause.Terminal;
             else pause = TypingPause.None;
-            return new TypingPlace(pause, usKeys, chromium, prefs.Get<bool>(Pref.TypingInTerminals));
+            bool mayTakeText = caret || chromium || own;
+            return new TypingPlace(pause, usKeys, chromium, prefs.Get<bool>(Pref.TypingInTerminals), mayTakeText);
         }
 
         public FieldSnapshot? ReadField(int length)

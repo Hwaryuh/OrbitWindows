@@ -30,7 +30,11 @@ public enum TypingPause
 /// late, so a selection can be seen in time but the text just typed can't be compared.
 /// </param>
 /// <param name="AllowTerminals">The user turned typing on for terminals too.</param>
-public sealed record TypingPlace(TypingPause Pause, bool UsKeys, bool CheckEveryEdit, bool AllowTerminals = false);
+/// <param name="MayTakeText">
+/// The focused window shows a caret, or is a kind that never does (Chromium), so a box that can't be read
+/// may still be one. False: nothing to type into unless a read says so. A game's window is this.
+/// </param>
+public sealed record TypingPlace(TypingPause Pause, bool UsKeys, bool CheckEveryEdit, bool AllowTerminals = false, bool MayTakeText = true);
 
 /// <summary>Everything about Windows the typing logic needs, so it can be tested without any of it.</summary>
 public interface ITypingHost
@@ -111,7 +115,9 @@ public sealed class TypingCore(ITypingEngine engine, ITypingHost host, TypingGat
         {
             field = host.ReadField(1);
             if (LeftAloneFor(field) is { } reason) pause = reason;
-            else if (field is { TakesText: false }) pause = TypingPause.NotText;
+            // An unreadable window with no caret: a read refused while the last one still runs (just after
+            // Alt+Tab) must not leave a game's keys going through the queue until the next focus event.
+            else if (field is { TakesText: false } || (field is null && !_place.MayTakeText)) pause = TypingPause.NotText;
             else if (!host.HoldIme()) pause = TypingPause.ImeNotResponding;
         }
 
