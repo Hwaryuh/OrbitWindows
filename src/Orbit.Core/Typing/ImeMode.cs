@@ -19,6 +19,7 @@ public sealed class ImeMode
 
     private HWND _changed;
     private nuint _modeBefore;
+    private nuint _modeHeld;
 
     /// <summary>The window with the keyboard's focus, or the one in front.</summary>
     public static unsafe HWND FocusWindow(out bool hasCaret)
@@ -43,12 +44,15 @@ public sealed class ImeMode
     {
         var window = FocusWindow(out _);
         if (window.IsNull) return false;
+        // Only one window is remembered, so the one before gets its mode back first.
+        if (window != _changed) Release();
         if ((Language(window) & PrimaryLanguageMask) != Korean) return true;
         var ime = PInvoke.ImmGetDefaultIMEWnd(window);
         if (ime.IsNull) return false;
         if (Ask(ime, GetConversionMode, 0) is not { } mode) return false;
         if ((mode & Native) == 0) return true;
-        Ask(ime, SetConversionMode, mode & ~Native);
+        nuint held = mode & ~Native;
+        Ask(ime, SetConversionMode, held);
         if (Ask(ime, GetConversionMode, 0) is not { } after || (after & Native) != 0)
         {
             Log.Info("The Microsoft IME stayed in Hangul mode");
@@ -57,17 +61,23 @@ public sealed class ImeMode
         Log.Info("The Microsoft IME went to alphanumeric mode");
         _changed = window;
         _modeBefore = mode;
+        _modeHeld = held;
         return true;
     }
 
-    /// <summary>The last window changed gets its mode back, if it is still the one with focus.</summary>
+    /// <summary>
+    /// The last window changed gets its mode back, wherever focus is now: a pause usually comes after focus
+    /// moved. Each window has a mode of its own, and one left in alphanumeric stayed so after Orbit moved on,
+    /// which Minecraft's 한/영 key couldn't undo (2026-11-06).
+    /// </summary>
     public void Release()
     {
         var window = _changed;
         _changed = default;
-        if (window.IsNull || !PInvoke.IsWindow(window) || FocusWindow(out _) != window) return;
+        if (window.IsNull || !PInvoke.IsWindow(window)) return;
         var ime = PInvoke.ImmGetDefaultIMEWnd(window);
-        if (!ime.IsNull) Ask(ime, SetConversionMode, _modeBefore);
+        // A mode other than the one held is the user's own choice since: it stays.
+        if (!ime.IsNull && Ask(ime, GetConversionMode, 0) == _modeHeld) Ask(ime, SetConversionMode, _modeBefore);
     }
 
     private static unsafe nuint? Ask(HWND ime, nuint command, nuint value)
