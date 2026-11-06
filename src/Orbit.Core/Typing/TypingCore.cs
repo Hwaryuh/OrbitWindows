@@ -103,6 +103,9 @@ public sealed class TypingCore(ITypingEngine engine, ITypingHost host, TypingGat
         _wordAsTyped = false;
     }
 
+    /// <summary>The last look wanted the box and couldn't read it, so what it decided is a guess worth checking again.</summary>
+    public bool Unread { get; private set; }
+
     /// <summary>Focus or the program in front moved, or the setting changed: are keys Orbit's here?</summary>
     /// <param name="sameBoxKeepsWord">Only focus moved. A focus event for the box already held isn't a move.</param>
     public void Look(bool sameBoxKeepsWord)
@@ -111,9 +114,11 @@ public sealed class TypingCore(ITypingEngine engine, ITypingHost host, TypingGat
         _place = Enabled ? host.Place() : new TypingPlace(TypingPause.Off, false, false);
         var pause = _place.Pause;
         FieldSnapshot? field = null;
+        Unread = false;
         if (pause == TypingPause.None)
         {
             field = host.ReadField(1);
+            Unread = field is null;
             if (LeftAloneFor(field) is { } reason) pause = reason;
             // An unreadable window with no caret: a read refused while the last one still runs (just after
             // Alt+Tab) must not leave a game's keys going through the queue until the next focus event.

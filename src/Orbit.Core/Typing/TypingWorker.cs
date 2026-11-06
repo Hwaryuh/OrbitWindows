@@ -12,6 +12,8 @@ public sealed class TypingWorker : IDisposable
     private const int Capacity = 1024;
     private const long StallMs = 250;
     private const int TickMs = 100;
+    private const long RetryMs = 150;
+    private const int Retries = 3;
 
     private readonly Func<ITypingEngine> _makeEngine;
     private readonly ITypingHost _host;
@@ -37,6 +39,8 @@ public sealed class TypingWorker : IDisposable
     private volatile bool _lookFront;
     private volatile bool _enabled;
     private HeldModifiers _held;
+    private long _retryAt;
+    private int _retriesLeft = Retries;
 
     public TypingWorker(Func<ITypingEngine> makeEngine, ITypingHost host)
     {
@@ -63,7 +67,12 @@ public sealed class TypingWorker : IDisposable
         _thread = new Thread(Run, 16 * 1024 * 1024) { Name = "Orbit typing", IsBackground = true, Priority = ThreadPriority.AboveNormal };
         _thread.Start();
         _signal.Set();
-        _watchdog = new Timer(_ => CheckStall(Environment.TickCount64), null, TickMs, TickMs);
+        _watchdog = new Timer(_ =>
+        {
+            long now = Environment.TickCount64;
+            CheckStall(now);
+            CheckRetry(now);
+        }, null, TickMs, TickMs);
     }
 
     public void Dispose()
@@ -80,6 +89,8 @@ public sealed class TypingWorker : IDisposable
     public void SetEnabled(bool enabled)
     {
         _enabled = enabled;
+        Interlocked.Exchange(ref _retryAt, 0);
+        RetriesFromStart();
         _lookFront = true;
         _signal.Set();
     }
@@ -87,6 +98,7 @@ public sealed class TypingWorker : IDisposable
     /// <summary>Focus moved inside a window. Any thread.</summary>
     public void FocusMoved()
     {
+        RetriesFromStart();
         _lookFocus = true;
         _signal.Set();
     }
@@ -94,6 +106,7 @@ public sealed class TypingWorker : IDisposable
     /// <summary>Another program came to the front. Any thread.</summary>
     public void FrontMoved()
     {
+        RetriesFromStart();
         _lookFront = true;
         _signal.Set();
     }
@@ -179,6 +192,10 @@ public sealed class TypingWorker : IDisposable
                 _lookFocus = false;
                 core.Enabled = _enabled;
                 core.Look(sameBoxKeepsWord: !front);
+                // A read refused or too slow (the one before still running, just after Alt+Tab) decided
+                // nothing, and no event may come to look again: a game or a canvas sends none.
+                if (core.Unread && Interlocked.Decrement(ref _retriesLeft) >= 0)
+                    Interlocked.Exchange(ref _retryAt, Environment.TickCount64 + RetryMs);
             }
         }
         catch (Exception e)
@@ -273,6 +290,18 @@ public sealed class TypingWorker : IDisposable
             Gate.Active = false;
             SendAllAsTyped();
         }
+    }
+
+    /// <summary>Something new to look at: unread boxes get their full count of looks again.</summary>
+    private void RetriesFromStart() => Volatile.Write(ref _retriesLeft, Retries);
+
+    /// <summary>Looks again at a box that couldn't be read. Public for tests: the timer calls it.</summary>
+    public void CheckRetry(long now)
+    {
+        long at = Interlocked.Read(ref _retryAt);
+        if (at == 0 || now < at || Interlocked.CompareExchange(ref _retryAt, 0, at) != at) return;
+        _lookFocus = true;
+        _signal.Set();
     }
 
     /// <summary>Under the send lock. Any answer still being worked out for these is thrown away.</summary>

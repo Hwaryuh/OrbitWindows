@@ -125,6 +125,7 @@ public sealed class TypingCoreTests
         var (core, gate, _) = Make(new Engine(), new FakeTypingHost { DefaultField = null });
         Assert.True(gate.Active);
         Assert.Equal(TypingPause.None, core.Pause);
+        Assert.True(core.Unread);
     }
 
     [Fact]
@@ -582,6 +583,18 @@ public sealed class TypingWorkerTests
         WaitFor(() => !worker.Gate.Busy);
         Assert.True(worker.Gate.HasWord);
         lock (host.Sent) Assert.Single(host.Sent);
+    }
+
+    [Fact]
+    public void ABoxThatCouldNotBeReadIsLookedAtAgainWithoutAnEvent()
+    {
+        // Chromium after Alt+Tab: the first read is refused, and a canvas sends no focus event later.
+        var host = new FakeTypingHost { DefaultField = new FieldSnapshot(false, false, null, false, [1]) };
+        host.Fields.Enqueue(null);
+        using var worker = new TypingWorker(() => new SlowEngine(), host);
+        worker.Start(true);
+        WaitFor(() => host.Reads >= 2 && worker.Pause == TypingPause.NotText);
+        Assert.False(worker.Gate.Active);
     }
 
     [Fact]
