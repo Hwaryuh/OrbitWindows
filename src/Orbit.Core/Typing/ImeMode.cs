@@ -20,6 +20,9 @@ public sealed class ImeMode
     private HWND _changed;
     private nuint _modeBefore;
     private nuint _modeHeld;
+    // The window, with its layout, whose IME last answered that letters go out as letters.
+    private HWND _sure;
+    private ushort _sureLanguage;
 
     /// <summary>The window with the keyboard's focus, or the one in front.</summary>
     public static unsafe HWND FocusWindow(out bool hasCaret)
@@ -39,17 +42,41 @@ public sealed class ImeMode
         return (ushort)(nuint)PInvoke.GetKeyboardLayout(thread).Value;
     }
 
-    /// <summary>True when letters go out as letters: not a Korean layout, or the IME agreed.</summary>
+    /// <summary>
+    /// True when letters go out as letters: not a Korean layout, or the IME agreed. An IME that doesn't
+    /// answer in time, as a busy app's doesn't, leaves the last answer for the same window and layout
+    /// standing: asked again on every word, one late reply would stop typing until focus moved.
+    /// </summary>
     public bool Hold()
     {
         var window = FocusWindow(out _);
         if (window.IsNull) return false;
         // Only one window is remembered, so the one before gets its mode back first.
-        if (window != _changed) Release();
-        if ((Language(window) & PrimaryLanguageMask) != Korean) return true;
+        if (window != _changed) GiveBack();
+        ushort language = Language(window);
+        if (HoldIn(window, language) is not { } held) return window == _sure && language == _sureLanguage;
+        _sure = held ? window : default;
+        _sureLanguage = language;
+        return held;
+    }
+
+    /// <summary>
+    /// Keys are no longer Orbit's: 한/영 now reaches the app, so no earlier answer can stand in for a late
+    /// one when they come back.
+    /// </summary>
+    public void Release()
+    {
+        _sure = default;
+        GiveBack();
+    }
+
+    /// <summary>Null: the IME didn't answer before anything was seen of its mode.</summary>
+    private bool? HoldIn(HWND window, ushort language)
+    {
+        if ((language & PrimaryLanguageMask) != Korean) return true;
         var ime = PInvoke.ImmGetDefaultIMEWnd(window);
         if (ime.IsNull) return false;
-        if (Ask(ime, GetConversionMode, 0) is not { } mode) return false;
+        if (Ask(ime, GetConversionMode, 0) is not { } mode) return null;
         if ((mode & Native) == 0) return true;
         nuint held = mode & ~Native;
         Ask(ime, SetConversionMode, held);
@@ -70,11 +97,12 @@ public sealed class ImeMode
     /// moved. Each window has a mode of its own, and one left in alphanumeric stayed so after Orbit moved on,
     /// which Minecraft's 한/영 key couldn't undo (2026-11-06).
     /// </summary>
-    public void Release()
+    private void GiveBack()
     {
         var window = _changed;
         _changed = default;
         if (window.IsNull || !PInvoke.IsWindow(window)) return;
+        if (window == _sure) _sure = default;
         var ime = PInvoke.ImmGetDefaultIMEWnd(window);
         // A mode other than the one held is the user's own choice since: it stays.
         if (!ime.IsNull && Ask(ime, GetConversionMode, 0) == _modeHeld) Ask(ime, SetConversionMode, _modeBefore);

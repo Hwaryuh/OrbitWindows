@@ -192,10 +192,18 @@ public sealed class TypingWorker : IDisposable
                 _lookFocus = false;
                 core.Enabled = _enabled;
                 core.Look(sameBoxKeepsWord: !front);
-                // A read refused or too slow (the one before still running, just after Alt+Tab) decided
-                // nothing, and no event may come to look again: a game or a canvas sends none.
-                if (core.Unread && Interlocked.Decrement(ref _retriesLeft) >= 0)
-                    Interlocked.Exchange(ref _retryAt, Environment.TickCount64 + RetryMs);
+                // A read refused or too slow (the one before still running, just after Alt+Tab), or an IME
+                // too busy to answer, decided nothing, and no event may come to look again: a game or a
+                // canvas sends none, and a window that keeps focus sends none either.
+                if (core.Unread || core.Pause == TypingPause.ImeNotResponding)
+                {
+                    if (Interlocked.Decrement(ref _retriesLeft) >= 0) Interlocked.Exchange(ref _retryAt, Environment.TickCount64 + RetryMs);
+                }
+                // Settled: a look still due from before would only come in the middle of a word.
+                else
+                {
+                    Interlocked.Exchange(ref _retryAt, 0);
+                }
             }
         }
         catch (Exception e)

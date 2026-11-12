@@ -9,6 +9,8 @@ internal sealed class FakeTypingHost : ITypingHost
     public Queue<FieldSnapshot?> Fields { get; } = new();
     public FieldSnapshot? DefaultField { get; set; } = new(false, true, null, false, [1]);
     public bool ImeAnswers { get; set; } = true;
+    public Queue<bool> ImeReplies { get; } = new();
+    public int ImeAsks { get; private set; }
     public bool Accepts { get; set; } = true;
     public int Reads { get; private set; }
     public int ImeReleases { get; private set; }
@@ -25,7 +27,11 @@ internal sealed class FakeTypingHost : ITypingHost
         return Fields.Count > 0 ? Fields.Dequeue() : DefaultField;
     }
 
-    public bool HoldIme() => ImeAnswers;
+    public bool HoldIme()
+    {
+        ImeAsks++;
+        return ImeReplies.Count > 0 ? ImeReplies.Dequeue() : ImeAnswers;
+    }
 
     public void ReleaseIme() => ImeReleases++;
 
@@ -595,6 +601,18 @@ public sealed class TypingWorkerTests
         worker.Start(true);
         WaitFor(() => host.Reads >= 2 && worker.Pause == TypingPause.NotText);
         Assert.False(worker.Gate.Active);
+    }
+
+    [Fact]
+    public void AnImeTooBusyToAnswerIsAskedAgainWithoutAnEvent()
+    {
+        // A busy app's IME misses the first look, and focus stays where it is.
+        var host = new FakeTypingHost();
+        host.ImeReplies.Enqueue(false);
+        using var worker = new TypingWorker(() => new SlowEngine(), host);
+        worker.Start(true);
+        WaitFor(() => host.ImeAsks >= 2 && worker.Pause == TypingPause.None);
+        Assert.True(worker.Gate.Active);
     }
 
     [Fact]
