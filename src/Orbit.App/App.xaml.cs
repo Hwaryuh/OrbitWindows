@@ -170,7 +170,11 @@ public partial class App : Application
     private void OnWindowsSettingChanged(object sender, Microsoft.Win32.UserPreferenceChangedEventArgs e)
     {
         if (e.Category == Microsoft.Win32.UserPreferenceCategory.General)
-            Dispatcher.BeginInvoke(() => Palette.Current().ApplyTo(Resources));
+            Dispatcher.BeginInvoke(() =>
+            {
+                Palette.Current().ApplyTo(Resources);
+                _tray?.FollowTaskbarTheme();
+            });
     }
 
     private void OnHook(HookEvent e)
