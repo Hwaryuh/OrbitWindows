@@ -729,7 +729,7 @@ public sealed class TypingWorkerTests
 
     private sealed class BlockingLookHost : ITypingHost
     {
-        private readonly FakeTypingHost _inner = new();
+        public FakeTypingHost Inner { get; } = new();
         public ManualResetEventSlim Entered { get; } = new();
         public ManualResetEventSlim Release { get; } = new();
         public volatile bool Blocks;
@@ -745,14 +745,79 @@ public sealed class TypingWorkerTests
                 Entered.Set();
                 Release.Wait(TimeSpan.FromSeconds(10));
             }
-            return _inner.Place();
+            return Inner.Place();
         }
 
-        public FieldSnapshot? ReadField(int length) => _inner.ReadField(length);
+        public FieldSnapshot? ReadField(int length) => Inner.ReadField(length);
         public bool HoldIme() => true;
         public void ReleaseIme() { }
-        public bool Send(INPUT[] events) => _inner.Send(events);
+        public bool Send(INPUT[] events) => Inner.Send(events);
         public void Wait(int milliseconds) { }
+    }
+
+    private static (TypingWorker Worker, BlockingLookHost Host, RecordingEngine Engine) StartedInAGame()
+    {
+        var host = new BlockingLookHost();
+        host.Inner.DefaultField = new FieldSnapshot(false, false, null, false, [1]);
+        var engine = new RecordingEngine();
+        var worker = new TypingWorker(() => engine, host);
+        worker.Start(true);
+        WaitFor(() => worker.Pause == TypingPause.NotText);
+        return (worker, host, engine);
+    }
+
+    [Fact]
+    public void AKeyTypedWhileANewWindowIsLookedAtWaitsAndReachesTheEngine()
+    {
+        var (worker, host, engine) = StartedInAGame();
+        using var _ = worker;
+        host.Inner.DefaultField = new FieldSnapshot(false, true, null, false, [1]);
+        host.Blocks = true;
+        worker.FrontMoved();
+        Assert.True(host.Entered.Wait(TimeSpan.FromSeconds(5)));
+        Assert.True(worker.KeyArrived(0x53, 0x1F, false, true, false));
+
+        host.Blocks = false;
+        host.Release.Set();
+        WaitFor(() => !worker.Gate.Busy);
+        Assert.Equal(0x53, engine.Last.Vk);
+        Assert.False(worker.Gate.Looking);
+        Assert.DoesNotContain((ushort)0x53, Keys(host.Inner));
+    }
+
+    [Fact]
+    public void AKeyTypedWhileLookingGoesOnAsTypedWhenTheWindowTakesNoText()
+    {
+        var (worker, host, engine) = StartedInAGame();
+        using var _ = worker;
+        host.Blocks = true;
+        worker.FocusMoved();
+        Assert.True(host.Entered.Wait(TimeSpan.FromSeconds(5)));
+        Assert.True(worker.KeyArrived(0x57, 0x11, false, true, false));
+
+        host.Blocks = false;
+        host.Release.Set();
+        WaitFor(() => !worker.Gate.Busy);
+        Assert.Equal(0, engine.Last.Vk);
+        Assert.Equal(new ushort[] { 0x57 }, Keys(host.Inner));
+        Assert.False(worker.Gate.Looking);
+        Assert.False(worker.KeyArrived(0x57, 0x11, false, false, false));
+    }
+
+    [Fact]
+    public void AStallWhileLookingLetsKeysThroughAgain()
+    {
+        var (worker, host, _) = StartedInAGame();
+        using var __ = worker;
+        host.Blocks = true;
+        worker.FrontMoved();
+        Assert.True(host.Entered.Wait(TimeSpan.FromSeconds(5)));
+        Assert.True(worker.KeyArrived(0x53, 0x1F, false, true, false));
+        worker.CheckStall(Environment.TickCount64 + 1000);
+        Assert.False(worker.Gate.Looking);
+        Assert.False(worker.KeyArrived(0x49, 0x17, false, true, false));
+        host.Blocks = false;
+        host.Release.Set();
     }
 
     [Fact]

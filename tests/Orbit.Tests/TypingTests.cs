@@ -162,6 +162,14 @@ public sealed class TypingGateTests
     }
 
     [Fact]
+    public void ALetterWaitsWhileTheTypingThreadLooks()
+    {
+        var gate = new TypingGate { Looking = true };
+        Assert.Equal(GateAction.Pass, gate.Decide(0xA0, true, false));
+        Assert.Equal(GateAction.Queue, gate.Decide(0x41, true, false));
+    }
+
+    [Fact]
     public void ShortcutsPassWithNoWordHeld()
     {
         var gate = Gate();

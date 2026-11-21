@@ -14,6 +14,7 @@ public sealed class TypingWorker : IDisposable
     private const int TickMs = 100;
     private const long RetryMs = 150;
     private const int Retries = 3;
+    private const int LookFocus = 1, LookFront = 2;
 
     private readonly Func<ITypingEngine> _makeEngine;
     private readonly ITypingHost _host;
@@ -35,8 +36,7 @@ public sealed class TypingWorker : IDisposable
     private Timer? _watchdog;
     private volatile bool _stopping;
     private volatile bool _forget;
-    private volatile bool _lookFocus;
-    private volatile bool _lookFront;
+    private int _looksAsked;
     private volatile bool _enabled;
     private HeldModifiers _held;
     private long _retryAt;
@@ -62,7 +62,7 @@ public sealed class TypingWorker : IDisposable
     public void Start(bool enabled)
     {
         _enabled = enabled;
-        _lookFront = true;
+        Interlocked.Or(ref _looksAsked, LookFront);
         // Big enough for the Swift runtime, which is used to a main thread's stack.
         _thread = new Thread(Run, 16 * 1024 * 1024) { Name = "Orbit typing", IsBackground = true, Priority = ThreadPriority.AboveNormal };
         _thread.Start();
@@ -79,6 +79,7 @@ public sealed class TypingWorker : IDisposable
     {
         _stopping = true;
         Gate.Active = false;
+        Gate.Looking = false;
         // Keys already kept from the app still have to reach it.
         lock (_sendLock) SendAllAsTyped();
         _signal.Set();
@@ -91,7 +92,7 @@ public sealed class TypingWorker : IDisposable
         _enabled = enabled;
         Interlocked.Exchange(ref _retryAt, 0);
         RetriesFromStart();
-        _lookFront = true;
+        Interlocked.Or(ref _looksAsked, LookFront);
         _signal.Set();
     }
 
@@ -99,7 +100,8 @@ public sealed class TypingWorker : IDisposable
     public void FocusMoved()
     {
         RetriesFromStart();
-        _lookFocus = true;
+        Interlocked.Or(ref _looksAsked, LookFocus);
+        HoldKeysForLook();
         _signal.Set();
     }
 
@@ -107,8 +109,14 @@ public sealed class TypingWorker : IDisposable
     public void FrontMoved()
     {
         RetriesFromStart();
-        _lookFront = true;
+        Interlocked.Or(ref _looksAsked, LookFront);
+        HoldKeysForLook();
         _signal.Set();
+    }
+
+    private void HoldKeysForLook()
+    {
+        if (_enabled && Volatile.Read(ref _core) is not null) Gate.Looking = true;
     }
 
     /// <summary>The box may have changed without a key: a mouse press, another Orbit feature's keys. Any thread, no allocation.</summary>
@@ -148,8 +156,9 @@ public sealed class TypingWorker : IDisposable
     {
         try
         {
-            _core = new TypingCore(_makeEngine(), _host, Gate);
-            _core.PauseChanged += () => PauseChanged?.Invoke();
+            var core = new TypingCore(_makeEngine(), _host, Gate);
+            core.PauseChanged += () => PauseChanged?.Invoke();
+            Volatile.Write(ref _core, core);
         }
         catch (Exception e)
         {
@@ -185,11 +194,10 @@ public sealed class TypingWorker : IDisposable
                 _forget = false;
                 core.Forget();
             }
-            bool front = _lookFront;
-            if (front || _lookFocus)
+            int asked = Interlocked.Exchange(ref _looksAsked, 0);
+            if (asked != 0)
             {
-                _lookFront = false;
-                _lookFocus = false;
+                bool front = (asked & LookFront) != 0;
                 core.Enabled = _enabled;
                 core.Look(sameBoxKeepsWord: !front);
                 // A read refused or too slow (the one before still running, just after Alt+Tab), or an IME
@@ -212,6 +220,15 @@ public sealed class TypingWorker : IDisposable
             Log.Warn($"Typing couldn't look at the box ({e.GetType().Name})");
             Gate.Active = false;
         }
+        ReleaseKeysUnlessLookPending();
+    }
+
+    private void ReleaseKeysUnlessLookPending()
+    {
+        if (!Gate.Looking) return;
+        Gate.Looking = false;
+        Interlocked.MemoryBarrier();
+        if (Volatile.Read(ref _looksAsked) != 0) Gate.Looking = true;
     }
 
     private bool TryNext(out KeyEvent key, out long epoch)
@@ -268,7 +285,7 @@ public sealed class TypingWorker : IDisposable
         }
         Log.Info("Typing is back after a stall");
         TryForget(_core!);
-        _lookFront = true;
+        Interlocked.Or(ref _looksAsked, LookFront);
         RunLooks();
     }
 
@@ -296,6 +313,7 @@ public sealed class TypingWorker : IDisposable
             if (!_stalled) Log.Warn("Typing stalled: keys are going out as typed");
             _stalled = true;
             Gate.Active = false;
+            Gate.Looking = false;
             SendAllAsTyped();
         }
     }
@@ -308,7 +326,7 @@ public sealed class TypingWorker : IDisposable
     {
         long at = Interlocked.Read(ref _retryAt);
         if (at == 0 || now < at || Interlocked.CompareExchange(ref _retryAt, 0, at) != at) return;
-        _lookFocus = true;
+        Interlocked.Or(ref _looksAsked, LookFocus);
         _signal.Set();
     }
 

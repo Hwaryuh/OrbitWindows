@@ -33,6 +33,8 @@ public sealed class TypingGate
     /// <summary>Set by the typing thread: not paused, and in a text box.</summary>
     public volatile bool Active;
 
+    public volatile bool Looking;
+
     /// <summary>Set by the typing thread: a word is held that a later key could still change.</summary>
     public volatile bool HasWord;
 
@@ -63,7 +65,7 @@ public sealed class TypingGate
     {
         if (Busy) return GateAction.Queue;
         if (!down) return Volatile.Read(ref _keys[vk]) == Taken ? GateAction.Drop : GateAction.Pass;
-        if (!Active) return GateAction.Pass;
+        if (!Active && !Looking) return GateAction.Pass;
         if (IsShortcutModifier(vk)) return HasWord ? GateAction.Queue : GateAction.Pass;
         if (IsShift(vk)) return GateAction.Pass;
         if (shortcutHeld) return GateAction.Pass;
